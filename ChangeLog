@@ -1,3 +1,9 @@
+2000-03-18  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/Makefile.in tools/libtool-get-dll-ext: New script to
+	detect shared library endings without using 'rev' which is missing
+	on some platforms.
+
 2000-03-14  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* sanei/sanei_scsi.c: Test for 'USE == LINUX_INTERFACE' instead of
