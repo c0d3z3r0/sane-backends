@@ -2217,6 +2217,9 @@ check_inquiry(Microtek2_Device *md, SANE_String *model_string)
           if ( md->revision == 1.00 )
               md->model_flags |= MD_OFFSET_2;
           break;
+        case 0x99:
+          *model_string = "ScanMaker X6USB";
+          break;
         case 0x9a:
           *model_string = "Phantom 636cx / C6";
           /* The Phantom 636cx says it supports the SLIDE mode, but it */
@@ -3125,6 +3128,7 @@ dump_attributes(Microtek2_Info *mi)
       case 0x94: fprintf(stderr, "Phantom 330cx or Phantom 336cx"); break;
       case 0x97: fprintf(stderr, "ScanMaker 636"); break;
       case 0x98: fprintf(stderr, "ScanMaker X6EL"); break;
+      case 0x99: fprintf(stderr, "ScanMaker X6USB"); break;
       case 0x9a: fprintf(stderr, "Phantom 636cx / C6"); break;
       case 0x9d: fprintf(stderr, "AGFA DuoScan T1200"); break;
       case 0xa3: fprintf(stderr, "ScanMaker V6USL"); break;
