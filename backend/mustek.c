@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 92
+#define BUILD 93
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -315,8 +315,8 @@ scsi_sense_wait_ready (int fd)
   struct timeval now, start;
   SANE_Status status;
   size_t len;
-  unsigned char sense_buffer [4];
-  unsigned char bytetxt[300], dbgtxt[300], *pp;
+  char sense_buffer [4];
+  char bytetxt[300], dbgtxt[300], *pp;
 
   gettimeofday (&start, 0);
 
@@ -673,10 +673,10 @@ static SANE_Status
 attach (const char *devname, Mustek_Device **devp, int may_wait)
 {
   int mustek_scanner, fw_revision;
-  unsigned char result[INQ_LEN];
-  unsigned char inquiry_byte_list [50], inquiry_text_list [17];
-  unsigned char inquiry_byte [5], inquiry_text [5];
-  const unsigned char *model_name = result + 44;
+  char result[INQ_LEN];
+  char inquiry_byte_list [50], inquiry_text_list [17];
+  char inquiry_byte [5], inquiry_text [5];
+  const char *model_name = result + 44;
   Mustek_Scanner s;
   Mustek_Device *dev, new_dev;
   SANE_Status status;
@@ -687,10 +687,10 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       "Write-Once", "CD-ROM", "Scanner", "Optical Memory", "Medium Changer",
       "Communications"
     };
-  unsigned char scsi_vendor[9];
-  unsigned char scsi_product[17];
-  unsigned char scsi_revision[5];
-  unsigned char *pp;
+  char scsi_vendor[9];
+  char scsi_product[17];
+  char scsi_revision[5];
+  char *pp;
   SANE_Bool warning = SANE_FALSE;
   int firmware_format = 0;
   int firmware_revision_system = 0;
@@ -1125,7 +1125,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	 own line-distance correction code. */
       if (dev->flags & MUSTEK_FLAG_N)
 	{
-	  if (fw_revision == 0x101)
+	  if (fw_revision < 0x200)
 	    dev->flags |= MUSTEK_FLAG_LD_N1;
 	  else
 	    dev->flags |= MUSTEK_FLAG_LD_N2;
@@ -3445,7 +3445,7 @@ init_options (Mustek_Scanner *s)
   s->val[OPT_CONTRAST].w = 0;
 
   /* gamma */
-  gammasize = 256;
+    gammasize = 256;
   for (i = 0; i < 4; ++i)
     for (j = 0; j < gammasize; ++j)
       s->gamma_table[i][j] = j;
@@ -4044,7 +4044,8 @@ attach_one_device (const char *devname)
 SANE_Status
 sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 {
-  char line[PATH_MAX], *cp, *word, *end;
+  char line[PATH_MAX], *word, *end;
+  const char *cp;
   int linenumber;
   FILE *fp;
   
@@ -4092,7 +4093,7 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       word = 0;
       linenumber++;
 
-      cp = (char *) sanei_config_get_string (line, &word);
+      cp = sanei_config_get_string (line, &word);
       if (!word || cp == line)
 	{
 	  DBG(5, "sane_init: config file line %d: ignoring empty line\n",
@@ -4111,13 +4112,13 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	{
 	  free (word);
 	  word = 0;
-	  cp = (char *) sanei_config_get_string (cp, &word);
+	  cp = sanei_config_get_string (cp, &word);
 
 	  if (strcmp (word, "strip-height") == 0)
 	    {
 	      free (word);
 	      word = 0;
-	      cp = (char *) sanei_config_get_string (cp, &word);
+	      cp = sanei_config_get_string (cp, &word);
 	      errno = 0;
 	      strip_height = strtod (word, &end);
 	      if (end == word)
@@ -4188,7 +4189,7 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 
 	      free (word);
 	      word = 0;
-	      cp = (char *) sanei_config_get_string (cp, &word);
+	      cp = sanei_config_get_string (cp, &word);
 	      errno = 0;
 	      buffer_size = strtol (word, &end, 0);
 
@@ -4268,7 +4269,7 @@ sane_exit (void)
   for (dev = first_dev; dev; dev = next)
     {
       next = dev->next;
-      free ((void *) dev->sane.name);
+      free (dev->sane.name);
       free (dev);
     }
 
@@ -4568,7 +4569,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 		  return SANE_STATUS_GOOD;		/* no change */
 		free (old_val);
 	      }
-	    *info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
+	    if (info)
+	      *info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
 
 	    s->val[option].s = strdup (val);
 

@@ -200,7 +200,7 @@ typedef struct Mustek_Scanner
 	int quant[3];	/* for resolution correction */
 	int saved[3];	/* number of saved color lines */
 	/* these are used for SE, MFS and N line-distance correction: */
-	char *buf[3];
+	unsigned char *buf[3];
 	/* these are used for N line-distance correction only: */
 	int ld_line;	/* line # currently processed in ld-correction */
 	int lmod3;	/* line # modulo 3 */

@@ -593,7 +593,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
       }
       s->opt[OPT_TPU_PN].cap ^= SANE_CAP_INACTIVE;
       s->opt[OPT_TPU_DCM].cap ^= SANE_CAP_INACTIVE;
-      *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_RELOAD_OPTIONS;
+      if (info)
+	*info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_RELOAD_OPTIONS;
       return SANE_STATUS_GOOD;
       
     case OPT_TPU_DCM:
@@ -616,7 +617,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
         s->opt[OPT_TPU_FILMTYPE].cap &= ~SANE_CAP_INACTIVE;
       }
       else s->hw->tpu.ControlMode = 0;
-      *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_RELOAD_OPTIONS;
+      if (info)
+	*info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_RELOAD_OPTIONS;
       return SANE_STATUS_GOOD;
       
     case OPT_TPU_FILMTYPE:

@@ -239,10 +239,7 @@ too.
 .PP
 If your images have horizontal stripes in color mode, check option
 linedistance-fix (see above). Apply this option for a scanner with
-firmware version 2.00 and disable it for version 1.01. Please contact
-the mailing list 
-.IR sane\-devel@mostang.com 
-if you have a 600 II N with a different firmware version.
+firmware version 2.x and disable it for version 1.x. 
 .PP
 Also note that after a while of no activity, some scanners themself (not
 the SANE backend) turns off their CCFL lamps. This shutdown is not always

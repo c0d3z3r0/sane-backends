@@ -114,11 +114,11 @@ below:
   Backends for scanners:
     Abaton                 sane-abaton(5)
     AGFA Focus             sane-agfafocus(5)
-    AGFA SnapScan          http://www.cs.ualberta.ca/~charter/SnapScan/snapscan.html
+    AGFA SnapScan          sane-snapscan(5)
     Apple                  sane-apple(5)
     Artec                  sane-artec(5)
     Avision                sane-avision(5)
-    Canon                  doc/canon.README
+    Canon                  sane-canon(5)
     Nikon Coolscan         http://www.sema.be/coolscan/ http://andreas.rick.free.fr/sane/
     Epson                  sane-epson(5)
     Fujitsu                sane-fujitsu(5)

@@ -1,5 +1,20 @@
 CHANGES for the SANE Mustek backend
 
+2000-07-27
+  * removed warnings
+
+2000-07-26
+  * fixed possible segfault pointer info was not checked for 0 (found by
+    Petter Reinholdtsen)
+  * Updated comment about Paragon 600 II N linedistance correction in man 
+    page
+
+2000-07-25
+  * Fixed color scanning for Paragon 600 II N firmware < 2.00.
+
+2000-07-25
+  * Released backend version 1.0-92
+  
 2000-07-24
   * Fixed ADF handling (output was mirrored in x direction). Gray and lineart
     seems to work now. Color and halftone modes look somewhat crazy.

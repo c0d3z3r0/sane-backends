@@ -1,3 +1,23 @@
+2000-07-28  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* ltmain.sh: Added underscore to sed expression for removing
+ 	  backendname from soname (needed for libsane-mustek_pp).
+	* sane.lsm: Added keywords for new backends.
+	* lib/isfdtype.c: Added implementation for platforms that lack
+	  isfdtype() (mostly from Olly Betts).
+	* backend/v4l.desc: Activated man page entry.
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+ 	  1.0-93. Fixed color scanning for Paragon 600 II N firmware 1.02.
+	  Fixed possible segfault in sane_control_option() when info is 0.
+	  Removed some compiler warnings.
+	* NEWS: Updated Mustek backend version, added Artec, fixed typo
+ 	* doc/Makefile.in doc/sane-snapscan.man doc/sane-canon.man README
+ 	  backend/snapscan.desc backend/canon.desc backend/.cvsignore:
+ 	  Added manpage for canon and snapscan backends. Added :interface
+ 	  entry for canon.
+	* backend/canon-sane.c: Fixed possible segfault in 
+	  sane_control_option() when info is 0.
+	
 2000-07-22  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/v4l.c: Bugfix: Avoid crashing in

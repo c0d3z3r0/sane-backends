@@ -5,11 +5,12 @@ Entered-date:   _DATE_
 Description:    SANE (Scanner Access Now Easy) is a universal scanner
 		interface and comes complete with documentation and several
 		frontends and backends.
-Keywords:       camera, scanner, Abaton, Apple, Agfa, Artec, Canon, Epson,
-		HP, Kodak DC25 & DC210, Microtek, Mustek, Nikon CoolScan,
-		Polaroid Digital Microscope Camera, PINT, Connectix QuickCam,
-		Ricoh, Siemens, Tamarack, UMAX, network server & client,
-		Java API & client
+Keywords:       camera, scanner, Abaton, Agfa, Apple, Artec, Avision, Canon,
+                Epson, Fujitsu, HP, Kodak DC25 & DC210, Microtek, Mustek,
+                Nikon CoolScan,	Polaroid Digital Microscope Camera, PINT,
+                Plustek, Connectix QuickCam, Ricoh, Sharp, Siemens, Tamarack,
+                UMAX, Video for Linux, network server & client, 
+                Java API & client
 Author:         David.Mosberger@acm.org (David Mosberger-Tang)
 		(see AUTHORS for complete list)
 Maintained-by:  David.Mosberger@acm.org (David Mosberger-Tang)
