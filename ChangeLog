@@ -1,5 +1,8 @@
 2000-02-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* frontend/saned.c sanei/sanei_pio.c sanei/sanei_scsi.c: Some OS/2
+	patches from Yuri Dario.
+
 	* frontend/scanimage.c: Avoid sprintf("%s", NULL). Bugreport and
 	fix from Yuri Dario.
 
