@@ -281,7 +281,8 @@ Value  Descsription
 1      print fatal errors
 2      print important messages
 3      print non-fatal errors and less important messages
-4      print all available debugging output
+4      print all but debugging messages
+5      print everything
 
 Example: 
 export SANE_DEBUG_MUSTEK=4

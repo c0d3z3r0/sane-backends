@@ -142,6 +142,11 @@ typedef struct Mustek_Device
     /* current and maximum buffer size of the scanner */
     int buffer_size;
     int max_buffer_size;
+    /* firmware format: 0 = old, MUSTEK at pos 8; 1 = new, MUSTEK at
+       pos 36 */
+    int firmware_format;
+    /* firmware revision system: 0 = old, x.yz; 1 = new, Vxyz */
+    int firmware_revision_system;
   }
 Mustek_Device;
 
@@ -156,6 +161,7 @@ typedef struct Mustek_Scanner
     SANE_Int halftone_pattern[64];
 
     int scanning;
+    int cancelled;
     int pass;			/* pass number */
     int line;			/* current line number */
     SANE_Parameters params;
