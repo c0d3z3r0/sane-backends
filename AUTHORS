@@ -22,6 +22,7 @@ Backends:
  epson:		Kazuhiro Sasayama
  hp:		Peter Kirchgessner
 		Geoffrey Dairiki
+ m3096g:        Randolph Bentson
  microtek:	Matthew Marjanovic
  microtek2:	Bernd Schroeder
  mustek:	Andreas Bolsch, David Mosberger and Andreas Czechanowski
@@ -34,6 +35,7 @@ Backends:
  ricoh:		Feico W. Dillema
  sharp:		FUKUDA Kazuya and Abel Deuring
  snapscan:	Kevin Charter, Franck Schneider, and Michel Roelofs
+ sp15c:         Randolph Bentson
  tamarack:	Roger Wolff
  umax:		Oliver Rauch and Michael K. Johnson
 
@@ -82,6 +84,7 @@ Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 Patrick Reynolds <patrickr@virginia.edu>
 Peter Fales <psfales@earthling.net>
 Peter Kirchgessner <peter@kirchgessner.net>
+Randolph Bentson <bentson@grieg.holmsjoen.com>
 Rene Rebe <rene.rebe@okay.net>
 Roger Wolff <R.E.Wolff@BitWizard.nl>
 Tristan Tarrant <ttarrant@etnoteam.it>
