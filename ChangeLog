@@ -1,3 +1,8 @@
+2000-02-18  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* sharp.c / sharp.h: Options for resolution now conform to
+	the Sane API; fixed and initialisation bug. Updated backend 
+	version number in sharp.desc.	
+
 2000-02-18  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* updated umax backend to 1.0 build 17
 	  (added support for sanei_scsi_open_extended)
