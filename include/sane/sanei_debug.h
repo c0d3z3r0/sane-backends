@@ -13,7 +13,8 @@
 #endif
 
 #ifdef NDEBUG
-# define DBG_INIT(backend, var)
+# define DBG_LEVEL  (0)
+# define DBG_INIT()
 # ifdef HAVE_VARARG_MACROS
 #  define DBG(level, msg, args...)
 # else
