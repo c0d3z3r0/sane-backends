@@ -1,3 +1,8 @@
+1999-12-12  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/microtek2.c backend/microtek2.h: Updated Microtek2
+	backend to v0.8 from Bernd Schroeder <bernd@aquila.muc.de>.
+
 1999-11-20  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
 	* ltmain.sh:
