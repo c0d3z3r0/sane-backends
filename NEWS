@@ -3,7 +3,7 @@ New with 1.0.3, released XXXX-XX-XX:
 
 * New backends: mustek_pp, plustek, st400, v4l.
 * Updated backends: Coolscan (v0.4.3), Epson (v0.1.29), HP (v0.88),
-  Mustek (v1.0-89), Sharp (v0.31), UMAX (v1.0-21).
+  Mustek (v1.0-90), Sharp (v0.31), UMAX (v1.0-21).
 * Removed backend info sagitta.desc due to lack of interest.
 * Installing no longer depends on 'rev'.
 * Added and structured documentation.

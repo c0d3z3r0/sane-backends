@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 89
+#define BUILD 90
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -994,11 +994,11 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->y_trans_range.max = SANE_FIX (255.0);
 
       dev->dpi_range.max = SANE_FIX (800);
-      dev->flags |= MUSTEK_FLAG_LD_NONE;
       /* At least scanners with firmware 1.20 need a gamma table upload
 	 in color mode, otherwise the image is red */
       if (fw_revision == 0x120)
 	dev->flags |= MUSTEK_FLAG_FORCE_GAMMA;
+      /*      dev->flags |= MUSTEK_FLAG_LD_NONE;*/
       
       dev->sane.model = "MFS-8000SP";
     }
@@ -1040,7 +1040,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       /* Earlier versions of this source code used MUSTEK_FLAG_LD_MFS
 	 for firmware versions < 1.02 and LD_NONE for the rest. This
 	 didn't work for my scanners.  1.00 doesn't need any LD
-	 correction, 1.02 and 1.07 does need normal LD
+	 correction, 1.02 and 1.07 do need normal LD
 	 corrections. Bug reports suggest that 1.11 needs no LD
 	 correction.  Maybe this is true for all 1.x x!=02, x!=07
 	 scanners. */
@@ -1049,20 +1049,26 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	dev->flags |= MUSTEK_FLAG_LD_NONE;
       dev->sane.model = "MFS-12000SP";
     }
-  /* Does it exist? */
+  /* One report for this one */
   else if (strncmp (model_name, "MFS-08000SP", 11) == 0)
     {
-      /* These values are not tested. */
-      dev->x_range.max = SANE_FIX (8.50 * MM_PER_INCH);
-      dev->y_range.max = SANE_FIX (13.85 * MM_PER_INCH);
-      /* copied from MSF-08000SP */
+      /* These values are not tesetd but copied from the MSF-08000SP */
+      dev->x_range.min = SANE_FIX (0.0);
+      dev->x_range.max = SANE_FIX (8.5 * MM_PER_INCH);
+      dev->y_range.min = SANE_FIX (2.5);
+      dev->y_range.max = SANE_FIX (355.6);
       dev->x_trans_range.min = SANE_FIX (1.0);
       dev->y_trans_range.min = SANE_FIX (1.0);
       dev->x_trans_range.max = SANE_FIX (205.0);
       dev->y_trans_range.max = SANE_FIX (255.0);
+
       dev->dpi_range.max = SANE_FIX (800);
+      dev->flags |= MUSTEK_FLAG_LD_NONE;
+      /* At least scanners with firmware 1.20 need a gamma table upload
+	 in color mode, otherwise the image is red */
+      if (fw_revision == 0x120)
+	dev->flags |= MUSTEK_FLAG_FORCE_GAMMA;
       dev->sane.model = "MFS-8000SP";
-      warning = SANE_TRUE;      
     }
   /* I have never seen one of those */
   else if (strncmp (model_name, "MFS-06000SP", 11) == 0)
@@ -2439,6 +2445,9 @@ line_distance (Mustek_Scanner *s)
 	  "(%d, %d, %d)\n", s->ld.max_value, s->ld.peak_res, s->ld.quant[0],
 	  s->ld.quant[1], s->ld.quant[2]);
     }
+  else
+    s->ld.max_value = 0;
+    
   return SANE_STATUS_GOOD;
 }
 
@@ -3595,7 +3604,9 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	    num_lines = fix_line_distance_n_1 (s, num_lines, bpl, data,
 					       extra);
 	}  
-      else if (s->hw->flags & MUSTEK_FLAG_LD_NONE)
+      else if (!(s->hw->flags & MUSTEK_FLAG_LD_NONE) && (s->ld.max_value != 0))
+	fix_line_distance_normal (s, num_lines, bpl, data, extra);
+      else
         {
 	  /* Just shuffle around while copying from *data to *extra */ 
           SANE_Byte *red_ptr, *grn_ptr, *blu_ptr;
@@ -3617,8 +3628,6 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	      red_ptr = ptr_end;
 	    }
 	}
-      else
-	fix_line_distance_normal (s, num_lines, bpl, data, extra);
 
       fwrite (extra, num_lines, s->params.bytes_per_line, fp);
     }

@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "18 Jun 2000"
+.TH sane-mustek 5 "15 Jul 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -44,8 +44,8 @@ Trust SCSI Connect 19200
 More details can be found on the Mustek backend homepage 
 .IR http://hmg.home.pages.de/sane/.
 .PP
-Don't mix up MFS (Paragon) and ScanExpress models! They're completely
-different. Check the exact model name! 
+Don't mix up MFS (Paragon), Pro and ScanExpress models! They're
+completely different. Check the exact model name!
 .PP
 Note that most of the above scanners come with a SCSI interface.  The
 only non-SCSI scanner that has some support at this point is the 600
@@ -53,12 +53,10 @@ II N scanner which comes with its own parallel port adapter (i.e., it
 does
 .I not
 attach to the printer port).  More info on how to use the 600 II N can
-be found below in section PARAGON 600 II N. Other parallel port scanners 
-are not supported by this backend but you may be successful using
-the Mustek parallel port backend. It is not included in the sane 
-distribution, information and links can be found at 
-http://hmg.home.pages.de/sane/ . USB scanners are not supported by this
-backend by now.
+be found below in section PARAGON 600 II N. Other parallel port
+scanners are not supported by this backend but you may be successful
+using the Mustek parallel port backend (mustek_pp). USB scanners are
+not supported by this backend by now.
 .PP
 Mustek scanners have no protection against exceeding the physical scan
 area height.  That is, if a scan is attempted with a height that
@@ -76,7 +74,7 @@ scanner's exact model name (look at the front and back of the scanner)
 and a debug output to
 .IR sane\-devel@mostang.com .
 You can get the debug output by setting the environment variable
-SANE_DEBUG_MUSTEK to 4 and showing the list of available scanners with
+SANE_DEBUG_MUSTEK to 5 and showing the list of available scanners with
 scanimage \-L . Please send all of it to the mailing list.
 
 .SH "DEVICE NAMES"
@@ -212,6 +210,7 @@ The ScanExpress models have sometimes trouble with high resolution
 color mode. If you encounter sporadic corrupted images (parts duplicated
 or shifted horizontally) kill all other applications before scanning
 and (if sufficient memory is available) disable swapping. 
+
 .SH PARAGON 600 II N
 This backend has support for the Paragon 600 II N parallel port
 scanner.  Note that this scanner comes with its own ISA card that
@@ -221,7 +220,11 @@ connected to the printer parallel port).
 This scanner can be configured by listing the port number
 of the adapter in the mustek.conf file.  Valid port numbers are 0x26b,
 0x2ab, 0x2eb, 0x22b, 0x32b, 0x36b, 0x3ab, 0x3eb.  Pick one that
-doesn't conflict with the other hardware in your computer.
+doesn't conflict with the other hardware in your computer. Put only
+one number on a single line. Example:
+
+.IR 0x3eb
+
 .PP
 Note that for this scanner root privileges are required to access the
 I/O ports.  Thus, either make frontends such as scanimage(1) and

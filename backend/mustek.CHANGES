@@ -1,5 +1,20 @@
 CHANGES for the SANE Mustek backend
 
+2000-07-15
+  * Added MUSTEK_FLAG_LD_NONE for MFS-08000SP and removed warning for
+    this scanner. Added TA support. First report for this device from
+    Roland Koebler.
+  * Changed LD correction system. Some scanners (e.g. the 800 II SP)
+    seem to need different LD correction depending on resolution.
+    Now with LD_NORMAL max_value is checked and correction is only done
+    if it is != 0. Hope this works for all scanners.
+  * Moved the comment after the example port entry in mustek.conf to
+    the next line. Now this line should work.
+  * Updated manpage concerning PP scanners and 600 II N.
+
+2000-06-30
+  * Released backend vesrion 1.0-89
+
 2000-06-30
   * Fixed bug in do_stop. The scan slider didn't return after the scan 
     in some situations.
