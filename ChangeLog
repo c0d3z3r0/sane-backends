@@ -1,3 +1,8 @@
+2000-02-18  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* updated umax backend to 1.0 build 17
+	  (added support for sanei_scsi_open_extended)
+	  for details take a look at backend/umax.CHANGES
+
 2000-02-15  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/tamarack.desc: Updated info on request from Rogier
