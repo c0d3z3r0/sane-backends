@@ -1,3 +1,24 @@
+2000-06-22  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * include/sane/sanei_pa4s2.h sanei/sanei_pa4s2.c Makefile.in 
+	  backend/Makefile.in sanei/Makefile.in: Added interface for
+	  Mustek parallel port scanners (from Jochen Eisinger 
+	  <jochen.eisinger@gmx.net>). This will be used by the Mustek
+	  parallel port backend mustek_pp (coming soon).
+
+	* tools/sane-desc.el backend/template.desc.: Added support for
+	  "interface" column in sane-desc.el. The new keyword is 
+	  ":interface", examples in "template.desc.". All maintainers
+	  should update their *.desc files.
+
+	* backend/mustek.desc abaton.desc agfafocus.desc apple.desc 
+	  dc210.desc dmc.desc qcam.desc ricoh.desc s9036.desc snapscan.desc
+	  tamarack.desc: added interface entry for the Mustek and 
+	  unmaintained backends.
+
+	* backend/abaton.c apple.c qcam.c tamarack.c: fixed sane_close ()
+ 	  bug for the unmaintained backends.
+	
 2000-06-18  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend

@@ -9,7 +9,7 @@
 ;
 
 :backend "mustek"		; name of backend
-:version "1.0-86"		; version of backend
+:version "1.0-87"		; version of backend
 :status :beta			; :alpha, :beta, :stable, :new
 :manpage "sane-mustek"		; name of manpage (if it exists)
 :url "http://hmg.home.pages.de/sane/"
@@ -20,34 +20,56 @@
 :url "http://www.mustek.com/"
 
 :model "Paragon MFS-6000CX"
+:interface "SCSI"
 :comment "3-pass"
 :model "Paragon MFS-12000CX"
+:interface "SCSI"
 :comment "3-pass"
 :model "Paragon MFC-600S"
+:interface "SCSI"
 :model "Paragon 600 II CD"
+:interface "SCSI"
 :model "ScanMagic 600 II SP"
+:interface "SCSI"
 :model "Paragon MFC-800S"
+:interface "SCSI"
 :model "Paragon 800 II SP"
+:interface "SCSI"
 :model "Paragon MFS-6000SP"
+:interface "SCSI"
 :model "Paragon MFS-8000SP"
+:interface "SCSI"
 :model "Paragon MFS-1200SP"
+:interface "SCSI"
 :model "Paragon MFS-12000SP"
+:interface "SCSI"
 :model "ScanExpress 6000SP"
+:interface "SCSI"
 :model "ScanExpress 12000SP"
+:interface "SCSI"
 :model "ScanExpress 12000SP Plus"
+:interface "SCSI"
 :model "Paragon 1200 III SP"
+:interface "SCSI"
 :model "ScanMagic 9636S"
+:interface "SCSI"
 :model "ScanMagic 9636S Plus"
+:interface "SCSI"
 :model "Paragon 1200 A3 Pro"
+:interface "SCSI"
+:comment "Please test!"
 :model "Paragon 600 II N"
-:comment "proprietary interface"
+:interface "Proprietary"
 :mfg "Trust"			; name a manufacturer
 :url "http://www.trust-site.com"
 :model "Imagery 1200 SP"
+:interface "SCSI"
 :comment "Please test!"
 :model "Imagery 4800 SP"
+:interface "SCSI"
 :comment "Please test!"
 :model "SCSI Connect 19200"
+:interface "SCSI"
 :comment "Please test!"
 
 ; :comment and :url specifiers are optional after :mfg, :model, :desc,
