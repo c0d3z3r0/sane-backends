@@ -11,8 +11,7 @@
 :version "0.5"                 ; version of backend
 :status :beta                  ; :alpha, :beta, :stable, :new
 ;
-; Sorry, no manpage yet. Anybody want to write one?
-;:manpage "sane-tamarack"              ; name of manpage (if it exists)
+:manpage "sane-tamarack"             ; name of manpage (if it exists)
 
 :devicetype :scanner
 

@@ -109,7 +109,7 @@ below:
     scanimage              scanimage(1)
     xscanimage	           xscanimage(1)
     saned		   saned(1)
-    xcam		   frontend/xcam.README
+    xcam		   xcam(1)
 
   Backends for scanners:
     Abaton                 sane-abaton(5)
@@ -117,7 +117,7 @@ below:
     AGFA SnapScan          http://www.cs.ualberta.ca/~charter/SnapScan/snapscan.html
     Apple                  sane-apple(5)
     Artec                  sane-artec(5)
-    Avision                http://www.rene.rebe.myokay.net/avision/index.html
+    Avision                sane-avision(5)
     Canon                  doc/canon.README
     Nikon Coolscan         http://www.sema.be/coolscan/
     Epson                  sane-epson(5)
@@ -126,10 +126,10 @@ below:
     Microtek               sane-microtek(5)
     Mikrotek SCSI-2        sane-microtek2(5)
     Mustek                 sane-mustek(5)
-    Ricoh                  no documentation, look at the source
+    Ricoh                  sane-ricoh(5)
     Sharp                  sane-sharp(5)
-    Siemens S9036          no documentation, look at the source
-    Tamarack               no documentation, look at the source
+    Siemens S9036          sane-s9036(5)
+    Tamarack               sane-tamarack(5)
     UMAX                   sane-umax(5)
     
   Backends for digital cameras:

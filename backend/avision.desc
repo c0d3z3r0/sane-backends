@@ -13,7 +13,7 @@
 :url "http://www.rene.rebe.myokay.net/avision/index.html" ; backend's web page
 ;
 ; Sorry, no manpage yet. Anybody want to write one?
-;:manpage "sane-avision"              ; name of manpage (if it exists)
+:manpage "sane-avision"              ; name of manpage (if it exists)
 
 :devicetype :scanner
 
@@ -21,6 +21,7 @@
 :url "http://www.avision.com/"
 
 :model "AV 630 CS"                    ; name models for above-specified mfg.
+:interface "SCSI"
 :comment "1 pass, 1200*600 DPI"       ;
 
 
