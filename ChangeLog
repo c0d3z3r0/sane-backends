@@ -1,3 +1,12 @@
+2000-06-30  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/mustek.* Update to Mustek backend 1.0-89. Fixed "scan 
+	  slider doesn't return to start" bug. Details in
+ 	  backend/mustek.CHANGES.
+
+	* backend/nec.desc backend/dc25.desc backend/m3096g.desc: Added
+	  :interface entries. Updated email adderess.
+
 2000-06-28  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.c Fixed sane_close() - when the scanner still had

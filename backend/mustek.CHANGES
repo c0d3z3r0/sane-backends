@@ -1,5 +1,12 @@
 CHANGES for the SANE Mustek backend
 
+2000-06-30
+  * Fixed bug in do_stop. The scan slider didn't return after the scan 
+    in some situations.
+
+2000-06-28
+  * Released backend version 1.0-88
+
 2000-06-28
   * Changed again linedistance handling for the Paragon 1200SP. This
     time version 1.07 seems to need a special treetment. Even with normal

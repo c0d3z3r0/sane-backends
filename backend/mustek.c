@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 88
+#define BUILD 89
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -328,6 +328,12 @@ scsi_sense_wait_ready (int fd)
       status = sanei_scsi_cmd (fd, scsi_request_sense, 
 			       sizeof (scsi_request_sense), sense_buffer, 
 			       &len);
+      if (status != SANE_STATUS_GOOD)
+	{
+	  DBG(1, "scsi_sense_wait_ready: failed: %s\n", 
+	      sane_strstatus (status));
+	  return status;
+	}
       
       dbgtxt[0] = '\0';
       for (pp = sense_buffer; pp < ( sense_buffer + 4); pp++)
@@ -337,12 +343,6 @@ scsi_sense_wait_ready (int fd)
 	}
       DBG(5, "scsi_sense_wait_ready: sensebuffer: %s\n", dbgtxt);
 
-      if (status != SANE_STATUS_GOOD)
-	{
-	  DBG(1, "scsi_sense_wait_ready: failed: %s\n", 
-	      sane_strstatus (status));
-	  return status;
-	}
       if (!(sense_buffer[1] & 0x01))
 	{
 	  DBG(4, "scsi_sense_wait_ready: ok\n");
@@ -2205,14 +2205,10 @@ start_scan (Mustek_Scanner *s)
 static SANE_Status
 stop_scan (Mustek_Scanner *s)
 {
-  u_int8_t start[6];
-
   DBG(4, "stop_scan\n");
-  memset (start, 0, sizeof (start));
-  start[0] = MUSTEK_SCSI_START_STOP;
-  
-  scsi_sense_wait_ready (s->fd);
-  return  dev_cmd (s, start, sizeof (start), 0, 0);
+  if (s->hw->flags & MUSTEK_FLAG_PRO)
+    scsi_sense_wait_ready (s->fd);
+  return  dev_cmd (s, scsi_start_stop, sizeof (scsi_start_stop), 0, 0);
 
 }
 
