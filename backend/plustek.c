@@ -288,24 +288,19 @@ static SANE_Status close_pipe( Plustek_Scanner *scanner )
 }
 
 /*.............................................................................
+ *
+ */
+static void sig_chldhandler( int signo )
+{
+	DBG( _DBG_PROC, "Child is down (signal=%d)\n", signo );
+}
+
+/*.............................................................................
  * signal handler to kill the child process
  */
-static int pipe_out;
-
 static RETSIGTYPE reader_process_sigterm_handler( int signal )
 {
-	char buffer[10];
-
 	DBG( _DBG_PROC, "reader_process: terminated by signal %d\n", signal );
-
-	/*
-	 * to make sure, that the parent will call it´s reader function !
-	 * I know it´s not very elegant but the best way as long as it is not
-	 * possible to make asynchronous calls to the driver
-	 */
-	if( -1 != pipe_out )
-		write( pipe_out, buffer, 10 );
-
 	_exit( SANE_STATUS_GOOD );
 }
 
@@ -320,9 +315,6 @@ static int reader_process( Plustek_Scanner *scanner, int pipe_fd )
 	struct SIGACTION act;
 
 	DBG( _DBG_PROC, "reader_process started\n" );
-
-	/* set the pipe for the signal handler */
-	pipe_out = pipe_fd;
 
 	/* install the signal handler */
 	memset (&act, 0, sizeof(act));			
@@ -1106,9 +1098,8 @@ SANE_Status sane_control_option( SANE_Handle handle, SANE_Int option,
     			}
 
 				s->opt[OPT_HALFTONE].cap |= SANE_CAP_INACTIVE;
-#if 0
-				s->opt[OPT_DROPOUT].cap  |= SANE_CAP_INACTIVE;
-#endif
+/*				s->opt[OPT_DROPOUT].cap  |= SANE_CAP_INACTIVE;
+ */
 				s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
 
 				if (info != NULL)
@@ -1270,7 +1261,7 @@ SANE_Status sane_start( SANE_Handle handle )
 	cb.ucmd.cInf.ImgDef.wDataType = scanmode;
 
 /*
- * CHECK: what about the 10 bit mode ?
+ * CHECK: what about the 10 bit mode
  */
 	if( COLOR_TRUE48 == scanmode )
 		cb.ucmd.cInf.ImgDef.wBits = OUTPUT_12Bits;
@@ -1418,6 +1409,8 @@ SANE_Status sane_start( SANE_Handle handle )
 		/* don't use exit() since that would run the atexit() handlers */
 		_exit( status );
 	}
+
+	signal( SIGCHLD, sig_chldhandler );
 
 	close(fds[1]);
 	s->pipe = fds[0];
