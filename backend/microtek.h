@@ -74,7 +74,6 @@ enum Mtek_Option
   OPT_EXP_RES,
   OPT_NEGATIVE,         /* -n */
   OPT_SPEED,            /* -v */
-  /*  OPT_FORCE_3PASS,*/
   OPT_SOURCE,           /* -t */
   OPT_PREVIEW,
   OPT_CALIB_ONCE,
@@ -186,7 +185,7 @@ typedef struct Microtek_Info {
 #define MI_ENH_CAP_MIDTONE 0x02  /* can adjust midtone          */
   SANE_Byte enhance_cap;
   SANE_Int max_lookup_size;     /* max. size of gamma LUT            */
-  SANE_Int max_gamma_val;       /* max. value of a gamma LUT element */
+  SANE_Int max_gamma_bit_depth; /* max. bits of a gamma LUT element  */
   SANE_Int gamma_size;          /* size (bytes) of each LUT element  */
   SANE_Byte fast_color_preview; /* allows fast color preview?        */
   SANE_Byte xfer_format_select; /* allows select of transfer format? */
@@ -302,9 +301,11 @@ typedef struct Microtek_Scanner {
   SANE_Bool reversecolors;
   SANE_Bool fastprescan;
   SANE_Int bits_per_color;
-  SANE_Bool gamma_entries;
-  SANE_Bool gamma_entry_size;
-  SANE_Bool gamma_max_entry;
+  SANE_Int gamma_entries;
+  SANE_Int gamma_entry_size;
+  SANE_Int gamma_bit_depth;
+  /*  SANE_Int gamma_max_entry;*/
+  
   SANE_Range gamma_entry_range;
 
   /* ...set by sane_get_parameters  (i.e. parameters specified by options) */
@@ -344,7 +345,6 @@ typedef struct Microtek_Scanner {
   SANE_Int pixel_bpl;   /* bytes per line, pixels  */
   SANE_Int header_bpl;  /* bytes per line, headers */
   SANE_Int ppl;         /* pixels per line         */
-  /*  SANE_Int lines;        lines, left to scan     */
   SANE_Int planes;      /* color planes            */
 
   SANE_Bool doexpansion;

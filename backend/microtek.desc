@@ -1,5 +1,5 @@
 :backend "microtek"
-:version "0.11.0"
+:version "0.12.0"
 :status :beta
 :manpage "sane-microtek" 
 :url "http://www.mir.com/mtek/"
@@ -30,6 +30,8 @@
 :comment "untested (color?)"
 :model "Scanmaker 600G(S)"
 :comment "gray only (see manpage)"
+:model "Color PageWiz"
+:comment "sheet-fed (preliminary)"
 
 :mfg "Agfa"
 :url "http://www.agfa.com/"
@@ -38,3 +40,5 @@
 :model "StudioScan"
 :model "StudioScan II"
 :model "StudioScan IIsi"
+:model "DuoScan"
+:comment "preliminary"

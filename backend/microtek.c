@@ -54,7 +54,7 @@
 
 
 #define MICROTEK_MAJOR 0
-#define MICROTEK_MINOR 11
+#define MICROTEK_MINOR 12
 #define MICROTEK_PATCH 0
 
 #include <stdlib.h>
@@ -110,9 +110,9 @@ static SANE_Bool inhibit_real_calib = SANE_FALSE;
 #define M_TRANS    "Transparency"
 #define M_AUTOFEED "AutoFeeder"
 
-#define M_NONE "None"
+#define M_NONE   "None"
 #define M_SCALAR "Scalar"
-#define M_TABLE "Table"
+#define M_TABLE  "Table"
 
 static SANE_String_Const gamma_mode_list[4] = {
   M_NONE,
@@ -293,7 +293,10 @@ sense_handler (int scsi_fd, u_char *sense, void *arg)
 {
   int *sense_flags = (int *)arg;
   SANE_Status stat;
-  
+
+  DBG(10, "SENSE!  fd = %d\n", scsi_fd);
+  DBG(10, "sense = %02x %02x %02x %02x.\n", 
+            sense[0], sense[1], sense[2], sense[3]);
   switch(sense[0]) {
   case 0x00:
     return SANE_STATUS_GOOD;
@@ -342,8 +345,6 @@ sense_handler (int scsi_fd, u_char *sense, void *arg)
     return SANE_STATUS_IO_ERROR;
   default :
     DBG(10, "sense: unknown error\n");
-    DBG(10, "sense = %02x %02x %02x %02x.\n", 
-            sense[0], sense[1], sense[2], sense[3]);
     return SANE_STATUS_IO_ERROR;
   }
   return SANE_STATUS_GOOD;
@@ -384,23 +385,6 @@ scanning_frame(Microtek_Scanner *ms)
 
   DBG(23, ".scanning_frame...\n");
 
-  /* make sure left < right, top < bottom */
-  /*
-  if (ms->x1 > ms->x2) {
-    x1 = ms->x2;
-    x2 = ms->x1;
-  } else {
-    x1 = ms->x1;
-    x2 = ms->x2;
-  }
-  if (ms->y1 > ms->y2) {
-    y1 = ms->y2;
-    y2 = ms->y1;
-  } else {
-    y1 = ms->y1;
-    y2 = ms->y2;
-  }
-  */
   x1 = ms->x1;
   x2 = ms->x2;
   y1 = ms->y1;
@@ -526,7 +510,7 @@ save_mode_sense(Microtek_Scanner *ms)
   for (i=0; i<10; i++) ms->mode_sense_cache[i] = data[i];
 
   if (DBG_LEVEL >= 192) {
-    int i;  
+    unsigned int i;  
     fprintf(stderr, "SMS: ");
     for (i=0;i<lenp;i++) fprintf(stderr, "%2x ", data[i]);
     fprintf(stderr, "\n");
@@ -559,7 +543,7 @@ compare_mode_sense(Microtek_Scanner *ms, int *match)
     *match = *match && (ms->mode_sense_cache[i] == data[i]);
 
   if (DBG_LEVEL >= 192) {
-    int i;  
+    unsigned int i;  
     fprintf(stderr, "CMS: ");
     for (i=0;i<lenp;i++) fprintf(stderr, "%2x(%2x) ", 
 				 data[i],
@@ -751,7 +735,8 @@ download_gamma(Microtek_Scanner *ms)
 			                        0, 0,    0, 0, 0 };*/
   int i, pl;
   int commsize;
-
+  int bit_depth = 8; /* hard-code for now, should match bpp XXXXXXX */
+  int max_entry;
   SANE_Status status;
 
   DBG(23, ".download_gamma...\n");
@@ -764,9 +749,11 @@ download_gamma(Microtek_Scanner *ms)
     DBG(23, ".download_gamma:  entry size %d?!?!?\n", ms->gamma_entry_size);
     return SANE_STATUS_INVAL; /* XXXXXXXxx */
   }
+
+  max_entry = (1 << bit_depth) - 1;
     
   DBG(23, ".download_gamma:  %d entries of %d bytes, max %d\n",
-      ms->gamma_entries, ms->gamma_entry_size, ms->gamma_max_entry);
+      ms->gamma_entries, ms->gamma_entry_size, max_entry);
   commsize = 10 + (ms->gamma_entries * ms->gamma_entry_size);
   comm = calloc(commsize, sizeof(u_int8_t));
   if (comm == NULL) {
@@ -789,19 +776,24 @@ download_gamma(Microtek_Scanner *ms)
 
   if (!(strcmp(ms->val[OPT_CUSTOM_GAMMA].s, M_TABLE))) {
     /***** Gamma by TABLE *****/
+    int table_shift = (ms->gamma_bit_depth - bit_depth);
+
+    DBG(23, ".download_gamma: by table (%d bpe, %d shift)\n",
+	ms->gamma_bit_depth, table_shift);
+
     if (ms->val[OPT_GAMMA_BIND].w == SANE_TRUE) {
-      /*for (i=0; i<256; i++) 
-       	data[i] = (u_int8_t) ms->gamma_table[0][i];*/
-      for (i=0; i<ms->gamma_entries; i++) 
+      for (i=0; i<ms->gamma_entries; i++) {
+	int val = ms->gray_lut[i] >> table_shift;
 	switch (ms->gamma_entry_size) {
 	case 1:
-	  data[i] = (u_int8_t) ms->gray_lut[i];
+	  data[i] = (u_int8_t) val;
 	  break;
 	case 2:
-	  data[i*2] =  ms->gray_lut[i] & 0xFF;
-	  data[(i*2)+1] = (ms->gray_lut[i]>>8) & 0xFF;
+	  data[i*2] =  val & 0xFF;
+	  data[(i*2)+1] = (val>>8) & 0xFF;
 	  break;
 	}
+      }
       status = sanei_scsi_cmd(ms->sfd, comm, commsize, 0, 0);
     } else {
       pl = 1;
@@ -817,16 +809,15 @@ download_gamma(Microtek_Scanner *ms)
 	  return SANE_STATUS_INVAL; /* XXXXXXXxx */
 	  break;
 	}
-	/*for (i=0; i<256; i++) 
-	  data[i] = (u_int8_t) ms->gamma_table[pl][i];*/
 	for (i=0; i<ms->gamma_entries; i++) {
+	  int val = pl_lut[i] >> table_shift;
 	  switch (ms->gamma_entry_size) {
 	  case 1:
-	    data[i] = (u_int8_t) pl_lut[i];
+	    data[i] = (u_int8_t) val;
 	    break;
 	  case 2:
-	    data[i*2] =  pl_lut[i] & 0xFF;
-	    data[(i*2)+1] =  (pl_lut[i]>>8) & 0xFF;
+	    data[i*2] =  val & 0xFF;
+	    data[(i*2)+1] =  (val>>8) & 0xFF;
 	    break;
 	  }
 	}
@@ -838,10 +829,11 @@ download_gamma(Microtek_Scanner *ms)
     }
   } else if (!(strcmp(ms->val[OPT_CUSTOM_GAMMA].s, M_SCALAR))) {
     /***** Gamma by SCALAR *****/
+    DBG(23, ".download_gamma: by scalar\n");
     if (ms->val[OPT_GAMMA_BIND].w == SANE_TRUE) {
       double gamma = SANE_UNFIX(ms->val[OPT_ANALOG_GAMMA].w);
       for (i=0; i<ms->gamma_entries; i++) {
-	int val =  (ms->gamma_max_entry * 
+	int val =  (max_entry * 
 		    pow((double) i / ((double) ms->gamma_entries - 1.0),
 			1.0 / gamma));
 	switch (ms->gamma_entry_size) {
@@ -866,7 +858,7 @@ download_gamma(Microtek_Scanner *ms)
 	default: gamma = 1.0; break; /* should never happen */
 	}
 	for (i=0; i<ms->gamma_entries; i++) {
-	  int val =  (ms->gamma_max_entry * 
+	  int val =  (max_entry * 
 		      pow((double) i / ((double) ms->gamma_entries - 1.0),
 			  1.0 / gamma));
 	  switch (ms->gamma_entry_size) {
@@ -886,9 +878,13 @@ download_gamma(Microtek_Scanner *ms)
     }
   } else { 
     /***** No custom Gamma *****/
+    DBG(23, ".download_gamma: by default\n");
     for (i=0; i<ms->gamma_entries; i++) {
-      int val =  (((double) i * ms->gamma_max_entry / 
-		   ((double) ms->gamma_entries - 1.0)) + 0.5);
+      /*      int val =  (((double) max_entry * (double) i /
+	      ((double) ms->gamma_entries - 1.0)) + 0.5);     ROUNDING????*/
+      int val =  
+	(double) max_entry * (double) i /
+	((double) ms->gamma_entries - 1.0);		   
       switch (ms->gamma_entry_size) {
       case 1:
 	data[i] = (u_int8_t) val;
@@ -1069,7 +1065,8 @@ init_options(Microtek_Scanner *ms)
 
   sod[OPT_SPEED].name  = SANE_NAME_SCAN_SPEED;
   sod[OPT_SPEED].title = SANE_TITLE_SCAN_SPEED;
-  sod[OPT_SPEED].desc  = SANE_DESC_SCAN_SPEED;
+  /*  sod[OPT_SPEED].desc  = SANE_DESC_SCAN_SPEED;*/
+  sod[OPT_SPEED].desc  = "Scan speed throttle -- higher values are *slower*.";
   sod[OPT_SPEED].type  = SANE_TYPE_INT;
   sod[OPT_SPEED].cap   |= SANE_CAP_ADVANCED;
   sod[OPT_SPEED].unit  = SANE_UNIT_NONE;
@@ -1328,12 +1325,10 @@ init_options(Microtek_Scanner *ms)
   sod[OPT_GAMMA_VECTOR].desc  = SANE_DESC_GAMMA_VECTOR;
   sod[OPT_GAMMA_VECTOR].type  = SANE_TYPE_INT;
   sod[OPT_GAMMA_VECTOR].unit  = SANE_UNIT_NONE;
-  /*  sod[OPT_GAMMA_VECTOR].size  = 256 * sizeof(SANE_Word);*/
   sod[OPT_GAMMA_VECTOR].size  = ms->gamma_entries * sizeof(SANE_Word);
   sod[OPT_GAMMA_VECTOR].cap   |= SANE_CAP_INACTIVE;
   sod[OPT_GAMMA_VECTOR].constraint_type = SANE_CONSTRAINT_RANGE;
   sod[OPT_GAMMA_VECTOR].constraint.range      = &(ms->gamma_entry_range);
-  /*  val[OPT_GAMMA_VECTOR].wa     = &(ms->gamma_table[0][0]); */
   val[OPT_GAMMA_VECTOR].wa     = ms->gray_lut;
 
   sod[OPT_GAMMA_VECTOR_R].name  = SANE_NAME_GAMMA_VECTOR_R;
@@ -1341,12 +1336,10 @@ init_options(Microtek_Scanner *ms)
   sod[OPT_GAMMA_VECTOR_R].desc  = SANE_DESC_GAMMA_VECTOR_R;
   sod[OPT_GAMMA_VECTOR_R].type  = SANE_TYPE_INT;
   sod[OPT_GAMMA_VECTOR_R].unit  = SANE_UNIT_NONE;
-  /*  sod[OPT_GAMMA_VECTOR].size  = 256 * sizeof(SANE_Word);*/
   sod[OPT_GAMMA_VECTOR_R].size  = ms->gamma_entries * sizeof(SANE_Word);
   sod[OPT_GAMMA_VECTOR_R].cap   |= SANE_CAP_INACTIVE;
   sod[OPT_GAMMA_VECTOR_R].constraint_type = SANE_CONSTRAINT_RANGE;
   sod[OPT_GAMMA_VECTOR_R].constraint.range      = &(ms->gamma_entry_range);
-  /*  val[OPT_GAMMA_VECTOR_R].wa     = &(ms->gamma_table[1][0]);*/
   val[OPT_GAMMA_VECTOR_R].wa     = ms->red_lut;
 
   sod[OPT_GAMMA_VECTOR_G].name  = SANE_NAME_GAMMA_VECTOR_G;
@@ -1354,12 +1347,10 @@ init_options(Microtek_Scanner *ms)
   sod[OPT_GAMMA_VECTOR_G].desc  = SANE_DESC_GAMMA_VECTOR_G;
   sod[OPT_GAMMA_VECTOR_G].type  = SANE_TYPE_INT;
   sod[OPT_GAMMA_VECTOR_G].unit  = SANE_UNIT_NONE;
-  /*  sod[OPT_GAMMA_VECTOR].size  = 256 * sizeof(SANE_Word);*/
   sod[OPT_GAMMA_VECTOR_G].size  = ms->gamma_entries * sizeof(SANE_Word);
   sod[OPT_GAMMA_VECTOR_G].cap   |= SANE_CAP_INACTIVE;
   sod[OPT_GAMMA_VECTOR_G].constraint_type = SANE_CONSTRAINT_RANGE;
   sod[OPT_GAMMA_VECTOR_G].constraint.range      = &(ms->gamma_entry_range);
-  /*  val[OPT_GAMMA_VECTOR_G].wa     = &(ms->gamma_table[2][0]);*/
   val[OPT_GAMMA_VECTOR_G].wa     = ms->green_lut;
 
   sod[OPT_GAMMA_VECTOR_B].name  = SANE_NAME_GAMMA_VECTOR_B;
@@ -1367,12 +1358,10 @@ init_options(Microtek_Scanner *ms)
   sod[OPT_GAMMA_VECTOR_B].desc  = SANE_DESC_GAMMA_VECTOR_B;
   sod[OPT_GAMMA_VECTOR_B].type  = SANE_TYPE_INT;
   sod[OPT_GAMMA_VECTOR_B].unit  = SANE_UNIT_NONE;
-  /*  sod[OPT_GAMMA_VECTOR].size  = 256 * sizeof(SANE_Word);*/
   sod[OPT_GAMMA_VECTOR_B].size  = ms->gamma_entries * sizeof(SANE_Word);
   sod[OPT_GAMMA_VECTOR_B].cap   |= SANE_CAP_INACTIVE;
   sod[OPT_GAMMA_VECTOR_B].constraint_type = SANE_CONSTRAINT_RANGE;
   sod[OPT_GAMMA_VECTOR_B].constraint.range      = &(ms->gamma_entry_range);
-  /*  val[OPT_GAMMA_VECTOR_B].wa     = &(ms->gamma_table[3][0]);*/
   val[OPT_GAMMA_VECTOR_B].wa     = ms->blue_lut;
 
   sod[OPT_EXP_RES].name  = "exp_res";
@@ -1395,21 +1384,6 @@ init_options(Microtek_Scanner *ms)
     val[OPT_CALIB_ONCE].w     = SANE_FALSE;
   } else 
     val[OPT_CALIB_ONCE].w     = SANE_TRUE;
-
-
-#if 0
-  sod[OPT_FORCE_3PASS].name  = "force_3pass";
-  sod[OPT_FORCE_3PASS].title = "Force 3-pass";
-  sod[OPT_FORCE_3PASS].desc  = 
-    "Force 3-pass color scans on single-pass scanners";
-  sod[OPT_FORCE_3PASS].type  = SANE_TYPE_BOOL;
-  sod[OPT_FORCE_3PASS].cap   |= SANE_CAP_ADVANCED;
-  /*  if (!(ms->dev->info.modes & MI_MODES_ONEPASS) ||
-      (strcmp(val[OPT_MODE].s, M_COLOR)*/ /* mode != color */ /*))*/ /* || 
-      !(ms->dev->info.does_3pass)) XXXXXXX*/
-    sod[OPT_FORCE_3PASS].cap   |= SANE_CAP_INACTIVE;
-  val[OPT_FORCE_3PASS].w     = SANE_FALSE;
-#endif
 
   /*
   sod[OPT_].name  = SANE_NAME_;
@@ -1476,6 +1450,7 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
   case 0x5f: /* ScanMaker E3      */
   case 0x56: /* ScanMaker A3t     */
   case 0x64: /* ScanMaker E2 (,Vobis RealScan) */
+  case 0x65: /* Color PageWiz */
   case 0xC8: /* ScanMaker 600ZS */
     mi->base_resolution = 300;
     break;
@@ -1490,12 +1465,13 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
     mi->base_resolution = 600;
     break;
   case 0x51: /* ScanMaker 45t     */
+  case 0x5d: /* Agfa DuoScan      */
     mi->base_resolution = 1000;
     break;
   case 0x52: /* ScanMaker 35t     */
     mi->base_resolution = 1828;
     break;
-  case 0x62: /* ScanMaker 35t+     */
+  case 0x62: /* ScanMaker 35t+    */
     mi->base_resolution = 1950;
     break;
   default:
@@ -1531,7 +1507,15 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
   case 0x05:
     mi->max_x = 8.3 * mi->base_resolution - 1;
     mi->max_y = 14.0 * mi->base_resolution - 1;
-    break;
+    break;    
+  case 0x06:
+    mi->max_x = 8.3 * mi->base_resolution - 1;
+    mi->max_y = 13.5 * mi->base_resolution - 1;
+    break;    
+  case 0x07:
+    mi->max_x = 8.0 * mi->base_resolution - 1;
+    mi->max_y = 14.0 * mi->base_resolution - 1;
+    break;    
   case 0x80:
     /* Slide format, size is mm */
     mi->max_x = (35.0 / MM_PER_INCH) * mi->base_resolution - 1;
@@ -1624,6 +1608,7 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
     DBG(4, "parse_inquiry:  E6 falsely denies 1024-byte LUT.\n");
   }
 
+  /*
   switch (result[66] >> 5) {
   case 0x00: mi->max_gamma_val =   255;  mi->gamma_size = 1;  break;
   case 0x01: mi->max_gamma_val =  1023;  mi->gamma_size = 2;  break;
@@ -1631,6 +1616,17 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
   case 0x03: mi->max_gamma_val = 65535;  mi->gamma_size = 2;  break;
   default:
     mi->max_gamma_val =     0;  mi->gamma_size = 0;
+    DBG(15, "parse_inquiry:  Unknown gamma max val!  0x%x\n",
+	result[66]);
+  }
+  */
+  switch (result[66] >> 5) {
+  case 0x00: mi->max_gamma_bit_depth =  8;  mi->gamma_size = 1;  break;
+  case 0x01: mi->max_gamma_bit_depth = 10;  mi->gamma_size = 2;  break;
+  case 0x02: mi->max_gamma_bit_depth = 12;  mi->gamma_size = 2;  break;
+  case 0x03: mi->max_gamma_bit_depth = 16;  mi->gamma_size = 2;  break;
+  default:
+    mi->max_gamma_bit_depth =  0;  mi->gamma_size = 0;
     DBG(15, "parse_inquiry:  Unknown gamma max val!  0x%x\n",
 	result[66]);
   }
@@ -1740,9 +1736,14 @@ dump_inquiry(Microtek_Info *mi, unsigned char *result)
 	  (mi->enhance_cap & MI_ENH_CAP_MIDTONE) ? "yes" : "no ");
   fprintf(stderr, "Digital brightness/offset? %s\n",
 	  (mi->extra_cap & MI_EXCAP_OFF_CTL) ? "yes" : "no");
+  /*
   fprintf(stderr, 
 	  "Gamma Table Size: %d entries of %d bytes (max. value: %d)\n",
 	  mi->max_lookup_size, mi->gamma_size, mi->max_gamma_val);
+  */
+  fprintf(stderr, 
+	  "Gamma Table Size: %d entries of %d bytes (max. depth: %d)\n",
+	  mi->max_lookup_size, mi->gamma_size, mi->max_gamma_bit_depth);
 
   fprintf(stderr, "===== Source Options...\n");
   fprintf(stderr, "Feed type:  %s%s   ADF support? %s\n",
@@ -1865,6 +1866,7 @@ static SANE_Status
 id_microtek(u_int8_t *result, char **model_string)
 {
   SANE_Byte device_type, response_data_format;
+  int forcewarn = 0;
 
   DBG(15, "id_microtek...\n");
   /* check device type first... */
@@ -1884,7 +1886,7 @@ id_microtek(u_int8_t *result, char **model_string)
       !(strncmp("        ", &(result[8]), 8)) ) {
     switch (result[62]) {
     case 0x16 :
-      *model_string = "ScanMaker 600ZS";  break;
+      *model_string = "ScanMaker 600ZS";    break;
     case 0x50 :
       *model_string = "ScanMaker II/IIXE";  break;
     case 0x51 :
@@ -1917,9 +1919,22 @@ id_microtek(u_int8_t *result, char **model_string)
     case 0x66 :
       *model_string = "ScanMaker E6";       break;
     case 0x64 : /* and "Vobis RealScan" */
-      *model_string = "ScanMaker E2"; break;
+      *model_string = "ScanMaker E2";       break;
+    case 0x65:
+      *model_string = "Color PageWiz";      break;
     case 0xC8:
-      *model_string = "ScanMaker 600ZS";  break;
+      *model_string = "ScanMaker 600ZS";    break;
+      /* the follow are listed in the docs, but are otherwise a mystery... */
+    case 0x5D:
+      *model_string = "Agfa DuoScan";  forcewarn = 1; break;
+    case 0x5E:
+      *model_string = "SS3";      forcewarn = 1; break;
+    case 0x60:
+      *model_string = "HR1";      forcewarn = 1; break;
+    case 0x61:
+      *model_string = "45T+";     forcewarn = 1; break;
+    case 0x67:
+      *model_string = "TR3";      forcewarn = 1; break;
     default :
       /* this might be a newer scanner, which uses the SCSI II command set. */
       /* that's unfortunate, but we'll warn the user anyway....             */
@@ -1938,6 +1953,26 @@ id_microtek(u_int8_t *result, char **model_string)
 	}
       }
       return SANE_STATUS_INVAL;
+    }
+    if (forcewarn) {
+      /* force debugging on, to encourage user to send in a report */
+      DBG_LEVEL = 1;
+      fprintf(stderr, "\n\n\n");
+      fprintf(stderr, "========== Congratulations! ==========\n");
+      fprintf(stderr, "Your scanner appears to be supported  \n");
+      fprintf(stderr, "by the microtek backend.  However, it \n");
+      fprintf(stderr, "has never been tried before, and some \n");
+      fprintf(stderr, "parameters are bound to be wrong.     \n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "Please send the scanner inquiry log in\n");
+      fprintf(stderr, "its entirety to mtek-bugs@mir.com and \n");
+      fprintf(stderr, "include a description of the scanner, \n");
+      fprintf(stderr, "including the base optical resolution.\n");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "You'll find complete instructions for \n");
+      fprintf(stderr, "submitting an error/debug log in the  \n");
+      fprintf(stderr, "'sane-microtek' man-page.             \n");
+      fprintf(stderr, "\n\n\n");
     }
     return SANE_STATUS_GOOD;
   }
@@ -2115,8 +2150,7 @@ static void sort_values(int *result, u_int8_t *scanline[], int pix)
 /********************************************************************/
 
 
-static void calc_calibration(Microtek_Scanner *s,
-			     u_int8_t *caldata, u_int8_t *scanline[], 
+static void calc_calibration(u_int8_t *caldata, u_int8_t *scanline[], 
 			     int pixels)
 {
   int i,j;
@@ -2228,7 +2262,7 @@ static SANE_Status do_real_calibrate(Microtek_Scanner *s)
 	i++;
       }
     }
-    calc_calibration(s, combuff + 8, scanline, linewidth - 2);
+    calc_calibration(combuff + 8, scanline, linewidth - 2);
     if ((status = download_calibration(s, combuff, letter, linewidth))
 	!= SANE_STATUS_GOOD) {
       DBG(23, "...download_calibration failed\n");
@@ -2325,6 +2359,7 @@ static SANE_Status finagle_precal(SANE_Handle handle)
   /* if so, calibrate it 
      (either for real, or via a fake scan, with calibration */
   /* (but only bother if you *could* disable calibration) */
+  DBG(23, "finagle_precal...\n");
   if ((s->do_clever_precal) || (s->do_real_calib)) {
     if ((status = compare_mode_sense(s, &match)) != SANE_STATUS_GOOD)
       return status;
@@ -2337,10 +2372,10 @@ static SANE_Status finagle_precal(SANE_Handle handle)
 	 (s->precal_record < MS_PRECAL_EXP_COLOR))) {
       DBG(23, "finagle_precal:  must precalibrate!\n");
       s->precal_record = MS_PRECAL_NONE;
-      if (s->do_real_calib) {  /* do a real calibration if allowed */
+      if (s->do_real_calib) {    /* do a real calibration if allowed */
 	if ((status = do_real_calibrate(s)) != SANE_STATUS_GOOD)
 	  return status;
-      } else {                 /* otherwise do the fake-scan version */
+      } else if (s->do_clever_precal) {/* otherwise do the fake-scan version */
 	if ((status = do_precalibrate(s)) != SANE_STATUS_GOOD)
 	  return status;
       }
@@ -2969,13 +3004,12 @@ sane_open(SANE_String_Const devicename,
     scanner->do_clever_precal = SANE_TRUE;
   } else {
     DBG(23, "sane_open:  All calibration routines disabled.\n");
-    scanner->allow_calibrate = SANE_TRUE; /* actually, wouldn't matter, eh? */
+    scanner->allow_calibrate = SANE_TRUE; 
     scanner->do_real_calib = SANE_FALSE;
     scanner->do_clever_precal = SANE_FALSE;
   }
 
   scanner->onepass = (dev->info.modes & MI_MODES_ONEPASS);
-  /*scanner->useADF = SANE_FALSE; ZZZZZZZZ */
   scanner->allowbacktrack = SANE_TRUE;  /* ??? XXXXXXX */
   scanner->reversecolors = SANE_FALSE;
   scanner->fastprescan = SANE_FALSE;
@@ -2983,13 +3017,14 @@ sane_open(SANE_String_Const devicename,
 
   /* init gamma tables */
   if (dev->info.max_lookup_size) {
-    int j, v;
+    int j, v, max_entry;
     DBG(23, "sane_open:  init gamma tables...\n");
     scanner->gamma_entries = dev->info.max_lookup_size;
     scanner->gamma_entry_size = dev->info.gamma_size;
-    scanner->gamma_max_entry = dev->info.max_gamma_val;
+    scanner->gamma_bit_depth = dev->info.max_gamma_bit_depth;
+    max_entry = (1 << scanner->gamma_bit_depth) - 1;
     scanner->gamma_entry_range.min = 0;
-    scanner->gamma_entry_range.max = scanner->gamma_max_entry;
+    scanner->gamma_entry_range.max = max_entry;
     scanner->gamma_entry_range.quant = 1;
 
     scanner->gray_lut  = calloc(scanner->gamma_entries,
@@ -3012,31 +3047,23 @@ sane_open(SANE_String_Const devicename,
       free(scanner->green_lut);
       free(scanner->blue_lut);
     }
-    /* Oy! -- we still assume that the max. value for an LUT entry
-       is 255 -- i.e. 8-bit values only.    XXXXXXXXX  */
-    /* ok, not any more.... */
     for (j=0; j<scanner->gamma_entries; j += scanner->gamma_entry_size) {
       v = (SANE_Int) 
-	((double) j * (double) scanner->gamma_max_entry /
+	((double) j * (double) max_entry /
 	 ((double) scanner->gamma_entries - 1.0) + 0.5);
       scanner->gray_lut[j] = v;
       scanner->red_lut[j] = v;
       scanner->green_lut[j] = v;
       scanner->blue_lut[j] = v;
     }
-    /*
-    scanner->gamma_entries = MIN(256, dev->info.max_lookup_size);
-    for (j=0; j<scanner->gamma_entries; j++) {
-      scanner->gamma_table[0][j] = j;
-      scanner->gamma_table[1][j] = j;
-      scanner->gamma_table[2][j] = j;
-      scanner->gamma_table[3][j] = j;
-    }
-    */
   } else {
     DBG(23, "sane_open:  NO gamma tables.  (max size = %lu)\n",
 	(u_long)dev->info.max_lookup_size);
     scanner->gamma_entries = 0;
+    scanner->gray_lut  = NULL;
+    scanner->red_lut   = NULL;
+    scanner->green_lut = NULL;
+    scanner->blue_lut  = NULL;
   }
 
   DBG(23, "sane_open:  init pass-time variables...\n");
@@ -3080,12 +3107,15 @@ sane_close (SANE_Handle handle)
   DBG(10, "sane_close...\n");
   /* free malloc'ed stuff (strdup counts too!) */
   free((void *) ms->sod[OPT_MODE].constraint.string_list);
-  /*  free((void *) ms->sod[OPT_RESOLUTION].constraint.range);*/
   free((void *) ms->sod[OPT_SOURCE].constraint.string_list);
   free(ms->val[OPT_MODE].s);
   free(ms->val[OPT_HALFTONE_PATTERN].s);
   free(ms->val[OPT_SOURCE].s);
   free(ms->val[OPT_CUSTOM_GAMMA].s);
+  free(ms->gray_lut);
+  free(ms->red_lut);
+  free(ms->green_lut);
+  free(ms->blue_lut);
   /* remove Scanner from linked list */
   if (first_handle == ms)
     first_handle = ms->next;
@@ -3176,7 +3206,6 @@ sane_control_option (SANE_Handle handle,
     case OPT_ANALOG_GAMMA_B:
     case OPT_EXP_RES:
     case OPT_CALIB_ONCE:
-      /*    case OPT_FORCE_3PASS:*/
       *(SANE_Word *)value = val[option].w;
       return SANE_STATUS_GOOD;
       /* word-array options... */
@@ -3215,7 +3244,6 @@ sane_control_option (SANE_Handle handle,
     case OPT_BR_X:
     case OPT_BR_Y:
     case OPT_RESOLUTION:
-      /*    case OPT_FORCE_3PASS:*/
       if (info)
 	*info |= SANE_INFO_RELOAD_PARAMS;
     case OPT_SPEED:
@@ -3646,13 +3674,9 @@ sane_start_guts (SANE_Handle handle)
   }
   
   if ((status = wait_ready(s)) != SANE_STATUS_GOOD) return end_scan(s, status);
-#if 0
-  do_real_calibrate(s);
-#endif
-#if 1
+
   if ((status = finagle_precal(s)) != SANE_STATUS_GOOD) 
     return end_scan(s, status);
-#endif
 
   if ((status = scanning_frame(s)) != SANE_STATUS_GOOD) return end_scan(s, status);
   if (s->dev->info.source_options & 
@@ -3896,7 +3920,7 @@ sane_exit (void)
   /* free up device list */
   while (first_dev != NULL) {
     next = first_dev->next;
-    free((void *) first_dev->sane.name); 
+    free((void *) first_dev->sane.name);
     free((void *) first_dev->sane.model);
     free(first_dev);
     first_dev = next;
