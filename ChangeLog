@@ -1,3 +1,9 @@
+2000-03-07  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* Makefile.in (lsm) sane.lsm sane-1.0.1.lsm: New target to
+	generate Linux Software Map (LSM) entry from template.  Remove old
+	file.
+	
 2000-03-06  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in configure: New version is 1.0.2.
