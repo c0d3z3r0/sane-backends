@@ -1,3 +1,10 @@
+2000-07-17  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* backend/musteka4s2.desc: Removed. Now that the mustek_pp
+	  backend is part of SANE musteka4s2 is no longer neccessary.
+	  If somebody really wants to use the old musteka4s2 sources
+	  he will find a link on the mustek_pp WWW page.
+
 2000-07-16  Jochen Eisinger <jochen.eisinger@gmx.net>
 
 	* backend/mustek_pp.c: Replaced fgets() with sanei_config_read()
