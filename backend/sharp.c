@@ -46,7 +46,11 @@
    This file implements a SANE backend for Sharp flatbed scanners.  */
 
 /*
-   Version 0.30
+   Version 0.31
+   changes to version 0.30:
+   - support for JX350 added (Thanks to Shuhei Tomita for providind the
+     patch)
+    
    changes to version 0.20
    - support for the proposed extended open function in sanei_scsi.c added
    - support for ADF and FSU (transparency adapter) added
@@ -377,7 +381,8 @@ sense_handler(int fd, u_char *sense_buffer, void *s)
             }
           
         }
-      else if (sdat->model == JX250 || sdat->model == JX330)
+      else if (sdat->model == JX250 || sdat->model == JX330 ||
+	       sdat->model == JX350)
         {
           switch (sense_key)
             {
@@ -1198,7 +1203,8 @@ get_max_scan_size(int fd, SHARP_Device *dev, int mode)
   dev->info.br_x_ranges[mode].quant = 0;
 
   dev->info.tl_y_ranges[mode].min = 0;
-  if (dev->sensedat.model != JX250 || mode != SCAN_WITH_FSU)
+  if ((dev->sensedat.model != JX250 && dev->sensedat.model != JX350) ||
+      mode != SCAN_WITH_FSU)
     dev->info.tl_y_ranges[mode].max = SANE_FIX(PIX_TO_MM(
       (m_subdev.max_y[0] << 24) + (m_subdev.max_y[1] << 16) +
       (m_subdev.max_y[2] << 8) + m_subdev.max_y[3] - 1, dev->info.mud));
@@ -1291,6 +1297,8 @@ attach (const char *devnam, SHARP_Device ** devp)
         sensedat.model = JX610;
       else if (strncmp (inquiry_data + 16, "JX250", 5) == 0)
         sensedat.model = JX250;
+      else if (strncmp (inquiry_data + 16, "JX350", 5) == 0)
+        sensedat.model = JX350;
       else if (   strncmp (inquiry_data + 16, "JX320", 5) == 0
                || strncmp (inquiry_data + 16, "JX325", 5) == 0
                || strncmp (inquiry_data + 16, "JX330", 5) == 0)
@@ -1437,7 +1445,7 @@ attach (const char *devnam, SHARP_Device ** devp)
           get_max_scan_size(fd, dev, SCAN_WITH_FSU);
         }
 
-      if (dev->sensedat.model == JX330)
+      if (dev->sensedat.model == JX330 || dev->sensedat.model == JX350)
         {
           dev->info.xres_range.max = 600;
           dev->info.xres_range.min = 30;
@@ -1768,7 +1776,8 @@ init_options (SHARP_Scanner * s)
   init_string_option(s, SANE_NAME_HALFTONE_PATTERN, SANE_TITLE_HALFTONE_PATTERN,
     SANE_DESC_HALFTONE " (JX-330 only)", halftone_list, OPT_HALFTONE, 0);
 
-  if (s->dev->sensedat.model == JX250 || s->dev->sensedat.model == JX610)
+  if (s->dev->sensedat.model == JX250 || s->dev->sensedat.model == JX350 ||
+      s->dev->sensedat.model == JX610)
     s->opt[OPT_HALFTONE].cap |= SANE_CAP_INACTIVE;
 
   i = 0;
@@ -1874,7 +1883,8 @@ init_options (SHARP_Scanner * s)
 
   /* select resolution */
 #ifdef USE_RESOLUTION_LIST
-  if (s->dev->sensedat.model == JX610 || s->dev->sensedat.model == JX330)
+  if (s->dev->sensedat.model == JX610 || s->dev->sensedat.model == JX330 ||
+      s->dev->sensedat.model == JX350)
     init_string_option(s, "ResolutionList", "ResolutionList", "ResolutionList", 
       resolution_list_jx610, OPT_RESOLUTION_LIST, RESOLUTION_MAX_JX610);
   else
@@ -1979,7 +1989,7 @@ init_options (SHARP_Scanner * s)
     "Edge emphasis", edge_emphasis_list,
     OPT_EDGE_EMPHASIS, 0);
 
-  if (s->dev->sensedat.model == JX250)
+  if (s->dev->sensedat.model == JX250 || s->dev->sensedat.model == JX350)
     s->opt[OPT_EDGE_EMPHASIS].cap |= SANE_CAP_INACTIVE;
 
   /* threshold */
@@ -3099,7 +3109,7 @@ send_binary_gamma_tables (SHARP_Scanner *s)
 static SANE_Status
 send_gamma_tables (SHARP_Scanner *s)
 {
-  if (s->dev->sensedat.model != JX250)
+  if (s->dev->sensedat.model != JX250 && s->dev->sensedat.model != JX350)
     {
       return send_ascii_gamma_tables(s);
     }
@@ -3178,8 +3188,8 @@ s->dev->sensedat.complain_on_adf_error = 1;
      
      NOTE: If you need to decrease this value, remember that s->buffer
      is used in send_ascii_gamma_tables (JX330/JX610) and in 
-     send_binary_g_table (JX250). send_ascii_gamma_tables needs 4106 bytes,
-     and send_binary_g_table needs 522 bytes.
+     send_binary_g_table (JX250/JX350). send_ascii_gamma_tables needs 4106
+     bytes, and send_binary_g_table needs 522 bytes.
   */
   if (s->dev->info.bufsize < 32 * 1024)
     {
@@ -3454,7 +3464,7 @@ s->dev->sensedat.complain_on_adf_error = 1;
   if (s->val[OPT_CUSTOM_GAMMA].w == SANE_FALSE)
     {
 #endif
-      if (s->dev->sensedat.model != JX250)
+      if (s->dev->sensedat.model != JX250 && s->dev->sensedat.model != JX350)
         {
           ss.dtc = 0x03;
           if (strcmp (gamma, GAMMA10) == 0)
@@ -3507,7 +3517,7 @@ s->dev->sensedat.complain_on_adf_error = 1;
         }
 #endif
 
-  if (s->dev->sensedat.model != JX250)
+  if (s->dev->sensedat.model != JX250 && s->dev->sensedat.model != JX350)
     {
       ss.dtc = 0x86;
       ss.dtq = 0x05;
@@ -3590,7 +3600,7 @@ s->dev->sensedat.complain_on_adf_error = 1;
   wp.wdb.rif_padding = (s->reverse * 128) + 0;
   wp.wdb.eletu = (!s->speed << 2) + (s->edge << 6) + (s->lightcolor << 4);
 
-  if (s->dev->sensedat.model == JX250)
+  if (s->dev->sensedat.model == JX250 || s->dev->sensedat.model == JX350)
     {
       wp.wdbx250.threshold_red   = s->val[OPT_THRESHOLD_R].w;
       wp.wdbx250.threshold_green = s->val[OPT_THRESHOLD_G].w;
@@ -4001,7 +4011,7 @@ sane_read (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
     status = sane_read_direct(handle, dst_buf, max_len, len);
   else if (s->image_composition <= 4)
     status = sane_read_shuffled(handle, dst_buf, max_len, len, 0);
-  else if (s->dev->sensedat.model != JX250)
+  else if (s->dev->sensedat.model != JX250 && s->dev->sensedat.model != JX350 )
     status = sane_read_direct(handle, dst_buf, max_len, len);
   else
     status = sane_read_shuffled(handle, dst_buf, max_len, len, 1);
