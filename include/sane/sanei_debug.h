@@ -53,6 +53,4 @@ extern void sanei_debug_max (int level, int max_level, const char *msg, ...);
 # define IF_DBG(x)      x
 #endif /* NDEBUG */
 
-#else
-#  warning "sane/sanei_debug.h included more then once!"
 #endif /* _SANEI_DEBUG_H */

@@ -1,5 +1,27 @@
 CHANGES for the SANE Mustek backend
 
+2000-07-24
+  * Fixed ADF handling (output was mirrored in x direction). Gray and lineart
+    seems to work now. Color and halftone modes look somewhat crazy.
+  * Removed comment about lack of testing of ADFs in manpage. They are
+    tested to work now with most scanner at least basically.
+  * removed braindead test for Pro series concerning gamma table length
+    (discovered by Jan-Erik Karlsson).
+
+2000-07-22
+  * Fixed margin positions of MFS 6000CX and removed warning.
+  * Warning is printed with DBG level 0 again.
+
+2000-07-18
+  * Released backend version 1.0-91
+
+2000-07-18
+  * Removed again MUSTEK_FLAG_LD_NONE for MFS-08000SP. Maybe the automatical
+    detection works now.
+
+2000-07-15
+  * Released backend version 1.0-90
+
 2000-07-15
   * Added MUSTEK_FLAG_LD_NONE for MFS-08000SP and removed warning for
     this scanner. Added TA support. First report for this device from
@@ -13,7 +35,7 @@ CHANGES for the SANE Mustek backend
   * Updated manpage concerning PP scanners and 600 II N.
 
 2000-06-30
-  * Released backend vesrion 1.0-89
+  * Released backend version 1.0-89
 
 2000-06-30
   * Fixed bug in do_stop. The scan slider didn't return after the scan 

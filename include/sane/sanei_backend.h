@@ -18,21 +18,6 @@
 #endif
 #endif /* HAVE_OS2_H */
 
-#ifndef __GLIBC__
-# ifndef u_int8_t
-#  define u_int8_t      u_int8_t
-typedef unsigned char   u_int8_t;
-# endif
-# ifndef u_int16_t
-#  define u_int16_t     u_int16_t
-typedef unsigned short  u_int16_t;
-# endif
-# ifndef u_int32_t
-#  define u_int32_t     u_int32_t
-typedef unsigned int    u_int32_t;
-# endif
-#endif
-
 #ifdef HAVE_SIGPROCMASK
 # define SIGACTION      sigaction
 #else

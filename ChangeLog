@@ -1,3 +1,17 @@
+2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* configure.in configure include/sane/config.h.in 
+	  include/sane/sanei_backend.h: Moved test for u_int* to configure.
+	* include/sane/sanei_debug.h: Remove #warning (Irix compiler doesn't
+	  like this)
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+	  1.0-92. Changed linedistance correction for MFS-8000SP. Fixed 
+	  margin positions and removed warning for MFS 6000CX. Warning is
+ 	  printed in debug level 0 again. Removed test for gamma length. 
+	  Fixed (partly) ADF handling. Man page update. More details in
+	  mustek.CHANGES.
+	* NEWS: updated for new Mustek backend version.
+
 2000-07-20  Peter Kirchgessner <peter@kirchgessner.net>
         * backend/hp.c: use sanei_config_read() instead of fgets
         * backend/hp-scl.c: Dont write chars < 32 to DBG

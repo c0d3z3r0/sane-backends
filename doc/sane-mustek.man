@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "15 Jul 2000"
+.TH sane-mustek 5 "24 Jul 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -304,14 +304,12 @@ sane\-scsi(5)
 David Mosberger and Andreas Czechanowski, SE extensions Andreas
 Bolsch, bug fixes and Pro series extension Henning Meier-Geinitz
 .SH BUGS
-Automatic document feeder support is only tested for Paragon A4
-scanners (due to absence of equipment to test this with other
-scanners).
-
 Scanning with the SCSI adapters supplied by Mustek is very slow at
 high resolutions and wide scanareas. 
 
 Only 1, 8 and 24 bit modes are supported.
+
+Some scanners (e.g. Paragon 1200 A3 Pro) need more testing.
 
 More detailed bug information is available at the Mustek backend
 homepage

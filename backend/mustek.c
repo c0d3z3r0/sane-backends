@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 90
+#define BUILD 92
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -308,7 +308,7 @@ do {						\
 } while (0)
 
 /* Used for Pro series. First value seems to be always 85, second one varies.
-   Firts bit of second value clear == device ready (?) */
+   First bit of second value clear == device ready (?) */
 static SANE_Status
 scsi_sense_wait_ready (int fd)
 {
@@ -920,20 +920,23 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
      name "MFS-06000CX", the other one is "MSF-06000CZ"   */
   else if (strncmp (model_name, "MFS-06000CX", 11) == 0)
     {
-      /* These values are not tested. */
+      /* These values were measured and tested with a Paragon MFS-6000CX
+	 v4.06 */
+      dev->x_range.min = SANE_FIX (0.0);
       dev->x_range.max = SANE_FIX (8.5 * MM_PER_INCH);
+      dev->y_range.min = SANE_FIX (0.0);
       dev->y_range.max = SANE_FIX (13.85 * MM_PER_INCH);
-      dev->dpi_range.max = SANE_FIX (600);
       dev->x_trans_range.min = SANE_FIX (1.0);
-      dev->y_trans_range.min = SANE_FIX (1.0);
-      dev->x_trans_range.max = SANE_FIX (200.0);
-      dev->y_trans_range.max = SANE_FIX (250.0);
+      dev->y_trans_range.min = SANE_FIX (2.0);
+      dev->x_trans_range.max = SANE_FIX (203.0);
+      dev->y_trans_range.max = SANE_FIX (255.0);
+
+      dev->dpi_range.max = SANE_FIX (600);
       /* This version of the MFS-6000CX doesn't seem to need
 	 MUSTEK_FLAG_DOUBLE_RES. I don't know if this is true for
 	 all firmware revisions  */
       dev->flags |= MUSTEK_FLAG_USE_EIGHTS;
       dev->sane.model = "MFS-6000CX";
-      warning = SANE_TRUE;      
     }
   else if (strncmp(model_name, "MSF-06000CZ", 11) == 0)
     {
@@ -998,7 +1001,6 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	 in color mode, otherwise the image is red */
       if (fw_revision == 0x120)
 	dev->flags |= MUSTEK_FLAG_FORCE_GAMMA;
-      /*      dev->flags |= MUSTEK_FLAG_LD_NONE;*/
       
       dev->sane.model = "MFS-8000SP";
     }
@@ -1063,7 +1065,6 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->y_trans_range.max = SANE_FIX (255.0);
 
       dev->dpi_range.max = SANE_FIX (800);
-      dev->flags |= MUSTEK_FLAG_LD_NONE;
       /* At least scanners with firmware 1.20 need a gamma table upload
 	 in color mode, otherwise the image is red */
       if (fw_revision == 0x120)
@@ -1336,7 +1337,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 
   if (warning == SANE_TRUE)
     {
-      DBG(1, "WARNING: Your scanner was detected by the SANE Mustek backend, "
+      DBG(0, "WARNING: Your scanner was detected by the SANE Mustek backend, "
 	  "but\n  it is not fully tested. It may or may not work. Be "
 	  "carefull and read\n  the PROBLEMS file in the sane directory. "
 	  "Please set the debug level of this\n  backend to maximum "
@@ -3444,10 +3445,7 @@ init_options (Mustek_Scanner *s)
   s->val[OPT_CONTRAST].w = 0;
 
   /* gamma */
-  if ((s->hw->flags & MUSTEK_FLAG_PRO) || (s->hw->flags & MUSTEK_FLAG_PRO))
-    gammasize = 256; /* maybe use 4096 later for 12 bit/pixel */
-  else
-    gammasize = 256;
+  gammasize = 256;
   for (i = 0; i < 4; ++i)
     for (j = 0; j < gammasize; ++j)
       s->gamma_table[i][j] = j;
@@ -3629,7 +3627,27 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	    }
 	}
 
-      fwrite (extra, num_lines, s->params.bytes_per_line, fp);
+      if (strcmp (s->val[OPT_SOURCE].s, "Automatic Document Feeder") == 0)
+	{
+	  /* need to revert line direction */
+	  int line_number;
+	  int byte_number;
+	  
+	  DBG(5, "output_data: ADF found, mirroring lines\n");
+	  for (line_number = 0; line_number < num_lines;
+	       line_number++)
+	    {
+	      for (byte_number = bpl - 3;  byte_number >= 0; 
+		   byte_number -= 3)
+		{
+		  fputc (*(extra + line_number * bpl + byte_number), fp); 
+		  fputc (*(extra + line_number * bpl + byte_number + 1), fp); 
+		  fputc (*(extra + line_number * bpl + byte_number + 2), fp); 
+		}
+	    }
+	}
+      else
+	fwrite (extra, num_lines, s->params.bytes_per_line, fp);
     }
   else
     {
@@ -3700,10 +3718,44 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	      ptr = data;
 	      ptr_end = ptr + lines_per_buffer * bpl;
 	      
-	      while (ptr != ptr_end)
-		*ptr++ = ~*ptr;
-	    }    
-	  fwrite (data, lines_per_buffer, bpl, fp);
+	      if (strcmp (s->val[OPT_SOURCE].s, 
+			  "Automatic Document Feeder") == 0)
+		{
+		  while (ptr != ptr_end)
+		    {
+		      *ptr++ = ~*ptr;
+		      /* need to revert bit direction */
+		      *ptr= ((*ptr & 0x80) >> 7) + ((*ptr & 0x40) >> 5)
+			+ ((*ptr & 0x20) >> 3) + ((*ptr & 0x10) >> 1) 
+			+ ((*ptr & 0x08) << 1) + ((*ptr & 0x04) << 3) 
+			+ ((*ptr & 0x02) << 5) + ((*ptr & 0x01) << 7);
+		    }
+		}
+	      else
+		while (ptr != ptr_end)
+		  *ptr++ = ~*ptr;
+	    }
+	  if (strcmp (s->val[OPT_SOURCE].s, "Automatic Document Feeder") == 0)
+	    {
+	      /* need to revert line direction */
+	      int line_number;
+	      int byte_number;
+	      
+	      DBG(5, "output_data: ADF found, mirroring lines\n");
+	      for (line_number = 0; line_number < lines_per_buffer;
+		   line_number++)
+		{
+		  for (byte_number = bpl - 1; byte_number >= 0;
+		       byte_number--)
+		    {
+		      fputc (*(data + line_number * bpl + byte_number), fp); 
+		    }
+		}
+	    }
+	  else
+	    {
+	      fwrite (data, lines_per_buffer, bpl, fp);
+	    }
 	}
     }
   DBG(5, "output_data: end\n");
