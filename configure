@@ -14,7 +14,7 @@ ac_default_prefix=/usr/local
 ac_help="$ac_help
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]"
 ac_help="$ac_help
-  --enable-warnings Turn on tons of compiler warnings (if you're using GCC) [default=yes]"
+  --enable-warnings Turn on tons of compiler warnings (if you are using GCC) [default=yes]"
 ac_help="$ac_help
   --enable-shared[=PKGS]  build shared libraries [default=yes]"
 ac_help="$ac_help
@@ -1481,7 +1481,7 @@ EOF
 fi
 
 for ac_hdr in fcntl.h unistd.h libintl.h libc.h sys/dsreq.h sys/select.h \
-    sys/time.h jconfig.h \
+    sys/time.h jconfig.h linux/videodev.h \
     sys/scanio.h scsi.h sys/scsi.h sys/scsicmd.h sys/scsiio.h \
     bsd/dev/scsireg.h scsi/sg.h /usr/src/linux/include/scsi/sg.h io/cam/cam.h \
     camlib.h os2.h sys/socket.h sys/io.h asm/io.h gscdds.h sys/hw.h \
@@ -4341,6 +4341,15 @@ else
   QCAM=qcam
 fi
 
+if test "${ac_cv_header_linux_videodev_h}" = "no"
+then
+  echo "disabling Video4Linux backend"
+  V4L=
+else
+  echo "enabling Video4Linux backend"
+  V4L=v4l
+fi
+
 if test "${ac_cv_header_sys_socket_h}" = "no"; then
   echo "disabling NET backend"
   NET=
@@ -4550,6 +4559,7 @@ s%@GIMP_LIBS@%$GIMP_LIBS%g
 s%@DC210@%$DC210%g
 s%@PINT@%$PINT%g
 s%@QCAM@%$QCAM%g
+s%@V4L@%$V4L%g
 s%@NET@%$NET%g
 s%@SANED@%$SANED%g
 s%@V_MAJOR@%$V_MAJOR%g
