@@ -1,5 +1,21 @@
 1999-09-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/hp-handle.c backend/hp-option.c backend/hp-option.h
+ 	backend/hp-scl.c backend/hp-scl.h backend/hp-scsi.h backend/hp.c
+ 	backend/hp.desc backend/hp.h doc/sane-hp.man: Updated backend to
+ 	v0.83 from Peter Kirchgessner <peter@kirchgessner.net>.  News:
+	 - Reset scanner before downloading parameters (fixes problem with
+ 	   sleep mode of scanner)
+         - Fix problem with coredump if non-scanner HP SCSI devices are
+ 	   connected (CDR)
+         - Option scan-from-adf replaced by scantype
+ 	   normal/adf/xpa. Transparency adapter scans (XPA) allow scanning
+ 	   with internal light source switched off.
+         - PhotoScanner: Allow scanning of slides/negatives only at
+ 	   multiple of 300 dpi. This fixes problem with preview which
+ 	   scanned at arbitrary resolutions.
+	 - (by Marian Szebenyi): close pipe (coredump on Digital UNIX) 
+	
  	* backend/Makefile.in: Correct install target to also work on
  	platforms where dll endings isn't .so (like HP/UX).  Extract
  	endings from libsane-dll.la.
