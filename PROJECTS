@@ -1,0 +1,37 @@
+Thu Aug  3 21:00:03 CEST 2000
+
+Here is a list of projects that various people have expressed interest
+in.  Before starting working on one of these projects, it may be a
+good idea to get in touch with the relevant people.  (A status of
+"wip" means that it is work-in-progress.)
+
+Frontend:  Status: Contact:
+---------- ------- ----------------------------------------
+xcam	   wip	   David Mosberger
+xscanimage wip	   Tristan Tarrant & David Mosberger
+xsane	   wip	   Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+jscan	   wip	   (Java-based frontend to allow accessing
+		    scanners through web pages, etc)
+		   Jeff Freedman <jsf@hevanet.com>
+		   Guido Muesch <odiug@faho.rwth-aachen.de>
+
+Backend:   Status: Contact:				    available hw:
+--------   ------- ---------------------------------------- -------------
+HP 4200    wip     http://hp4200-backend.sourceforge.net/   HP 4200
+Primax	   wip     http://primax.sourceforge.net/           Colorado Direct 300
+                                                            Colorado Direct 9600 
+                                                            Colorado 1200p 
+                                                            Colorado USB 19200 
+Polaroid   wip	   Dick Bruijn <dick@wau.mis.ah.nl>	    Polaroid SprintScan
+							    35 LE
+EpsPhoto   wanted  Jeff Tranter <tranter@software.Mitel.COM>PhotoPC500 (want)
+Kodak	   wanted  John Kodis <kodis@kodis.jagunet.com>	    Kodak DS-20 (want)
+autoadj	   planned David Mosberger
+		   (Autobrightness/contrast for cameras etc.)
+Logitech   planned Erik Troan <ewt@redhat.com>		    ???
+sgivl      wip     Erik Nygren <nygren@mit.edu>             SGI IndyCam
+ePhoto	   wip (?) Matthew K. Gray <mkgray@mit.edu> [prop]  ePhoto
+
+Misc:		 Status: Contact:
+---------------- ------- --------
+OS/2 support	 wip	 Jeff Freedman <jsf@hevanet.com>
