@@ -1,3 +1,5 @@
+================== feature freeze before v1.0.3 =======================
+	
 2000-07-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* AUTHORS backend/dll.conf backend/Makefile.in backend/mustek_pp.c
