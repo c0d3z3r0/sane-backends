@@ -1,3 +1,19 @@
+2000-07-09  Gerhard Jaeger <g.jaeger@earthling.net>
+
+	* AUTHORS: added myself as maintainer of the Plustek backend
+
+    * README: added Plustek manpage entry
+
+	* backend/plustek.desc: updated description
+
+	* backend/plustek.c backend/plustek.h backend/plustek-share.h 
+	  backend/plustek.conf: added Plustek backend code 
+
+	* backend/Makefile.in doc/Makefile.in backend/dll.conf: 
+	  added plustek entries
+
+	* doc/sane-plustek.man: added manpage for Plustek backend
+
 2000-07-09  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* sanei/sanei_thread.c: Add required include files to get this to
