@@ -100,6 +100,7 @@ typedef struct
   {
     u_int inuse : 1;			/* is this handle in use? */
     u_int scanning : 1;			/* are we scanning? */
+    u_int docancel : 1;                 /* cancel the current scan */
     SANE_Handle handle;			/* backends handle */
   }
 Handle;
@@ -524,7 +525,10 @@ start_scan (Wire *w, int h, SANE_Start_Reply *reply)
 
   reply->status = sane_start (be_handle);
   if (reply->status == SANE_STATUS_GOOD)
-    handle[h].scanning = 1;
+    {
+      handle[h].scanning = 1;
+      handle[h].docancel = 0;
+    }
 
   return fd;
 }
@@ -674,10 +678,13 @@ do_scan (Wire *w, int h, int data_fd)
 	{
 	  DBG(4, "do_scan: processing RPC request on fd %d\n", w->io.fd);
 	  process_request (w);
+          if (handle[h].docancel)
+            break;
 	}
     }
   while (status == SANE_STATUS_GOOD || bytes_in_buf > 0 || status_dirty);
   DBG(2, "do_scan: done, status=%s\n", sane_strstatus (status));
+  handle[h].docancel = 0;
   handle[h].scanning = 0;
 }
 
@@ -854,6 +861,7 @@ process_request (Wire *w)
 	      {
 		sane_cancel (handle[h].handle);
 		handle[h].scanning = 0;
+                handle[h].docancel = 0;
 		syslog (LOG_ERR, "process_request: accept failed! (%s)\n",
 			strerror (errno));
 		return;
@@ -872,6 +880,7 @@ process_request (Wire *w)
 
 	h = decode_handle (w, "cancel");
 	sane_cancel (handle[h].handle);
+        handle[h].docancel=1;
 	sanei_w_reply (w, (WireCodecFunc) sanei_w_word, &ack);
       }
       break;
