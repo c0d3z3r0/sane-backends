@@ -43,9 +43,15 @@
    HP Scanner Control Language (SCL).
 */
 
-static char *hp_backend_version = "0.85";
+static char *hp_backend_version = "0.86";
 /* Changes:
 
+   V 0.86, 12-Feb-2000, PK:
+      - fix gcc warnings
+      - fix problems with bitdepths > 8
+      - allow hp_data_resize to be called with newsize==bufsiz
+        (Jens Heise, <heisbeee@calvados.zrz.TU-Berlin.DE>)
+      - add option enable-image-buffering
    V 0.85, 30-Jan-2000, PK:
       - correct and enhace data widths > 8 (Ewald de Wit  <ewald@pobox.com>)
       - enable data width for all scanners
@@ -165,15 +171,15 @@ sanei_hp_dbgdump (const void * bufp, size_t len)
   int		i;
   FILE *	fp	= stderr;
 
-  for (offset = 0; offset < len; offset += 16)
+  for (offset = 0; offset < (int)len; offset += 16)
     {
       fprintf(fp, " 0x%04X ", offset);
-      for (i = offset; i < offset + 16 && i < len; i++)
+      for (i = offset; i < offset + 16 && i < (int)len; i++)
 	  fprintf(fp, " %02X", buf[i]);
       while (i++ < offset + 16)
 	  fputs("   ", fp);
       fputs("  ", fp);
-      for (i = offset; i < offset + 16 && i < len; i++)
+      for (i = offset; i < offset + 16 && i < (int)len; i++)
 	  fprintf(fp, "%c", isprint(buf[i]) ? buf[i] : '.');
       fputs("\n", fp);
     }
@@ -266,6 +272,7 @@ hp_init_config (HpDeviceConfig *config)
   {
     config->connect = HP_CONNECT_SCSI;
     config->use_scsi_request = 1;
+    config->use_image_buffering = 0;
   }
 }
 
@@ -572,6 +579,10 @@ hp_read_config (void)
             else if (strcmp (arg2, "disable-scsi-request") == 0)
             {
               config->use_scsi_request = 0;
+            }
+            else if (strcmp (arg2, "enable-image-buffering") == 0)
+            {
+              config->use_image_buffering = 1;
             }
             else
             {
