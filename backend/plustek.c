@@ -70,7 +70,7 @@
 # include <lalloca.h>		/* MUST come first for AIX! */
 #endif
 
-#include <sane/config.h>
+#include "sane/config.h"
 #include <lalloca.h>
 
 #include <errno.h>
@@ -85,13 +85,13 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
 
 #define BACKEND_NAME	plustek
-#include <sane/sanei_backend.h>
-#include <sane/sanei_config.h>
+#include "sane/sanei_backend.h"
+#include "sane/sanei_config.h"
 
 #include "plustek.h"
 #include "plustek-share.h"

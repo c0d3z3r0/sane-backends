@@ -53,10 +53,10 @@
    These debug levels can be set using the envirnment variable
    SANE_DEBUG_SANEI_PA4S2 */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #define BACKEND_NAME sanei_pa4s2
-#include <sane/sanei_backend.h>	/* pick up compatibility defs */
+#include "sane/sanei_backend.h"	/* pick up compatibility defs */
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
@@ -89,9 +89,9 @@ inb (u_long port)
 #define IO_SUPPORT_MISSING
 #endif
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_pa4s2.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_pa4s2.h"
 
 
 #ifdef NDEBUG
@@ -137,7 +137,7 @@ static int sanei_pa4s2_dbg_init_called = SANE_FALSE;
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <sane/saneopts.h>
+#include "sane/saneopts.h"
 
 #define PA4S2_MODE_NIB	0
 #define PA4S2_MODE_UNI	1

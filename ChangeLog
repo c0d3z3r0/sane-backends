@@ -1,3 +1,16 @@
+2000-07-31  Henning Meier-Geinitz <hmg@gmx.de>
+        * sanei/sanei_DomainOS.c sanei/sanei_ab306.c sanei/sanei_codec_ascii.c
+ 	  sanei/sanei_codec_bin.c sanei/sanei_config.c sanei/sanei_config2.c
+	  sanei/sanei_constrain_value.c sanei/sanei_init_debug.c 
+	  sanei/sanei_load_values.c sanei/sanei_net.c sanei/sanei_pa4s2.c
+	  sanei/sanei_pio.c sanei/sanei_save_values.c sanei/sanei_scsi.c
+	  sanei/sanei_thread.c sanei/sanei_wire.c sanei/test_wire.c: Changed 
+	  include statements from #include <sane/...> to #include "sane...".
+	* PROBLEMS: Updated Mustek entry.
+	* TODO: Updated some entries that are done.
+	* backend/avision.c backend/plustek.c: Changed include statements from
+ 	  #include <sane/...> to #include "sane...".
+	
 2000-07-30  Peter Kirchgessner <peter@kirchgessner.net>
 
         * backend/hp.desc: Change Parallel to Parport in description

@@ -50,7 +50,7 @@
 
 ********************************************************************************/
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -64,14 +64,14 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <sane/sanei_config.h>
-#include <sane/sanei_backend.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "sane/sanei_config.h"
+#include "sane/sanei_backend.h"
 
-#include <avision.h>
+#include "avision.h"
 
 /* For timeval... */
 #ifdef DEBUG

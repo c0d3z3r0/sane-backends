@@ -1,5 +1,5 @@
 /* sane - Scanner Access Now Easy.
-   Copyright (C) 2000 Yuri Dario
+   Copyright (C) 1997 David Mosberger-Tang
    This file is part of the SANE package.
 
    This program is free software; you can redistribute it and/or
@@ -36,73 +36,93 @@
 
    If you write modifications of your own for SANE, it is your choice
    whether to permit this exception to apply to your modifications.
-   If you do not wish that, delete this exception notice.
-*/
+   If you do not wish that, delete this exception notice.  */
 
 #include "sane/config.h"
 
-#include <stdio.h>
+#include <errno.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#ifdef HAVE_UNISTD_H
-# include <unistd.h>
-#endif
+#include <string.h>
 
-#ifdef HAVE_OS2_H
-#define INCL_DOSPROCESS
-#include <os2.h>
-#endif
+#include "sane/sane.h"
+#include "sane/sanei_wire.h"
+#include "sane/sanei_codec_bin.h"
 
-#include "sane/sanei_thread.h"
-
-/*
- * starts a new thread or process
- * parameters:
- * start        address of reader function
- * arg_list     pointer to scanner data structure
- *
-*/
-int
-sanei_thread_begin( void (*start)(void *arg),
-                    void *arg_list)
+static void
+bin_w_byte (Wire *w, void *v)
 {
-#ifdef HAVE_OS2_H
-   return _beginthread( start, NULL, 64*1024, arg_list);
-#else
-   return fork();
-#endif
+  SANE_Byte *b = v;
+
+  sanei_w_space (w, 1);
+  switch (w->direction)
+    {
+    case WIRE_ENCODE:
+      *w->buffer.curr++ = *b;
+      break;
+
+    case WIRE_DECODE:
+      *b = *w->buffer.curr++;
+      break;
+
+    case WIRE_FREE:
+	break;
+    }
 }
 
-int
-sanei_thread_kill( int pid, int sig)
+static void
+bin_w_string (Wire *w, void *v)
 {
-#ifdef HAVE_OS2_H
-   return DosKillThread( pid);
-#else
-   return kill( pid, sig);
-#endif
+  SANE_Word len;
+  SANE_String *s = v;
+
+  if (w->direction == WIRE_ENCODE)
+    {
+      len = 0;
+      if (*s)
+	len = strlen (*s) + 1;
+    }
+  sanei_w_array (w, &len, v, w->codec.w_byte, 1);
+  if (!len && w->direction == WIRE_DECODE)
+    *s = 0;
 }
 
-int
-sanei_thread_waitpid( int pid, int *stat_loc, int options)
+static void
+bin_w_word (Wire *w, void *v)
 {
-#ifdef HAVE_OS2_H
-   return pid; /* DosWaitThread( (TID*) &pid, DCWW_WAIT);*/
-#else
-   return waitpid( pid, stat_loc, options);
-#endif
+  SANE_Word val, *word = v;
+
+  sanei_w_space (w, 4);
+  switch (w->direction)
+    {
+    case WIRE_ENCODE:
+      val = *word;
+      /* store in bigendian byte-order: */
+      w->buffer.curr[0] = (val >> 24) & 0xff;
+      w->buffer.curr[1] = (val >> 16) & 0xff;
+      w->buffer.curr[2] = (val >>  8) & 0xff;
+      w->buffer.curr[3] = (val >>  0) & 0xff;
+      w->buffer.curr += 4;
+      break;
+
+    case WIRE_DECODE:
+      val = (  ((w->buffer.curr[0] & 0xff) << 24)
+	     | ((w->buffer.curr[1] & 0xff) << 16)
+	     | ((w->buffer.curr[2] & 0xff) <<  8)
+	     | ((w->buffer.curr[3] & 0xff) <<  0));
+      *word = val;
+      w->buffer.curr += 4;
+      break;
+
+    case WIRE_FREE:
+      break;
+    }
 }
 
-int
-sanei_thread_wait( int *stat_loc)
+void
+sanei_codec_bin_init (Wire *w)
 {
-#ifdef HAVE_OS2_H
-   *stat_loc = 0;
-   return -1;  /* return error because I don't know child pid */
-#else
-   return wait( stat_loc);
-#endif
+  w->codec.w_byte = bin_w_byte;
+  w->codec.w_char = bin_w_byte;
+  w->codec.w_word = bin_w_word;
+  w->codec.w_string = bin_w_string;
 }
-

@@ -44,7 +44,7 @@
 # include <lalloca.h>		/* MUST come first for AIX! */
 #endif
 
-#include <sane/config.h>
+#include "sane/config.h"
 #include <lalloca.h>
 
 #include <assert.h>
@@ -175,12 +175,12 @@
 # define USE STUBBED_INTERFACE
 #endif
 
-#include <sane/sanei.h>
-#include <sane/sanei_config.h>
-#include <sane/sanei_scsi.h>
+#include "sane/sanei.h"
+#include "sane/sanei_config.h"
+#include "sane/sanei_scsi.h"
 
 #define BACKEND_NAME	sanei_scsi
-#include <sane/sanei_debug.h>
+#include "sane/sanei_debug.h"
 
 #if USE == DECUNIX_INTERFACE
 static int cam_fd = -1;		/* used for SCSI CAM based interfaces */

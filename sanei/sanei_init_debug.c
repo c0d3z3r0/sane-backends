@@ -38,7 +38,7 @@
    whether to permit this exception to apply to your modifications.
    If you do not wish that, delete this exception notice.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <stdio.h>
@@ -62,7 +62,7 @@
 #endif
 
 #define BACKEND_NAME sanei_debug
-#include <sane/sanei_debug.h>
+#include "sane/sanei_debug.h"
 
 static int global_max_level = 0;
 
