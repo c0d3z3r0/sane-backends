@@ -1,7 +1,11 @@
 1999-11-11  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/microtek2.c backend/microtek2.h backend/microtek2.desc:
+	Updated Microtek2 backend to vpre0.8.161099 from Bernd Schroeder
+	<bernd@aquila.muc.de>
+
 	* backend/canon-* NEWS doc/canon.*: Updated Canon backend to
-	v991108.
+	v991108 from Manuel Panea <mpd@rzg.mpg.de>.
 
 1999-09-14  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
