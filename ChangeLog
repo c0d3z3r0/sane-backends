@@ -1,3 +1,13 @@
+2000-02-19  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.*: Updated desc file with new version number and 
+	  some more supported scanners.
+	  Removed OPT_PREVIEW_RESOLUTION so that the frontend can handle
+	  the preview resolution.
+	  Changed the OPT_RESOLUTION data from a range to a word list, so
+	  that the frontends can display the correct list of available
+	  resolutions.
+
 2000-02-19  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/artec.c: Updated backend version to v0.5.13.  Corrected
