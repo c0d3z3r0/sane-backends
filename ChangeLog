@@ -1,3 +1,9 @@
+2000-08-10  Rene Rebe <rene.rebe@myokay.net>
+	* backend/avision.h: some updates + cleanups
+	* backend/avision.c: use of DB () and sane_config_read ()
+	  general cleanups (sorry for the big commit - I used Emacs auto-ident
+	  for some regions ...)
+	
 2000-08-07  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* README.irix: Removed text about library version problems.
