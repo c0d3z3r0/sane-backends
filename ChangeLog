@@ -1,3 +1,20 @@
+2000-06-25  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * doc/Makefile.in doc/sane-s9036.man doc/sane-tamarack.man 
+	  doc/sane-ricoh.man doc/sane-avision.man doc/xcam.man .cvsignore:
+ 	  Added manpages for these backends and xcam.
+
+	* frontend/xcam.README: removed because manpage now exists.
+
+	* backend/plustek.desc backend/qcam.desc backend/ricoh.desc
+	  backend/s9036.desc backend/tamarack.desc backend/avision.desc
+	  backend/st400.desc: Updated :interface and :manpage information.
+
+	* README: Updated information regarding documentation.
+
+	* backend/tamarack.c: Changed printf(...) to fprintf(stderr,...)
+	  on behalf of the maintainer.
+
 2000-06-23  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc - added :interface information
