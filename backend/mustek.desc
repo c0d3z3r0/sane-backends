@@ -9,7 +9,7 @@
 ;
 
 :backend "mustek"		; name of backend
-:version "0.76"			; version of backend
+:version "0.78"			; version of backend
 :status :beta			; :alpha, :beta, :stable, :new
 :manpage "sane-mustek"		; name of manpage (if it exists)
 :url "http://hmg.home.pages.de/sane/"
@@ -19,30 +19,28 @@
 :mfg "Mustek"			; name a manufacturer
 :url "http://www.mustek.com/"
 
-:model "MFS-6000CX"
+:model "Paragon MFS-6000CX"
 :comment "3-pass"
-:model "MFS-12000CX"
+:model "Paragon MFS-12000CX"
 :comment "3-pass"
-:model "MFC-600S"
-:model "MFC-600CD"
-:model "600 II CD"
+:model "Paragon MFC-600S"
+:model "Paragon MFC-600CD"
+:model "Paragon 600 II CD"
 :model "Paragon 600 II SP"
 :model "ScanMagic 600 II SP"
-:model "MFS-6000SP"
-:model "MFS-8000SP"
-:model "MFC-800S"
-:model "800 II SP"
-:model "MFS-1200SP"
-:model "MFS-12000SP"
-:model "12000SP"
-:model "Paragon 1200 SP"
-:model "ScanExpress 6000 SP"
-:model "ScanExpress 12000 SP"
-:model "ScanExpress 12000 SP Plus"
+:model "Paragon MFC-800S"
+:model "Paragon 800 II SP"
+:model "Paragon MFS-6000SP"
+:model "Paragon MFS-8000SP"
+:model "Paragon MFS-1200SP"
+:model "Paragon MFS-12000SP"
+:model "ScanExpress 6000SP"
+:model "ScanExpress 12000SP"
+:model "ScanExpress 12000SP Plus"
 :model "Paragon 1200 III SP"
 :model "ScanMagic 9636S"
 :comment "Please test!"
-:model "600 II N"
+:model "Paragon 600 II N"
 
 :mfg "Trust"			; name a manufacturer
 :url "http://www.trust-site.com"

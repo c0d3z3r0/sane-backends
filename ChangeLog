@@ -1,3 +1,10 @@
+2000-04-02 Henning Meier-Geinitz <hmg@gmx.de>
+
+        * backend/mustek.*: Update to Mustek backend 0.78. Fixed several
+	small bugs and spelling errors. Adjusted scanner names to Mustek
+        style. Inquiry is even more verbose now. Look at
+        backend/mustek.CHANGES for details.
+      
 2000-03-27  Karl Heinz Kremer <khk@khk.net>
 	* backend/epson.c  backend/epson.desc: Removed
 	  status request for push button. This caused an
