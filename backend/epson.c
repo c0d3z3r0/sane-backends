@@ -16,7 +16,7 @@
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.29 - 2000-06-13"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.30 - 2000-06-28"
 
 /*
    This file is part of the SANE package.
@@ -58,6 +58,9 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-06-28   When closing the scanner device the data that's	
+		still in the scanner, waiting to be transferred
+		is flushed. This fixes the problem with scanimage -T
    2000-06-13   Invert image when scanning negative with TPU,
                 Show film type only when TPU is selected
    2000-06-13   Initialize optical_res to 0 (Dave Hill)
@@ -2720,8 +2723,52 @@ SANE_Status sane_open ( SANE_String_Const devicename, SANE_Handle * handle)
  *
  */
 
-void sane_close ( SANE_Handle handle) {
+void sane_close ( SANE_Handle handle) 
+{
 	Epson_Scanner *s, *prev;
+
+	/*
+	 * Test if there is still data pending from 
+	 * the scanner. If so, then do a cancel
+	 */
+
+	s = (Epson_Scanner *) handle;
+
+	/*
+	 * If the s->ptr pointer is not NULL, then a scan operation
+	 * was started and if s->eof is FALSE, it was not finished.
+	 */
+
+	if (!s->eof && s->ptr != NULL)
+	{
+		u_char * dummy;
+		int len;
+		SANE_Status status;
+
+		/* malloc one line */
+		dummy = malloc (s->params.bytes_per_line);
+		if (dummy == NULL)
+		{
+			DBG (0, "Out of memory\n");
+	        	return;
+		}
+		else
+		{
+
+			/* there is still data to read from the scanner */
+
+			s->canceling = SANE_TRUE;
+			status = sane_read(s, dummy, s->params.bytes_per_line, &len);
+
+			while (!s->eof && 
+				SANE_STATUS_CANCELLED != sane_read(s, dummy, s->params.bytes_per_line, &len))
+			{
+				/* empty body, the while condition does the processing */
+			}
+		}
+	}
+
+
 
 	/* remove handle from list of open handles */
 	prev = 0;
