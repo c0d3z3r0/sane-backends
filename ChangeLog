@@ -48,6 +48,9 @@
 
 2000-07-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* acinclude.m4 configure.in aclocal.m4 configure: New autoconf
+	test SANE_V4L_VERSION.
+
 	* AUTHORS: Added myself as CVS repository maintainer.
 
 	* include/sane/sanei_debug.h sanei/sanei_init_debug.c: Send debug
