@@ -1,3 +1,10 @@
+2000-02-05  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* fixed wrong buffer size handling for old Linux SG drivers
+	  in sanei_scsi.c
+	* updated sane-scsi.man: How to change the buffer size,
+	  if the new Linux SG driver is being used.
+	* fixed a type on sharp.c
+
 2000-02-03  Karl Heinz Kremer <khk@khk.net>
 	* backend/epson.[ch] Reworked the gamma correction stuff
 
