@@ -1,5 +1,8 @@
 2000-07-06  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* configure configure.in: Change "you're" to "you are" to avoid
+	confusing emacs font-lock mode.  Regenerated configure.
+
 	* backend/v4l.c: Fix sane_close() bug.
 
 2000-07-02  Peter Kirchgessner <peter@kirchgessner.net>
