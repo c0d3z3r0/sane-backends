@@ -848,6 +848,7 @@ scan_it (void)
 	      image.x = image.width - 1;
 	      image.y = -1;
 	      if (!advance (&image))
+		status = SANE_STATUS_NO_MEM;
 		goto cleanup;
 	    }
 	}
@@ -886,6 +887,7 @@ scan_it (void)
 		    {
 		      image.data[offset + 3*i] = buffer[i];
 		      if (!advance (&image))
+			status = SANE_STATUS_NO_MEM;
 			goto cleanup;
 		    }
 		  offset += 3*len;
@@ -896,6 +898,7 @@ scan_it (void)
 		    {
 		      image.data[offset + i] = buffer[i];
 		      if ((offset + i) % 3 == 0 && !advance (&image))
+			status = SANE_STATUS_NO_MEM;
 			goto cleanup;
 		    }
 		  offset += len;
@@ -906,6 +909,7 @@ scan_it (void)
 		    {
 		      image.data[offset + i] = buffer[i];
 		      if (!advance (&image))
+			status = SANE_STATUS_NO_MEM;
 			goto cleanup;
 		    }
 		  offset += len;
@@ -963,7 +967,7 @@ pass_fail (int max, int len, SANE_Byte *buffer, SANE_Status status)
     fprintf (stderr, "PASS\n");
 }
 
-static void
+static SANE_Status
 test_it (void)
 {
   int i, len;
@@ -1042,6 +1046,7 @@ test_it (void)
   sane_cancel (device);
   if (image.data)
     free (image.data);
+  return status;
 }
 
 int
@@ -1378,7 +1383,7 @@ List of available devices:", prog_name);
       while (batch && SANE_STATUS_GOOD == status);
     }
   else
-    test_it ();
+    status = test_it ();
 
   sane_close (device);
 
