@@ -106,10 +106,10 @@
  */
 #define _NORMAL_X		216.0
 #define _NORMAL_Y		297.0
-#define _TP_X			((double)$TPAPageWidth/300.0 * MM_PER_INCH)
-#define _TP_Y			((double)$TPAPageHeight/300.0 * MM_PER_INCH)
-#define _NEG_X			((double)$NegativePageWidth/300.0 * MM_PER_INCH)
-#define _NEG_Y			((double)$NegativePageHeight/300.0 * MM_PER_INCH)
+#define _TP_X			((double)_TPAPageWidth/300.0 * MM_PER_INCH)
+#define _TP_Y			((double)_TPAPageHeight/300.0 * MM_PER_INCH)
+#define _NEG_X			((double)_NegativePageWidth/300.0 * MM_PER_INCH)
+#define _NEG_Y			((double)_NegativePageHeight/300.0 * MM_PER_INCH)
 
 /************************ some structures ************************************/
 
