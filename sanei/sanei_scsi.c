@@ -150,7 +150,7 @@
 # define INCL_DOSSEMAPHORES
 # define INCL_DOSMEMMGR
 # include <os2.h>
-# include "srb.h"
+# include "os2_srb.h"
 #elif defined (HAVE_SYS_SCSI_SGDEFS_H)
 # define USE SOLARIS_SG_INTERFACE
 # include <sys/scsi/sgdefs.h>
