@@ -1,3 +1,9 @@
+2000-03-27  Karl Heinz Kremer <khk@khk.net>
+	* backend/epson.c  backend/epson.desc: Removed
+	  status request for push button. This caused an
+	  error on older scanners. Fixed a few typos in
+	  the .desc file and added GT-9000 scanner.
+
 2000-03-23  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* updated umax backend to version 1.0 build 19
 	  for details read backend/umax.CHANGES
