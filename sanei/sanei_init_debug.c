@@ -48,12 +48,15 @@
 #endif
 #include <stdarg.h>
 #include <sys/syslog.h>
+#ifdef HAVE_OS2_H
+#include <sys/types.h>
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 #include <sys/socket.h>
 #endif
 #include <sys/stat.h>
 
-#ifdef __EMX__
+#ifdef HAVE_OS2_H
 # define INCL_DOS
 # include <os2.h>
 #endif
@@ -81,7 +84,7 @@ sanei_init_debug (const char * backend, int * var)
     }
   buf[i] = '\0';
 
-#ifdef __EMX__
+#ifdef HAVE_OS2_H
   if (DosScanEnv (buf, &val))
     val = 0;
 #else
@@ -104,9 +107,11 @@ debug_msg (int level, int max_level, const char *fmt, va_list ap)
 {
   if (max_level >= level)
     {
+#ifndef HAVE_OS2_H
       if ( 1 == isfdtype(fileno(stderr), S_IFSOCK) )
         vsyslog(LOG_DEBUG, fmt, ap);
       else
+#endif
         vfprintf (stderr, fmt, ap);
     }
 }
