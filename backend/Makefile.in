@@ -53,7 +53,8 @@ COMPILE = $(CC) -c $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
 
 PRELOADABLE_BACKENDS = abaton agfafocus apple artec avision canon coolscan \
 	dc25 @DC210@ dmc epson hp m3096g microtek microtek2 mustek @NET@ \
-	@PINT@ pnm @QCAM@ ricoh s9036 sharp snapscan sp15c tamarack umax
+	@PINT@ pnm @QCAM@ ricoh s9036 sharp snapscan sp15c tamarack umax \
+	@V4L@
 ALL_BACKENDS = $(PRELOADABLE_BACKENDS) dll
 
 LIBS = $(addprefix libsane-,$(addsuffix .la,$(ALL_BACKENDS)))
@@ -237,6 +238,7 @@ libsane-tamarack.la: ../sanei/sanei_scsi.lo
 libsane-umax.la: ../sanei/sanei_config2.lo
 libsane-umax.la: ../sanei/sanei_constrain_value.lo
 libsane-umax.la: ../sanei/sanei_scsi.lo
+libsane-v4l2.la: ../sanei/sanei_constrain_value.lo
 
 ifneq ($(DLL_PRELOAD),)
 # need to make dll dependent on all sanei files:
