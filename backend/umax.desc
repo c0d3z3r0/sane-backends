@@ -137,5 +137,10 @@
 :model "ColorPage-HR5 (Pro)"
 :comment "OK, SCSI-ID=KYE ColorPage-HR5"
 
+:mfg "Epson"                      ; another manufacturer...
+:url "http://www.epson.com/"
+:model "Perfection 600"
+:comment "OK, SCSI-ID=EPSON Perfection600"
+
 ; :comment and :url specifiers are optional after :mfg, :model, :desc,
 ;  and at the top-level.

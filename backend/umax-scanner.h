@@ -114,14 +114,16 @@ static char *scanner_str[] =
   "UMAX ",	"Mirage IIse ",
 /*  "UMAX ",	"PL-II ", */
 /*  "UMAX ",	"Power Look 2000 ", */
-/*  "UMAX ",	"Power Look III ", */
+  "UMAX ",	"PowerLook III ",
 /*  "UMAX ",	"Power Look 3000 ", */
   "UMAX ",	"Gemini D-16 ",
   "LinoHell",	"Office ",
   "LinoHell",	"Office2 ",
   "LinoHell",	"SAPHIR2 ",
+/*  "LinoHell",	"SAPHIR4 ", */
   "Nikon ",	"AX-210 ",
   "KYE ",	"ColorPage-HR5 ", 
+  "EPSON ",	"Perfection600 ", 
   "END_OF_LIST"
 };
 

@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 18
+#define BUILD 19
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -455,7 +455,7 @@ static void umax_print_inquiry(Umax_Device *dev)
   DBG_inq_nz(" - shading data/gain uploadable\n", get_inquiry_sc_uploadable_shade(inquiry_block));
   DBG_inq_nz(" - analog gamma correction\n", dev->inquiry_analog_gamma);
   DBG_inq_nz(" - x,y coordinate base\n", get_inquiry_xy_coordinate_base(inquiry_block));
-  DBG_inq_nz("0x62 bit 4\n", get_inquiry_0x62_bit4(inquiry_block));
+  DBG_inq_nz(" - lineart starts with LSB\n", get_inquiry_lineart_order(inquiry_block));
   DBG_inq_nz("0x62 bit 5\n", get_inquiry_0x62_bit5(inquiry_block));
   DBG_inq_nz("0x62 bit 6\n", get_inquiry_0x62_bit6(inquiry_block));
   DBG_inq_nz("0x62 bit 7\n", get_inquiry_0x62_bit7(inquiry_block));
@@ -2188,7 +2188,8 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
         dev->shading_type = SHADING_TYPE_AVERAGE_INVERT;	  /* shading type = average value and invert */
       }
     }
-    else if (!strncmp(product, "Astra 1200S ", 12))
+    else if ( (!strncmp(product, "Astra 1200S ", 12)) ||
+              (!strncmp(product, "Perfection600 ", 14)) )
     {
       dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
     }
@@ -3139,6 +3140,7 @@ static void umax_get_inquiry_values(Umax_Device *dev)
   dev->inquiry_shadow        = 1 - get_inquiry_sc_no_shadow(inquiry_block);
   dev->inquiry_highlight     = 1 - get_inquiry_sc_no_highlight(inquiry_block);
   dev->inquiry_analog_gamma  = get_inquiry_analog_gamma(inquiry_block);
+  dev->inquiry_lineart_order = get_inquiry_lineart_order(inquiry_block);
   dev->inquiry_gamma_dwload  = get_inquiry_gamma_download_available(inquiry_block);
 
   if (get_inquiry_gamma_type_2(inquiry_block) != 0)
@@ -3293,7 +3295,10 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
   dev->row_bufsize = dev->bufsize;
   umax_trim_rowbufsize(dev);								     /* trim bufsize */
 
-  if (dev->bits_per_pixel_code != 1) { bytes = 2; }						  /* >24 bpp */
+  if (dev->bits_per_pixel_code != 1) /* >24 bpp */
+  {
+    bytes = 2;
+  }
 
   DBG(DBG_read,"reading %u bytes in blocks of %u bytes\n", data_left, dev->row_bufsize);
 
@@ -3311,7 +3316,10 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
 
     dev->pixelbuffer = malloc(dev->width_in_pixels * dev->pixelline_max * bytes * 3);
 
-    if (dev->pixelbuffer == NULL) { return -1; }						/* NO MEMORY */
+    if (dev->pixelbuffer == NULL) /* NO MEMORY */
+    {
+      return -1;
+    }
   }
 
   do
@@ -3336,15 +3344,33 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
 
     if (dev->do_color_ordering == 0)							   /* pixel ordering */
     {
+      if ((dev->inquiry_lineart_order) && (dev->colormode == LINEART)) /* lineart with LSB first */
+      {
+       int i,j;
+       int new,old;
+
+        for (i=0; i<data_to_read; i++)
+        {
+          old=dev->buffer[i];    
+          new=0;
+          for (j=0; j<8; j++)  /* reverse bit order of 1 byte */
+          {
+            new = (new << 1) + (old & 1);
+            old = old >> 1;
+          }
+          dev->buffer[i]=new;
+        }
+      }
+
       fwrite(dev->buffer, 1, data_to_read, fp);
     }
     else										    /* line ordering */
     {
-      unsigned char *linesource = dev->buffer;
-      unsigned char *pixelsource;
-      int bytes = 1;
-      int lines;
-      int i;
+     unsigned char *linesource = dev->buffer;
+     unsigned char *pixelsource;
+     int bytes = 1;
+     int lines;
+     int i;
 
       if (dev->bits_per_pixel_code != 1)							  /* >24 bpp */
       {
@@ -3749,6 +3775,10 @@ int sfd;
 
   umax_get_inquiry_values(dev);
   umax_print_inquiry(dev);
+  DBG(DBG_inquiry,"\n");
+  DBG(DBG_inquiry,"==================== end of inquiry ====================\n");
+  DBG(DBG_inquiry,"\n");
+
   sanei_scsi_close(dev->sfd);
   dev->sfd=-1;
 
@@ -3881,6 +3911,7 @@ static SANE_Status init_options(Umax_Scanner *scanner)
 
   scanner->opt[OPT_NUM_OPTS].title = SANE_TITLE_NUM_OPTIONS;
   scanner->opt[OPT_NUM_OPTS].desc  = SANE_DESC_NUM_OPTIONS;
+  scanner->opt[OPT_NUM_OPTS].type  = SANE_TYPE_INT;
   scanner->opt[OPT_NUM_OPTS].cap   = SANE_CAP_SOFT_DETECT;
   scanner->val[OPT_NUM_OPTS].w     = NUM_OPTIONS;
 
@@ -4312,7 +4343,16 @@ static SANE_Status init_options(Umax_Scanner *scanner)
   scanner->opt[OPT_GAMMA_VECTOR].size  = scanner->gamma_length * sizeof(SANE_Word);
 
   scanner->output_range.min   = 0;
-  scanner->output_range.max   = (int) pow(2, bit_depth_list[1]) - 1;
+
+  if (bit_depth_list[1] == 8)
+  {
+    scanner->output_range.max = 255;    /* 8 bits/pixel */
+  }
+  else
+  {
+    scanner->output_range.max = 65535;  /* 9-16 bits/pixel */
+  }
+
   scanner->output_range.quant = 0;
 
   /* red gamma vector */
@@ -4889,13 +4929,16 @@ void sane_close(SANE_Handle handle)
 /* ------------------------------------------------------------ SANE GET OPTION DESCRIPTOR ----------------- */
 
 
-const SANE_Option_Descriptor * sane_get_option_descriptor(SANE_Handle handle, SANE_Int option)
+const SANE_Option_Descriptor *sane_get_option_descriptor(SANE_Handle handle, SANE_Int option)
 {
  Umax_Scanner *scanner = handle;
 
   DBG(DBG_sane_option,"sane_get_option_descriptor %d\n", option);
 
-  if ((unsigned) option >= NUM_OPTIONS) { return 0; }
+  if ((unsigned) option >= NUM_OPTIONS)
+  {
+    return 0;
+  }
 
  return scanner->opt + option;
 }
@@ -5159,10 +5202,12 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
           if (scanner->val[option].w == 8)						       /* 8 bit mode */
           {
             scanner->output_bytes  = 1;							    /* 1 bytes output */
+            scanner->output_range.max = 255;
           }
           else										      /* > 8 bit mode */
           {
             scanner->output_bytes  = 2;							    /* 2 bytes output */
+            scanner->output_range.max = 65535;
           }
 
           if (info)
@@ -5876,12 +5921,12 @@ SANE_Status sane_start(SANE_Handle handle)
       scanner->device->gamma_input_bits_code = 32;
       DBG(DBG_sane_info, "Using 16 bits for gamma input\n");
     }
-    if (scanner->device->inquiry_GIB & 16)						/* 14 bit input mode */
+    else if (scanner->device->inquiry_GIB & 16)						/* 14 bit input mode */
     {
       scanner->device->gamma_input_bits_code = 16;
       DBG(DBG_sane_info, "Using 14 bits for gamma input\n");
     }
-    if (scanner->device->inquiry_GIB & 8)						/* 12 bit input mode */
+    else if (scanner->device->inquiry_GIB & 8)						/* 12 bit input mode */
     {
       scanner->device->gamma_input_bits_code = 8;
       DBG(DBG_sane_info, "Using 12 bits for gamma input\n");
@@ -6413,7 +6458,7 @@ SANE_Status sane_read(SANE_Handle handle, SANE_Byte *buf, SANE_Int max_len, SANE
   if (nread == 0) /* EOF */
   {
     if ( (scanner->device->three_pass == 0) ||
-         (scanner->device->colormode<=RGB_LINEART) ||
+         (scanner->device->colormode <= RGB_LINEART) ||
          (++(scanner->device->three_pass_color) > 3) )
     {
       do_cancel(scanner);

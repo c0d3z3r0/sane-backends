@@ -710,3 +710,22 @@ build-17 -> build-18
 
     * scsi buffer is only reallocated when size has changed
 
+
+build-18 -> build-19
+--------------------
+
+    * added UMAX PowerLook III as supported scanner
+
+    * added EPSON Perfection600 as supporte scanner (is a Astra 1200S)
+
+    * type of option 0 (Option numbers) is set to SANE_TYPE_INT now (undefined before)
+
+    * removed bug that mixed 12 bit and 14/16 bit gamma table when 14 or 16 bit are supported
+      and changed value range of grey custom gamma table:
+      - maximum output value is 255 for 8 bits/pixel
+      - maximum output value is 65535 for 9-16 bits/pixel
+      the custom gamma table does work now with 9-16 bits/pixel output mode
+
+    * added routine that reverses bit order in lineart mode when scanner sends LSB first in lineart
+
+   

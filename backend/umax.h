@@ -293,6 +293,7 @@ typedef struct Umax_Device
   int			inquiry_reverse;				      /* 1 = 1 bit reverse supported */
   int			inquiry_reverse_multi;				  /* 1 = multi bit reverse supported */
   int			inquiry_analog_gamma;				       /* 1 = analog gamma supported */
+  int			inquiry_lineart_order;				     /* 1 = LSB first, 0 = MSB first */
   int			inquiry_gamma_dwload;				     /* 1 = gamma download supported */
   int			inquiry_gamma_DCF;				      /* gamma download curve format */
 
