@@ -21,7 +21,7 @@
 
 
 :devicetype :api                  ; specify a different type
-:desc "Interface to v4l 2 API"    ; describe a non-hardware device
+:desc "Interface to Video For Linux 2 API"    ; describe a non-hardware device
 
 ; :comment and :url specifiers are optional after :mfg, :model, :desc,
 ;  and at the top-level.
