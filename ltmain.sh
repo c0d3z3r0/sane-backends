@@ -2156,7 +2156,7 @@ EOF
         # added by oliver rauch:
         # must stand at this point because dlname has to be unchanged
         # removes "-backendname" from the soname of the backend libs
-        soname=`echo $soname | sed -e "s/libsane-[A-Za-z]*/libsane/g"`
+        soname=`echo $soname | sed -e "s/libsane-[A-Za-z0-9]*/libsane/g"`
 
 	# Do each of the archive commands.
 	if test -n "$export_symbols" && test -n "$archive_expsym_cmds"; then
