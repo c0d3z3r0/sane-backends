@@ -1,3 +1,22 @@
+2000-05-21  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * README: Added quick install. Removed list of supported platforms
+          because it is unknown how accurate it is at the moment. Added 
+          description for --enable-scsibuffersize (partly from Abel
+          Deuring). Removed operating system specific information. See
+          README.* files instead. Added comment to read the PROBLEMS file.
+          Added/changed list of available documentation. Added comment on 
+          possible causes for the frontends not detecting scanners. Added
+          comment on tools directory. Headings should be easier to find now.
+      
+        * README.aix: New file. Extracted from README.
+
+        * README.hp-ux: New file. Extracted from README.
+
+        * README.linux: New file. What is needed to get SCSI scanners to
+          work under Linux. Workaround for Adaptec 1542 users (from Abel
+          Deuring)
+	
 2000-05-18  Henning Meier-Geinitz <hmg@gmx.de>
 	
 	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
