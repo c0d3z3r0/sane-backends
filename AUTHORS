@@ -27,6 +27,7 @@ Backends:
  microtek2:	Bernd Schroeder (*)
  mustek:	Andreas Bolsch, David Mosberger, Andreas Czechanowski and
 		Henning Meier-Geinitz (*)
+ mustek_pp:     Jochen Eisinger (*)
  net:		Andreas Beck and David Mosberger
  pnm:		Andreas Beck, Gordon Matzigkeit, and David Mosberger
  pint:		Gordon Matzigkeit
@@ -85,6 +86,7 @@ Henning Meier-Geinitz <hmg@gmx.de>
 Ingo Schneider <schneidi@informatik.tu-muenchen.de>
 Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
 Jeff Freedman <jsf@hevanet.com>
+Jochen Eisinger <jochen.eisinger@gmx.net>
 Karl Anders Øygard <karlo@opera.no>
 Karl Heinz Kremer <khk@khk.net>
 Kazuhiro Sasayama <kaz@hypercore.co.jp>
