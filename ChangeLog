@@ -1,3 +1,12 @@
+2000-06-25  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+	  1.0-87. Fixed gamma correction for 1200 A3 Pro. Fixed dependancy
+ 	  of mustek.h on sane-backends.h. Fixed debug output bug in 
+	  fix_linedistance_se. Updated documentation and mustek.conf.
+
+	* README: Added v4l and fixed typo.
+
 2000-06-25  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc - Changed Parallel to Parport

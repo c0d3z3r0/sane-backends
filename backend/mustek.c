@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 86
+#define BUILD 87
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -1329,7 +1329,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 
   if (warning == SANE_TRUE)
     {
-      DBG(0, "WARNING: Your scanner was detected by the SANE Mustek backend, "
+      DBG(1, "WARNING: Your scanner was detected by the SANE Mustek backend, "
 	  "but\n  it is not fully tested. It may or may not work. Be "
 	  "carefull and read\n  the PROBLEMS file in the sane directory. "
 	  "Please set the debug level of this\n  backend to maximum "
@@ -1835,8 +1835,8 @@ calibration_pro (Mustek_Scanner *s)
   if (status != SANE_STATUS_GOOD)
     return status;
 
-  s->hw->cal.buffer = (u_int8_t *) malloc (s->hw->cal.bytes *
-					   s->hw->cal.lines);
+  s->hw->cal.buffer = (unsigned char *) malloc (s->hw->cal.bytes *
+						s->hw->cal.lines);
   if (!s->hw->cal.buffer)
     {
       DBG(1, "calibration_pro: failed to malloc %d bytes for buffer\n",
@@ -2056,14 +2056,14 @@ gamma_correction (Mustek_Scanner *s, int color_code)
       return dev_cmd (s, gamma, 6, 0, 0);
     }
 
-  if (((s->mode & MUSTEK_MODE_LINEART) || (s->mode & MUSTEK_MODE_HALFTONE) )
+  if (((s->mode & MUSTEK_MODE_LINEART) || (s->mode & MUSTEK_MODE_HALFTONE))
        && !(s->hw->flags & MUSTEK_FLAG_PRO))
     {
       DBG(5, "gamma_correction: nothing to do in lineart mode -- exiting\n");
       return SANE_STATUS_GOOD;
     }
 
-  if (!s->val[OPT_CUSTOM_GAMMA].w)
+  if ((!s->val[OPT_CUSTOM_GAMMA].w) && (!(s->hw->flags & MUSTEK_FLAG_PRO)))
     {
       /* Do we need to upload a gamma table even if the user didn't select
 	 this option? Some scanners need this work around. */
@@ -2105,7 +2105,8 @@ gamma_correction (Mustek_Scanner *s, int color_code)
       else /* lineart */
 	{
 	  gamma[2] = 128 - 127 * SANE_UNFIX(s->val[OPT_BRIGHTNESS].w) / 100.0; 
-	  gamma[9] = 0x80; /* grayscale */
+	  gamma[9] = 0x80; /* grayscale/lineart */
+	  DBG(5, "gamma_correction: sending brightness information\n");
 	}
     }
   else
@@ -3003,8 +3004,8 @@ fix_line_distance_se (Mustek_Scanner *s, int num_lines, int bpl,
 		      ++ptr;
 		    }
 		}
-	      DBG(5, "fix_line_distance_se: color: %d; raw bytes: %d; "
-		  "out bytes: %d\n",  s->ld.color, ptr - ptr_start, 
+	      DBG(5, "fix_line_distance_se: saved: color: %d; raw bytes: %d; "
+		  "out bytes: %d\n", color, ptr - ptr_start, 
 		  s->params.pixels_per_line);
 	      ptr = ptr_start + bpc;
 	    }

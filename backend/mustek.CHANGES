@@ -1,7 +1,25 @@
 CHANGES for the SANE Mustek backend
 
+2000-06-25
+  * updated manpage concerning parport and USB scanners
+  * added example for 600 II N to mustek.conf 
+
+2000-06-22
+  * fixed debug output bug in fix_linedistance_se (found by Jan-Erik Karlsson)
+
+2000-06-21
+  * fixed dependancy of mustek.h on sane-backends.h
+
+2000-06-19
+  * Fixed gamma correction in lineart mode for Paragon 1200 A3
+
+2000-06-18
+  * Released backend version 1.0-86
+
 2000-06-18
   * added enlarging x resolution for Paragon 1200 A3 Pro
+  * Paragon 1200 A3 PRO is fully functional now. Thanks to Heinrich Falk, who
+    borrowed me this device.
 
 2000-06-17
   * added calibration for Paragon 1200 A3 Pro (only dummy, doesn't work yet)
