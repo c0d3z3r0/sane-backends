@@ -1,3 +1,8 @@
+2000-07-25  Peter Kirchgessner <peter@kirchgessner.net>
+
+        * backend/hp.c hp-scl.c hp-option.c hp-handle.c hp-accessor.c
+          remove inline stuff
+
 2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* configure.in configure include/sane/config.h.in 
