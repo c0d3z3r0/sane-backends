@@ -1,3 +1,15 @@
+2000-01-25: Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* frontend/scanimage.c: minor modifications to the new batch mode
+	  If an error occurs in batch mode, the corresponding output file
+	  is now deleted. (Should make post-processing easier, because
+	  otherwise we would have an empty output file every time the
+	  ADF is empty or paper is jammed.)
+
+2000-01-25: Kazuya Fukuda <fukuda@avm.nhe.nec.co.jp> and
+            Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* backend/sharp.c: Fix of possible segfault in sane_init
+	* backend/sharp.conf: contains now a complete sample configuration
+
 2000-01-25  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* frontend/scanimage.c: Return SANE_STATUS_NO_MEM if advance()
