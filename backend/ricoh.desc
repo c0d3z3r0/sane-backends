@@ -20,8 +20,10 @@
 :url "http://www.ricoh.com/"
 
 :model "Ricoh IS50"                ; name models for above-specified mfg.
+:interface "SCSI"
 :comment "?"
 
 :model "Ricoh IS60"                ; name models for above-specified mfg.
+:interface "SCSI"
 :comment "?"
 

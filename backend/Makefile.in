@@ -249,6 +249,7 @@ libsane-dll.la libsane.la: ../sanei/sanei_scsi.lo
 libsane-dll.la libsane.la: ../sanei/sanei_wire.lo
 libsane-dll.la libsane.la: ../sanei/sanei_ab306.lo
 libsane-dll.la libsane.la: ../sanei/sanei_pio.lo
+libsane-dll.la libsane.la: ../sanei/sanei_pa4s2.lo
 endif
 
 depend:

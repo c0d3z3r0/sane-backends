@@ -9,4 +9,5 @@
 :mfg "Siemens"                 ; name a manufacturer
 :url "http://www.siemens.com/"
 :model "9036 Flatbed scanner"  ; name models for above-specified mfg.
+:interface "SCSI"
 ; :comment ""
