@@ -1,3 +1,11 @@
+2000-07-11  Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
+
+    * backend/st400.c, backend/st400.conf, backend/st400.h,
+      doc/sane-st400.man: new files
+    * backend/st400.desc: updated information
+    * README, backend/Makefile.in, doc/Makefile.in: added st400 backend
+    * AUTHORS: added myself as maintainer of st400 backend
+	
 2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
 
     * doc/sane-hp.man: Updated manual page (scantype --> scan source)
