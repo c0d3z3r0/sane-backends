@@ -184,7 +184,7 @@ sanei_hp_device_support_probe (HpScsi scsi)
 
  memset (&(info->sclsupport[0]), 0, sizeof (info->sclsupport));
 
- for (k = 0; k < sizeof (sclprobe) / sizeof (sclprobe[0]); k++)
+ for (k = 0; k < (int)(sizeof (sclprobe) / sizeof (sclprobe[0])); k++)
  {
    inqid = SCL_INQ_ID(sclprobe[k])-HP_SCL_INQID_MIN;
    sclsupport = &(info->sclsupport[inqid]);
@@ -252,7 +252,7 @@ sanei_hp_device_probe (enum hp_device_compat_e *compat, HpScsi scsi)
     last_device = NULL;
   }
   *compat = 0;
-  for (i = 0; i < sizeof(probes)/sizeof(probes[0]); i++)
+  for (i = 0; i < (int)(sizeof(probes)/sizeof(probes[0])); i++)
     {
       DBG(1,"probing %s\n",probes[i].model);
 

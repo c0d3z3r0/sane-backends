@@ -108,6 +108,7 @@ typedef struct
 {
   HpConnect connect;
   hp_bool_t use_scsi_request;
+  hp_bool_t use_image_buffering;
 } HpDeviceConfig;
 
 #define HP_SCL_INQID_MIN   10306
@@ -144,6 +145,15 @@ typedef struct
 } HpDeviceInfo;
 
 HpDeviceInfo *sanei_hp_device_info_get (const char *dev_name);
+
+typedef struct
+{
+  int lines;
+  int bytes_per_line;
+  int bits_per_channel;
+  hp_bool_t mirror_vertical;
+  hp_bool_t invert;
+} HpProcessData;
 
 /* hp-scl.c */
 #if INT_MAX > 30000

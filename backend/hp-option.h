@@ -240,6 +240,7 @@ SANE_Status sanei_hp_optset_control (HpOptSet this, HpData data,
 SANE_Status sanei_hp_optset_guessParameters (HpOptSet this, HpData data,
                                SANE_Parameters * p);
 enum hp_scanmode_e sanei_hp_optset_scanmode (HpOptSet this, HpData data);
+int sanei_hp_optset_data_width (HpOptSet this, HpData data);
 hp_bool_t sanei_hp_optset_isImmediate (HpOptSet this, int optnum);
 hp_bool_t sanei_hp_optset_mirror_vert (HpOptSet this, HpData data, HpScsi scsi);
 HpScl sanei_hp_optset_scan_type (HpOptSet this, HpData data);

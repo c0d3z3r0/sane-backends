@@ -1,4 +1,4 @@
-.TH sane-hp 5 "30-January 2000"
+.TH sane-hp 5 "12-February 2000"
 .IX sane-hp
 .SH NAME
 sane-hp - SANE backend for HP ScanJet scanners
@@ -97,8 +97,9 @@ keeps a device name apply just to the most recently mentioned device.
 .PP
 Supported options are
 .BR connect-scsi ,
+.BR connect-device
 and
-.BR connect-device .
+.BR enable-image-buffering .
 
 Option
 .B connect-scsi
@@ -111,6 +112,11 @@ Option
 specifies that the scanner is connected to the system by a special
 device. Input/output is performed by read()/write()-operations
 on the device. This option must be used for HP ScanJet Plus.
+
+Option
+.B enable-image-buffering
+stores the scanned image in memory before passing it to the frontend. Could be
+used in case of forward/backward moving scanner.
 .PP
   A sample configuration file is shown below:
 .PP

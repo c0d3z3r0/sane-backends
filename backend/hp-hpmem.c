@@ -61,7 +61,7 @@ struct hp_alloc_s
     hp_byte_t	buf[1];
 };
 
-static Alloc  head[] = {{ head, head }};
+static Alloc  head[] = {{ head, head, {0} }};
 
 #define DATA_OFFSET	  (head->buf - (hp_byte_t *)head)
 #define VOID_TO_ALLOCP(p) ((Alloc *)((hp_byte_t *)(p) - DATA_OFFSET))

@@ -56,9 +56,8 @@ const char *sanei_hp_scsi_model	     (HpScsi this);
 const char *sanei_hp_scsi_vendor     (HpScsi this);
 const char *sanei_hp_scsi_devicename (HpScsi this);
 
-SANE_Status sanei_hp_scsi_pipeout    (HpScsi this, int outfd, size_t count,
-                                      int mirror, int bytes_per_line,
-                                      int bits_per_channel, hp_bool_t invert);
+SANE_Status sanei_hp_scsi_pipeout    (HpScsi this, int outfd,
+                                      HpProcessData *pdescr);
 
 SANE_Status sanei_hp_scl_calibrate   (HpScsi scsi);
 SANE_Status sanei_hp_scl_startScan   (HpScsi scsi, HpScl scl);
