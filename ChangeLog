@@ -1,3 +1,11 @@
+2000-07-02  Peter Kirchgessner <peter@kirchgessner.net>
+
+        * backend/hp.desc added interface entries
+
+        * backend/hp.c, backend/hp-handle.c
+          ADF-support for ScanJet IIp
+          Return error SANE_STATUS_NO_DOCS if no paper in ADF
+
 2000-06-30  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* backend/mustek.* Update to Mustek backend 1.0-89. Fixed "scan 
