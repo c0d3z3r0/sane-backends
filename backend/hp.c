@@ -43,9 +43,12 @@
    HP Scanner Control Language (SCL).
 */
 
-static char *hp_backend_version = "0.86";
+static char *hp_backend_version = "0.87";
 /* Changes:
 
+   V 0.87, 28-Jun-2000, PK:
+      - ADF-support for ScanJet IIp
+      - Return error SANE_STATUS_NO_DOCS if no paper in ADF
    V 0.86, 12-Feb-2000, PK:
       - fix gcc warnings
       - fix problems with bitdepths > 8
