@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.8 Date 26-Jan-2000
+   Version 0.1.9 Date 29-Jan-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,10 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-01-29   fixed core dump with xscanimage by moving the gamma
+		curves to the standard interface (no longer advanced)
+   		Removed pragma pack() from source code to make it 
+		easier to compile on non-gcc compilers (KHK)
    2000-01-26   fixed problem with resolution selection when using the
 		resolution list in xsane (KHK)
    2000-01-25	moved the section where the device name is assigned 
@@ -63,6 +67,8 @@
 		this is not yet available via the UI (Christian Bucher)
    2000-01-24	Removed C++ style comments '//' (KHK)
 */
+
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.9 - 2000-01-29"
 
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
@@ -573,16 +579,10 @@ max_string_size (const SANE_String_Const strings[])
   return max_size;
 }
 
-
-#if 1
-
-#pragma	pack(1)
-
 typedef struct {
 	u_char	code;
 	u_char	status;
 	u_short	count;
-
 	u_char	buf [ 1];
 
 } EpsonHdrRec, * EpsonHdr;
@@ -615,10 +615,6 @@ typedef struct {
 	u_char	buf [ 4];
 
 } EpsonDataRec, * EpsonData;
-
-#pragma	pack()
-
-#endif
 
 /*
 //
@@ -1276,6 +1272,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	char * str;
 	struct Epson_Device * dev;
 
+	DBG(1, "%s\n", SANE_EPSON_VERSION);
+
 /*
 //  set dummy values.
 */
@@ -1929,7 +1927,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR].desc  = SANE_DESC_GAMMA_VECTOR;
 
 		s->opt[ OPT_GAMMA_VECTOR].type = SANE_TYPE_INT;
-		s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_ADVANCED;
+		/* s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -1943,7 +1941,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_R].desc  = SANE_DESC_GAMMA_VECTOR_R;
 
 		s->opt[ OPT_GAMMA_VECTOR_R].type = SANE_TYPE_INT;
-		s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_ADVANCED;
+		/* s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_R].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_R].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_R].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -1957,7 +1955,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_G].desc  = SANE_DESC_GAMMA_VECTOR_G;
 
 		s->opt[ OPT_GAMMA_VECTOR_G].type = SANE_TYPE_INT;
-		s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_ADVANCED;
+		/* s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_G].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_G].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_G].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -1971,7 +1969,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_B].desc  = SANE_DESC_GAMMA_VECTOR_B;
 
 		s->opt[ OPT_GAMMA_VECTOR_B].type = SANE_TYPE_INT;
-		s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_ADVANCED;
+		/* s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_B].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_B].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_B].constraint_type = SANE_CONSTRAINT_RANGE;
