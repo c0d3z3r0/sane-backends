@@ -1,3 +1,9 @@
+1999-09-12  Petter Reinholdtsen <pere@td.org.uit.no>
+
+ 	* backend/Makefile.in: Correct install target to also work on
+ 	platforms where dll endings isn't .so (like HP/UX).  Extract
+ 	endings from libsane-dll.la.
+
 1999-09-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* tools/find-scanner.c: Checks (Linux only so far) for SCSI
