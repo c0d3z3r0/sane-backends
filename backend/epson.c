@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.20 Date 19-Mar-2000
+   Version 0.1.21 Date 27-Mar-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,7 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-03-27	Disable request for push button status
    2000-03-22   Removed free() calls to static strings to remove
 		compile warnings. These were introduced to apparently
 		fix an OS/2 bug. It now turned out that they are not
@@ -701,7 +702,7 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 		const unsigned char * s = buf;
 
 		for( k = 0; k < buf_size; k++) {
-			DBG( 250, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
+			DBG( 125, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
 		}
 	}
 #endif
@@ -776,7 +777,7 @@ static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_St
 		const unsigned char * s = buf;
 
 		for( k = 0; k < n; k++) {
-			DBG( 255, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
+			DBG( 127, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
 	 	}
 	}
 #endif
@@ -1876,7 +1877,7 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 //
 */
 
-#if 1
+#if 0
 	{
 		u_char * buf;
 		EpsonHdr head;
