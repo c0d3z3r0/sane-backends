@@ -235,7 +235,7 @@ static u_char depths12[MD_NUM_MODES] =	{12, 1, 12, 1};
 #include <snapscan-sources.c>
 
 /* Remove comment from following line to enable USB instead of SCSI */
-// #include "snapscan-usb.c"
+/* #include "snapscan-usb.c" */
 
 static size_t max_string_size(SANE_String_Const strings[]);
 
@@ -2634,6 +2634,12 @@ SANE_Status sane_get_select_fd (SANE_Handle h, SANE_Int * fd)
 
 /*
  * $Log$
+ * Revision 1.1.1.1.2.3  2000/07/17 21:37:28  hmg
+ * 2000-07-17  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/snapscan.c backend/snapscan-scsi.c: Replace C++ comment
+ * 	  with C comment.
+ *
  * Revision 1.1.1.1.2.2  2000/07/13 04:47:46  pere
  * New snapscan backend version dated 20000514 from Steve Underwood.
  *

@@ -52,7 +52,7 @@
 /* scanner scsi commands */
 
 /* Remove comment from following line to use USB instead of SCSI */
-// #include "snapscan-usb.h" 
+/* #include "snapscan-usb.h" */
 
 /* a sensible sense handler, courtesy of Franck;
    the last argument is expected to be a pointer to the associated
@@ -928,6 +928,12 @@ static SANE_Status wait_scanner_ready (SnapScan_Scanner *pss)
 
 /*
  * $Log$
+ * Revision 1.1.2.3  2000/07/17 21:37:27  hmg
+ * 2000-07-17  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/snapscan.c backend/snapscan-scsi.c: Replace C++ comment
+ * 	  with C comment.
+ *
  * Revision 1.1.2.2  2000/07/13 04:47:44  pere
  * New snapscan backend version dated 20000514 from Steve Underwood.
  *
