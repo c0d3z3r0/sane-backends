@@ -1,3 +1,13 @@
+2000-02-11  Chris Pinkham <cpinkham@infi.net>
+
+	* backend/artec.c backend/artec.h: Updated backend to version 0.5.11.
+	  Removed mono_adjust function which handled bit offset in 1bpp modes,
+	  this is now handled by forcing all scans to be wide enough to fill a
+	  full byte.  Reinserted code to set brightness on A6000C model as this
+	  appears to be the only model that accepts that setting.  Bug-fixes
+	  for ADF & Transparency option settings.
+	* backend/artec.desc: updated backend version information.
+
 2000-02-11  Karl Heinz Kremer <khk@khk.net>
 	* backend/epson.c - Fixed default scan source when option equipment 
 	  is installed.  The default is now always "Flatbed". 
