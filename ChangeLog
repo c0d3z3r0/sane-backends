@@ -1,3 +1,8 @@
+2000-07-07  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* include/sane/sanei_debug.h sanei/sanei_init_debug.c: Send debug
+	messages to syslog if stderr is a socket.
+
 2000-07-06  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure configure.in: Change "you're" to "you are" to avoid
