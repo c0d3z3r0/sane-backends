@@ -1,3 +1,11 @@
+2000-07-18  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* configure.in configure include/sane/config.h.in lib/Makefile.in
+	lib/getenv.c lib/isfdtype.c lib/vsyslog.c
+	sanei/sanei_init_debug.c: OS/2's getenv() is useless, OS/2,
+	Solaris and AIX is missing isfdtype() and AIX is missing
+	vsyslog().  Implement replacement functions.
+
 2000-07-17  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* backend/snapscan.c backend/snapscan-scsi.c: Replace C++ comment 
