@@ -38,29 +38,35 @@
 
    If you write modifications of your own for SANE, it is your choice
    whether to permit this exception to apply to your modifications.
-   If you do not wish that, delete this exception notice.  */
+   If you do not wish that, delete this exception notice.  
+
+   This file implements a SANE backend for Mustek and some Trust flatbed
+   scanners with SCSI or proprietary interface.  */
+
 #ifndef mustek_h
 #define mustek_h
 
 #include <sys/types.h>
 
 /* flag values: */
-#define MUSTEK_FLAG_SINGLE_PASS	(1 << 0)	/* single-pass scanner? */
-#define MUSTEK_FLAG_ADF		(1 << 1)	/* automatic document feeder */
-#define MUSTEK_FLAG_ADF_READY	(1 << 2)	/* paper present */
-#define MUSTEK_FLAG_TA		(1 << 3)	/* transparency adapter */
-#define MUSTEK_FLAG_USE_EIGHTS	(1 << 4)	/* use 1/8" lengths */
-#define MUSTEK_FLAG_LD_FIX	(1 << 5)	/* need line-distance fix? */
-#define MUSTEK_FLAG_LD_MFS	(1 << 6)	/* MFS line-distance corr? */
-#define MUSTEK_FLAG_LD_NONE	(1 << 7)	/* no line-distance corr */
-#define MUSTEK_FLAG_LD_N1	(1 << 8)	/* LD corr for N-type v1 */
-#define MUSTEK_FLAG_LD_N2	(1 << 9)	/* LD corr for N-type v2 */
-#define MUSTEK_FLAG_LINEART_FIX	(1 << 10)	/* lineart fix/hack */
-#define MUSTEK_FLAG_N		(1 << 11)	/* N-type scanner (non SCSI) */
-#define MUSTEK_FLAG_SE		(1 << 12)	/* ScanExpress model */
-#define MUSTEK_FLAG_DOUBLE_RES  (1 << 13)       /* MSF-06000CZ res. encoding */
-#define MUSTEK_FLAG_FORCE_GAMMA (1 << 14)       /* force gamma table upload */
-#define MUSTEK_FLAG_ENLARGE_X   (1 << 15)       /* need to enlarge x-res for SE ? */
+#define MUSTEK_FLAG_SINGLE_PASS	(1 << 0)   /* single-pass scanner? */
+#define MUSTEK_FLAG_ADF		(1 << 1)   /* automatic document feeder */
+#define MUSTEK_FLAG_ADF_READY	(1 << 2)   /* paper present */
+#define MUSTEK_FLAG_TA		(1 << 3)   /* transparency adapter */
+#define MUSTEK_FLAG_USE_EIGHTS	(1 << 4)   /* use 1/8" lengths */
+#define MUSTEK_FLAG_LD_FIX	(1 << 5)   /* need line-distance fix? */
+#define MUSTEK_FLAG_LD_MFS	(1 << 6)   /* MFS line-distance corr? */
+#define MUSTEK_FLAG_LD_NONE	(1 << 7)   /* no line-distance corr */
+#define MUSTEK_FLAG_LD_N1	(1 << 8)   /* LD corr for N-type v1 */
+#define MUSTEK_FLAG_LD_N2	(1 << 9)   /* LD corr for N-type v2 */
+#define MUSTEK_FLAG_LINEART_FIX	(1 << 10)  /* lineart fix/hack */
+#define MUSTEK_FLAG_N		(1 << 11)  /* N-type scanner (non SCSI) */
+#define MUSTEK_FLAG_SE		(1 << 12)  /* ScanExpress model */
+#define MUSTEK_FLAG_DOUBLE_RES  (1 << 13)  /* MSF-06000CZ res. encoding */
+#define MUSTEK_FLAG_FORCE_GAMMA (1 << 14)  /* force gamma table upload */
+#define MUSTEK_FLAG_ENLARGE_X   (1 << 15)  /* need to enlarge x-res */
+#define MUSTEK_FLAG_PRO         (1 << 16)  /* Professional series model */
+
 
 /* source values: */
 #define MUSTEK_SOURCE_FLATBED	0
@@ -68,9 +74,11 @@
 #define MUSTEK_SOURCE_TA	2
 
 /* mode values: */
-#define MUSTEK_MODE_MULTIBIT	(1 << 0)	/* one-bit vs multi-bit */
-#define MUSTEK_MODE_COLOR	(1 << 1)	/* grayscale vs color */
-#define MUSTEK_MODE_HALFTONE	(1 << 2)	/* use dithering? */
+#define MUSTEK_MODE_LINEART	(1 << 0)	/* grayscale 1 bit / pixel */
+#define MUSTEK_MODE_GRAY	(1 << 1)	/* grayscale 8 bits / pixel */
+#define MUSTEK_MODE_COLOR	(1 << 2)	/* color 24 bits / pixel */
+#define MUSTEK_MODE_HALFTONE	(1 << 3)	/* use dithering */
+#define MUSTEK_MODE_GRAY_FAST   (1 << 4)        /* Pro series fast grayscale */
 
 enum Mustek_Option
   {
@@ -102,6 +110,7 @@ enum Mustek_Option
     OPT_GAMMA_VECTOR_R,
     OPT_GAMMA_VECTOR_G,
     OPT_GAMMA_VECTOR_B,
+    OPT_QUALITY_CAL,
     OPT_HALFTONE_DIMENSION,
     OPT_HALFTONE_PATTERN,
 
@@ -132,11 +141,12 @@ typedef struct Mustek_Device
     int gamma_length;		
     /* values actually used by scanner, not necessarily the desired! */
     int bpl, lines;
-    /* what is needed for calibration */
+    /* what is needed for calibration (ScanExpress and Pro series)*/
     struct
       {
         int bytes;
         int lines;
+	u_int8_t *buffer;
       }
     cal;    
     /* current and maximum buffer size of the scanner */

@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "07 May 2000"
+.TH sane-mustek 5 "18 Jun 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -29,6 +29,8 @@ ScanExpress 6000SP
 .br
 ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, ScanMagic 9636S, 9636S Plus
 .br
+Paragon 1200 A3 Pro
+.br
 Paragon 600 II N
 .br
 Trust Imagery 1200 SP
@@ -42,7 +44,8 @@ Trust SCSI Connect 19200
 More details can be found on the Mustek backend homepage 
 .IR http://hmg.home.pages.de/sane/.
 .PP
-Don't mix up MFS and ScanExpress models! They're completely different.
+Don't mix up MFS (Paragon) and ScanExpress models! They're completely
+different.
 .PP
 Note that most of the above scanners come with a SCSI interface.  The
 only non-SCSI scanner that has some support at this point is the 600
@@ -291,7 +294,7 @@ export SANE_DEBUG_MUSTEK=4
 sane\-scsi(5)
 .SH AUTHOR
 David Mosberger and Andreas Czechanowski, SE extensions Andreas
-Bolsch, various bug fixes Henning Meier-Geinitz
+Bolsch, bug fixes and Pro series extension Henning Meier-Geinitz
 .SH BUGS
 Automatic document feeder support is only tested for Paragon A4
 scanners (due to absence of equipment to test this with other
@@ -299,6 +302,8 @@ scanners).
 
 Scanning with the SCSI adapters supplied by Mustek is very slow at
 high resolutions and wide scanareas. 
+
+Only 1, 8 and 24 bit modes are supported.
 
 More detailed bug information is available at the Mustek backend
 homepage
