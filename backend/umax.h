@@ -2,7 +2,7 @@
 
 /* umax.h - headerfile for SANE-backend for umax scanners
   
-   (C) 1997-1998 Oliver Rauch
+   (C) 1997-2000 Oliver Rauch
 
    This program is free software; you can redistribute it and/or
    modify it under the terms of the GNU General Public License as
@@ -271,6 +271,16 @@ typedef struct Umax_Device
   int			inquiry_cbhs;						    /* 50, 255, 255+autoexp. */
   int			inquiry_cbhs_min;					   /* minimum value for cbhs */
   int			inquiry_cbhs_max;					   /* maximum value for cbhs */
+  int			inquiry_contrast_min;					      /* minimum value for c */
+  int			inquiry_contrast_max;					      /* maximum value for c */
+  int			inquiry_brightness_min;					      /* minimum value for b */
+  int			inquiry_brightness_max;					      /* maximum value for b */
+  int			inquiry_threshold_min;					      /* minimum value for t */
+  int			inquiry_threshold_max;					      /* maximum value for t */
+  int			inquiry_highlight_min;					      /* minimum value for h */
+  int			inquiry_highlight_max;					      /* maximum value for h */
+  int			inquiry_shadow_min;					      /* minimum value for s */
+  int			inquiry_shadow_max;					      /* maximum value for s */
 
   int			inquiry_quality_ctrl;						    /* 1 = supported */
   int			inquiry_preview;						    /* 1 = supported */

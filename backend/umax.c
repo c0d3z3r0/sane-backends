@@ -4,7 +4,7 @@
 
    umax.c 
 
-   (C) 1997-1999 Oliver Rauch
+   (C) 1997-2000 Oliver Rauch
 
    This file is part of the SANE package.
 
@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 12
+#define BUILD 14
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -157,7 +157,7 @@ in ADF mode this is done often:
 
 /* ------------------------------------------------------------ DEFINITIONS -------------------------------- */
 
-#define P_200_TO_255(per) SANE_UNFIX((per + 100) * 255/200 )
+#define P_200_TO_255(per) ( (SANE_UNFIX(per) + 100) * 255/200 )
 #define P_100_TO_255(per) SANE_UNFIX(per * 255/100 )
 #define P_100_TO_254(per) 1+SANE_UNFIX(per * 254/100 )
 
@@ -231,8 +231,8 @@ enum
 
 static const SANE_Int pattern_dim_list[] =
 {
-  8, /* # of elements */
-  0, 2, 3, 4, 5, 6, 7, 8
+  5, /* # of elements */
+  2, 4, 6, 8, 12
 };
 
 static const SANE_Range u8_range =
@@ -525,7 +525,7 @@ static void umax_print_inquiry(Umax_Device *dev)
 
   /* 0x6a */
   if (dev->inquiry_len<=0x6a) {return;}
-  DBG_inq_nz("built-in halftone patterns.................:\n", get_inquiry_halftones_supported(inquiry_block));
+  DBG_inq_nz("built-in halftone patterns:\n", get_inquiry_halftones_supported(inquiry_block));
   DBG_inq_nz("built-in halftone pattern size ............: 2x2\n",get_inquiry_halftones_2x2(inquiry_block));
   DBG_inq_nz("built-in halftone pattern size ............: 4x4\n",get_inquiry_halftones_4x4(inquiry_block));
   DBG_inq_nz("built-in halftone pattern size ............: 6x6\n",get_inquiry_halftones_6x6(inquiry_block));
@@ -1228,8 +1228,9 @@ static int umax_give_scanner(Umax_Device *dev)
 /* ------------------------------------------------------------ UMAX SEND GAMMA DATA ----------------------- */
 
 
-static void umax_send_gamma_data(Umax_Device *dev, void *data, int color)
+static void umax_send_gamma_data(Umax_Device *dev, void *gamma_data, int color)
 {
+ unsigned char *data = gamma_data;
  unsigned char *dest;
  int length;
  SANE_Status status;
@@ -1259,7 +1260,9 @@ static void umax_send_gamma_data(Umax_Device *dev, void *data, int color)
 
       set_DCF0_gamma_color(dest, 0, DCF0_gamma_color_gray);				        /* grayscale */
       if ( (dev->colormode == RGB) && (dev->three_pass != 0) )				     /* 3 pass color */
-      { set_DCF0_gamma_color(dest, 0,  dev->three_pass_color); }			        /* set color */
+      {
+        set_DCF0_gamma_color(dest, 0,  dev->three_pass_color);					/* set color */
+      }
 
       dest = dest + 2;
       memcpy(dest, data, 1024);								/* copy data */
@@ -1304,9 +1307,11 @@ static void umax_send_gamma_data(Umax_Device *dev, void *data, int color)
 
     memcpy(dest, gamma_DCF1.cmd, gamma_DCF1.size);
 
-    set_DCF1_gamma_color(dest, DCF0_gamma_color_gray);					        /* grayscale */
+    set_DCF1_gamma_color(dest, DCF1_gamma_color_gray);					        /* grayscale */
     if ( (dev->colormode == RGB) && (dev->three_pass != 0) )				     /* 3 pass color */
-    { set_DCF1_gamma_color(dest,  dev->three_pass_color); }				        /* set color */
+    {
+      set_DCF1_gamma_color(dest,  dev->three_pass_color);					/* set color */
+    }
 
     dest = dest + 2;
     memcpy(dest, data, 256);									/* copy data */
@@ -1329,9 +1334,13 @@ static void umax_send_gamma_data(Umax_Device *dev, void *data, int color)
     { set_DCF2_gamma_color(dest, dev->three_pass_color); }				        /* set color */
 
     if (color == 1)
-    { set_DCF2_gamma_lines(dest, DCF2_gamma_one_line); }
+    {
+      set_DCF2_gamma_lines(dest, DCF2_gamma_one_line);
+    }
     else
-    { set_DCF2_gamma_lines(dest, DCF2_gamma_three_lines); }
+    {
+      set_DCF2_gamma_lines(dest, DCF2_gamma_three_lines);
+    }
 
     set_DCF2_gamma_input_bits(dest, dev->gamma_input_bits_code);
     set_DCF2_gamma_output_bits(dest, dev->bits_per_pixel_code);
@@ -1396,11 +1405,13 @@ static void umax_send_data(Umax_Device *dev, void *data, int size, int datatype)
 /* ------------------------------------------------------------ UMAX SEND HALFTONE PATTERN ----------------- */
 
 
+#ifndef UMAX_HIDE_UNUSED
 static void umax_send_halftone_pattern(Umax_Device *dev, void *data, int size)
 {
   DBG(DBG_proc,"send_halftone_pattern\n");
   umax_send_data(dev, data, size*size, S_datatype_halftone);
 }
+#endif
 
 
 /* ------------------------------------------------------------ UMAX SEND SHADING DATA  -------------------- */
@@ -1437,7 +1448,7 @@ static int umax_read_data(Umax_Device *dev, size_t length, int datatype)
   status = sanei_scsi_cmd(dev->sfd, sread.cmd, sread.size, dev->buffer, &length);
   if (status)
   {
-    DBG(DBG_error, "umax_read_data(DCF=2): command returned status %s\n", sane_strstatus(status));
+    DBG(DBG_error, "umax_read_data: command returned status %s\n", sane_strstatus(status));
     return -1;
   }  
 
@@ -2132,6 +2143,10 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
         dev->shading_type = SHADING_TYPE_AVERAGE_INVERT;	  /* shading type = average value and invert */
       }
     }
+    else if (!strncmp(product, "Astra 1200S ", 12))
+    {
+//      dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
+    }
     else if (!strncmp(product, "Astra 2400S ", 12))
     {
       DBG(DBG_warning,"setting up special options for %s\n", product);
@@ -2215,9 +2230,7 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
     {
       DBG(DBG_error0,"ATTENTION: using test options for %s\n", product);
       DBG(DBG_error0," - changing inquiry data for UMAX S-12G\n");
-      set_inquiry_color_order(dev->buffer, IN_color_ordering_line_w_ccd);
-      DBG(DBG_error0," - activating inversion of shading data\n");
-      dev->shading_type = SHADING_TYPE_AVERAGE_INVERT;		  /* shading type = average value and invert */
+      set_inquiry_sc_halftone(dev->buffer, 1);
     }
 #endif
 
@@ -2313,6 +2326,7 @@ static int umax_identify_scanner(Umax_Device *dev)
         set_inquiry_sc_adf(dev->buffer, get_inquiry_scanmode(dev->buffer));	/* automatic document feeder available ? */
 
         set_inquiry_length(dev->buffer,inq_data.inquiry_len); 
+        umax_correct_inquiry(dev,vendor,product,version);
 
         return 0;										       /* ok */
       }
@@ -2465,13 +2479,9 @@ static int umax_check_values(Umax_Device *dev)
   {
     dev->scale_y = 2;
    }
-  else if (dev->y_resolution > dev->relevant_optical_res / 2)
-  {
-    dev->scale_y = 1;
-  }
   else
   {
-    dev->scale_y = 0.5;
+    dev->scale_y = 1;
   }
 
 
@@ -2585,17 +2595,17 @@ static int umax_check_values(Umax_Device *dev)
 
   /* ----------------------------- cbhs-range ----------------------------- */
 
-  dev->threshold   = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->threshold , dev->inquiry_cbhs_max);
-  dev->contrast    = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->contrast  , dev->inquiry_cbhs_max);
-  dev->brightness  = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->brightness, dev->inquiry_cbhs_max);
+  dev->threshold   = umax_cbhs_correct(dev->inquiry_threshold_min,  dev->threshold , dev->inquiry_threshold_max);
+  dev->contrast    = umax_cbhs_correct(dev->inquiry_contrast_min,   dev->contrast  , dev->inquiry_contrast_max);
+  dev->brightness  = umax_cbhs_correct(dev->inquiry_brightness_min, dev->brightness, dev->inquiry_brightness_max);
 
-  dev->highlight_r = umax_cbhs_correct(dev->inquiry_cbhs_min+1, dev->highlight_r, dev->inquiry_cbhs_max);
-  dev->highlight_g = umax_cbhs_correct(dev->inquiry_cbhs_min+1, dev->highlight_g, dev->inquiry_cbhs_max);
-  dev->highlight_b = umax_cbhs_correct(dev->inquiry_cbhs_min+1, dev->highlight_b, dev->inquiry_cbhs_max);
+  dev->highlight_r = umax_cbhs_correct(dev->inquiry_highlight_min, dev->highlight_r, dev->inquiry_highlight_max);
+  dev->highlight_g = umax_cbhs_correct(dev->inquiry_highlight_min, dev->highlight_g, dev->inquiry_highlight_max);
+  dev->highlight_b = umax_cbhs_correct(dev->inquiry_highlight_min, dev->highlight_b, dev->inquiry_highlight_max);
 
-  dev->shadow_r    = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->shadow_r, dev->inquiry_cbhs_max-1);
-  dev->shadow_g    = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->shadow_g, dev->inquiry_cbhs_max-1);
-  dev->shadow_b    = umax_cbhs_correct(dev->inquiry_cbhs_min, dev->shadow_b, dev->inquiry_cbhs_max-1);
+  dev->shadow_r    = umax_cbhs_correct(dev->inquiry_shadow_min, dev->shadow_r, dev->inquiry_shadow_max-1);
+  dev->shadow_g    = umax_cbhs_correct(dev->inquiry_shadow_min, dev->shadow_g, dev->inquiry_shadow_max-1);
+  dev->shadow_b    = umax_cbhs_correct(dev->inquiry_shadow_min, dev->shadow_b, dev->inquiry_shadow_max-1);
 
   if (dev->shadow_r >= dev->highlight_r) { dev->shadow_r = dev->highlight_r-1; }
   if (dev->shadow_g >= dev->highlight_g) { dev->shadow_g = dev->highlight_g-1; }
@@ -2612,6 +2622,10 @@ static int umax_check_values(Umax_Device *dev)
     }
   }
 
+  /* always set calibration lines because we also need this value if the scanner
+     requeires calibration by driver */
+  dev->calib_lines = dev->inquiry_max_calib_lines;
+
   if (dev->inquiry_quality_ctrl == 0)
   {
     if (dev->quality)
@@ -2622,8 +2636,10 @@ static int umax_check_values(Umax_Device *dev)
   }
   else
   {
-    dev->calib_lines = dev->inquiry_max_calib_lines;
-    if (dev->preview != 0) { dev->quality = 0; }	   /* do not use quality calibration in preview mode */
+    if (dev->preview != 0)
+    {
+      dev->quality = 0; /* do not use quality calibration in preview mode */
+    }
   }
 
   /* --------------------------- lamp intensity control ------------------- */
@@ -2977,8 +2993,16 @@ static void umax_get_inquiry_values(Umax_Device *dev)
 
   if (dev->cbhs_range == IN_CBHS_50)
   {
-    dev->inquiry_cbhs_min = 78;
-    dev->inquiry_cbhs_max = 178;
+    dev->inquiry_contrast_min   = 103;	      /* minimum value for c */
+    dev->inquiry_contrast_max   = 153;	      /* maximum value for c */
+    dev->inquiry_brightness_min = 78;	      /* minimum value for b */
+    dev->inquiry_brightness_max = 178;	      /* maximum value for b */
+    dev->inquiry_threshold_min  = 78;	      /* minimum value for t */
+    dev->inquiry_threshold_max  = 178;	      /* maximum value for t */
+    dev->inquiry_highlight_min  = 1;	      /* minimum value for h */
+    dev->inquiry_highlight_max  = 50;	      /* maximum value for h */
+    dev->inquiry_shadow_min     = 0;	      /* minimum value for s */
+    dev->inquiry_shadow_max     = 49;	      /* maximum value for s */ 
   }
 
   get_inquiry_vendor( (char *)inquiry_block, dev->vendor);  dev->vendor[8]  ='\0';
@@ -3127,14 +3151,26 @@ static void umax_get_inquiry_values(Umax_Device *dev)
   dev->inquiry_dor_x_off  = (double)get_inquiry_dor_x_original_point(inquiry_block) * 0.01;
   dev->inquiry_dor_y_off  = (double)get_inquiry_dor_y_original_point(inquiry_block) * 0.01;
 
-  dev->inquiry_max_warmup_time = get_inquiry_lamp_warmup_maximum_time(inquiry_block) * 2;
+  dev->inquiry_max_warmup_time          = get_inquiry_lamp_warmup_maximum_time(inquiry_block) * 2;
 
-  dev->inquiry_wdb_len = get_inquiry_wdb_length(inquiry_block);
+  dev->inquiry_wdb_len                  = get_inquiry_wdb_length(inquiry_block);
 
+  /* it is not guaranteed that the following values are in the inquiry return block */
+
+  /* 0x9a */
+  if (dev->inquiry_len<=0x9a) {return;}
   dev->inquiry_max_calib_lines          = get_inquiry_max_calibration_data_lines(inquiry_block);
 
+  /* 0x9b */
+  if (dev->inquiry_len<=0x9b) {return;}
   dev->inquiry_fb_uta_color_arrangement = get_inquiry_fb_uta_line_arrangement_mode(inquiry_block);
+
+  /* 0x9c */
+  if (dev->inquiry_len<=0x9c) {return;}
   dev->inquiry_adf_color_arrangement    = get_inquiry_adf_line_arrangement_mode(inquiry_block);
+
+  /* 0x9d */
+  if (dev->inquiry_len<=0x9d) {return;} 
   dev->inquiry_CCD_line_distance        = get_inquiry_CCD_line_distance(inquiry_block);
 
   return;
@@ -3407,8 +3443,16 @@ static void umax_init(Umax_Device *dev)		     /* umax_init is called once while 
   dev->inquiry_exposure_time_c_uta_def_b = -1;			 /* exposure time default for color uta blue */
   dev->inquiry_max_warmup_time           = 0;					      /* maximum warmup time */
   dev->inquiry_cbhs                      = WD_CBHS_255;
-  dev->inquiry_cbhs_min                  = 0;
-  dev->inquiry_cbhs_max                  = 255;
+  dev->inquiry_contrast_min              = 1;					      /* minimum value for c */
+  dev->inquiry_contrast_max              = 255;					      /* maximum value for c */
+  dev->inquiry_brightness_min            = 1;					      /* minimum value for b */
+  dev->inquiry_brightness_max            = 255;					      /* maximum value for b */
+  dev->inquiry_threshold_min             = 1;					      /* minimum value for t */
+  dev->inquiry_threshold_max             = 255;					      /* maximum value for t */
+  dev->inquiry_highlight_min             = 1;					      /* minimum value for h */
+  dev->inquiry_highlight_max             = 255;					      /* maximum value for h */
+  dev->inquiry_shadow_min                = 0;					      /* minimum value for s */
+  dev->inquiry_shadow_max                = 254;					      /* maximum value for s */ 
   dev->inquiry_quality_ctrl              = 0;
   dev->inquiry_preview                   = 0;
   dev->inquiry_lamp_ctrl                 = 0;
@@ -3431,6 +3475,7 @@ static void umax_init(Umax_Device *dev)		     /* umax_init is called once while 
   dev->inquiry_shadow                    = 0;
   dev->inquiry_highlight                 = 0;
   dev->inquiry_gamma_DCF                 = -1;
+  dev->inquiry_max_calib_lines           = 66;	 /* most scanners use 66 lines, so lets define it as default */
 
   dev->x_coordinate_base = 1200;						/* these are the 1200pt/inch */
   dev->y_coordinate_base = 1200;						/* these are the 1200pt/inch */
@@ -3595,7 +3640,9 @@ int sfd;
   dev->sane.type   = "flatbed scanner"; 
 
   if (strcmp(dev->sane.model,"PSD ") == 0)
-  { dev->sane.type = "page scanner"; }
+  {
+    dev->sane.type = "page scanner";
+  }
 
   dev->x_range.min               = SANE_FIX(0);
   dev->x_range.quant             = SANE_FIX(0);
@@ -3605,10 +3652,18 @@ int sfd;
   dev->y_range.quant             = SANE_FIX(0);
   dev->y_range.max               = SANE_FIX(dev->inquiry_fb_length * MM_PER_INCH);
 
+#if 0
+  dev->x_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
+  dev->x_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
+#endif
   dev->x_dpi_range.min           = SANE_FIX(1);
   dev->x_dpi_range.quant         = SANE_FIX(1);
   dev->x_dpi_range.max           = SANE_FIX(dev->inquiry_x_res);
 
+#if 0
+  dev->y_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
+  dev->y_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
+#endif
   dev->y_dpi_range.min           = SANE_FIX(1);
   dev->y_dpi_range.quant         = SANE_FIX(1);
   dev->y_dpi_range.max           = SANE_FIX(dev->inquiry_y_res);
@@ -3621,7 +3676,10 @@ int sfd;
   dev->next = first_dev;
   first_dev = dev;
 
-  if (devp) { *devp = dev; }
+  if (devp)
+  {
+    *devp = dev;
+  }
 
  return SANE_STATUS_GOOD;
 }
@@ -4156,7 +4214,7 @@ static SANE_Status init_options(Umax_Scanner *scanner)
   scanner->opt[OPT_HALFTONE_DIMENSION].unit  = SANE_UNIT_PIXEL;
   scanner->opt[OPT_HALFTONE_DIMENSION].constraint_type = SANE_CONSTRAINT_WORD_LIST;
   scanner->opt[OPT_HALFTONE_DIMENSION].constraint.word_list = pattern_dim_list;
-  scanner->val[OPT_HALFTONE_DIMENSION].w     = 0;
+  scanner->val[OPT_HALFTONE_DIMENSION].w     = pattern_dim_list[1];
 
   /* halftone pattern */
   scanner->opt[OPT_HALFTONE_PATTERN].name  = SANE_NAME_HALFTONE_PATTERN;
@@ -4418,7 +4476,7 @@ SANE_Status sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
 
   DBG(DBG_sane_init,"sane_init\n");
   DBG(DBG_error,"This is sane-umax version %d.%d build %d\n",V_MAJOR, V_MINOR, BUILD);
-  DBG(DBG_error,"(C) 1997-1999 by Oliver Rauch\n");
+  DBG(DBG_error,"(C) 1997-2000 by Oliver Rauch\n");
   DBG(DBG_error,"EMAIL: Oliver.Rauch@Wolfsburg.DE\n");
 
   if (version_code)
@@ -5164,11 +5222,17 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
       {
        int halftoning;
 
-        if (scanner->val[option].s) { free (scanner->val[option].s); }
+        if (scanner->val[option].s)
+        {
+          free (scanner->val[option].s);
+        }
 
         scanner->val[option].s = (SANE_Char*)strdup(val);
 
-        if (info) {*info |=SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;}
+        if (info)
+        {
+          *info |=SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
+        }
 
         scanner->opt[OPT_NEGATIVE].cap           |= SANE_CAP_INACTIVE; 
 
@@ -5215,12 +5279,15 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         scanner->opt[OPT_HALFTONE_DIMENSION].cap |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_HALFTONE_PATTERN].cap   |= SANE_CAP_INACTIVE;
 
+
         halftoning = (strcmp(val, HALFTONE_STR) == 0 || strcmp(val, COLOR_HALFTONE_STR) == 0);
 
         if (halftoning || strcmp(val, LINEART_STR) == 0 || strcmp(val, COLOR_LINEART_STR) == 0)
         {										    /* one bit modes */
           if (scanner->device->inquiry_reverse)
-          { scanner->opt[OPT_NEGATIVE].cap  &= ~SANE_CAP_INACTIVE; }
+          {
+            scanner->opt[OPT_NEGATIVE].cap  &= ~SANE_CAP_INACTIVE;
+          }
 
           if (halftoning)
           {										 /* halftoning modes */
@@ -5237,12 +5304,15 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
               scanner->opt[OPT_SHADOW].cap &= ~SANE_CAP_INACTIVE;
             }
 
+/* disable halftone pattern download options */
+#if 0
             scanner->opt[OPT_HALFTONE_DIMENSION].cap &= ~SANE_CAP_INACTIVE;
 
             if (scanner->val[OPT_HALFTONE_DIMENSION].w)
             {
               scanner->opt[OPT_HALFTONE_PATTERN].cap &= ~SANE_CAP_INACTIVE;
             }
+#endif
 
             if (scanner->val[OPT_SELECT_EXPOSURE_TIME].w == SANE_TRUE)
             {
@@ -5573,7 +5643,7 @@ SANE_Status sane_start(SANE_Handle handle)
     {
       scanner->device->bits_per_pixel      = 16;
       scanner->device->bits_per_pixel_code = 32;
-      scanner->device->max_value      = 65536;
+      scanner->device->max_value      = 65535;
       DBG(DBG_sane_info,"Using 16 bits for output\n");
     }
     else if (scanner->val[OPT_BIT_DEPTH].w == 14)				       /* 14 bit output mode */
@@ -5630,8 +5700,7 @@ SANE_Status sane_start(SANE_Handle handle)
 
     scanner->device->analog_gamma_r =
     scanner->device->analog_gamma_g =
-    scanner->device->analog_gamma_b =
-                     umax_calculate_analog_gamma(SANE_UNFIX(scanner->val[OPT_ANALOG_GAMMA].w));
+    scanner->device->analog_gamma_b = umax_calculate_analog_gamma(SANE_UNFIX(scanner->val[OPT_ANALOG_GAMMA].w));
 
     scanner->device->highlight_r =
     scanner->device->highlight_g = 
@@ -5735,10 +5804,8 @@ SANE_Status sane_start(SANE_Handle handle)
     scanner->device->upper_left_x = ((int) (SANE_UNFIX(scanner->val[OPT_TL_X].w) * xbasedots)) & 65534;
     scanner->device->upper_left_y = ((int) (SANE_UNFIX(scanner->val[OPT_TL_Y].w) * ybasedots)) & 65534;
 
-    scanner->device->scanwidth  = ((int)((SANE_UNFIX(scanner->val[OPT_BR_X].w - scanner->val[OPT_TL_X].w)) *
-                                    xbasedots)) & 65534;
-    scanner->device->scanlength = (SANE_UNFIX(scanner->val[OPT_BR_Y].w - scanner->val[OPT_TL_Y].w)) *
-                                  ybasedots;
+    scanner->device->scanwidth  = ((int)((SANE_UNFIX(scanner->val[OPT_BR_X].w - scanner->val[OPT_TL_X].w)) * xbasedots)) & 65534;
+    scanner->device->scanlength = ((int)((SANE_UNFIX(scanner->val[OPT_BR_Y].w - scanner->val[OPT_TL_Y].w)) * ybasedots)) & 65534;
 
     if (umax_check_values(scanner->device) != 0)
     {
@@ -5813,6 +5880,8 @@ SANE_Status sane_start(SANE_Handle handle)
     DBG(DBG_sane_info,"slow scan speed         = %d\n", scanner->device->slow);
     DBG(DBG_sane_info,"smear                   = %d\n", scanner->device->smear);
 
+/* halftone pattern download is not ready in this version */
+#if 0
 										     /* send halftonepattern */
     if ( (strcmp(mode, HALFTONE_STR) == 0) || (strcmp(mode, COLOR_HALFTONE_STR) == 0) )
     {
@@ -5820,7 +5889,7 @@ SANE_Status sane_start(SANE_Handle handle)
                                  scanner->val[OPT_HALFTONE_DIMENSION].w );
       scanner->device->halftone = WD_halftone_download;
     }									      /* end of send halftonepattern */
-
+#endif
  
   } /* ------------ end of first call -------------- */
 
@@ -5837,7 +5906,7 @@ SANE_Status sane_start(SANE_Handle handle)
 
         gamma = malloc( (size_t) (3 * scanner->gamma_length * scanner->output_bytes) );
         if (gamma == NULL)
-	{
+        {
           DBG(DBG_warning,"WARNING: not able to allocate memory for gamma table, gamma ignored !!!\n");
         }
         else
@@ -5857,13 +5926,13 @@ SANE_Status sane_start(SANE_Handle handle)
           }
 
           DBG(DBG_sane_info,"sending 3 * %d bytes of gamma data for RGB\n",
-                  scanner->gamma_length * scanner->output_bytes);
+              scanner->gamma_length * scanner->output_bytes);
 
           umax_send_gamma_data(scanner->device, &gamma[0], 3);
           scanner->device->digital_gamma_r =
           scanner->device->digital_gamma_g =
           scanner->device->digital_gamma_b = WD_gamma_download;
-	  free(gamma);
+          free(gamma);
         }
       }
       else									    /* three pass color scan */
@@ -5873,16 +5942,18 @@ SANE_Status sane_start(SANE_Handle handle)
 
         gamma = malloc( (size_t) (scanner->gamma_length * scanner->output_bytes) );
         if (gamma == NULL)
-	{
+        {
           DBG(DBG_warning,"not able to allocate memory for gamma table, gamma ignored !!!\n");
         }
         else
         {
           dest  = 0;
           color = scanner->device->three_pass_color;
+
           for(i = 0; i < scanner->gamma_length; i++)
           {
             value = scanner->gamma_table[color][i];
+
             if (scanner->output_bytes == 2)
             {
               gamma[dest++] = scanner->gamma_table[0][value] / 256;
@@ -5891,17 +5962,17 @@ SANE_Status sane_start(SANE_Handle handle)
           }
 
           DBG(DBG_sane_info,"sending %d bytes of gamma data for color %d\n",
-                  scanner->gamma_length * scanner->output_bytes, color);
+              scanner->gamma_length * scanner->output_bytes, color);
 
           umax_send_gamma_data(scanner->device, &gamma[0], 1);
           scanner->device->digital_gamma_r =
           scanner->device->digital_gamma_g =
           scanner->device->digital_gamma_b = WD_gamma_download;
-	  free(gamma);
+          free(gamma);
         }
       }
     }
-    else										   /* grayscale scan */
+    else if (strcmp(mode, GRAY_STR) == 0) /* grayscale scan */
     {
      int i, dest;
      char *gamma;

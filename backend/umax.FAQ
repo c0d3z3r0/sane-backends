@@ -13,24 +13,18 @@ A: The optimization set by "-O2" makes problems, try which one of the following
 -------------------------------------------------------------------------------
 
 Q: Will there be a support for the UMAX-parallel-port-scanners?
-
-A: UMAX published their SCSI-protocol for scanners, but the
-   parallel-port- and the USB-protocol is not published until now.
-   Without such informations I will not work on a driver!
-
-   Martin Mevald <martinmv@penguin.cz> is working on a driver!
-
--------------------------------------------------------------------------------
-
 Q: Will there be a support for the UMAX-USB-scanners?
 
-A: UMAX published their SCSI-protocol for scanners, but the
-   parallel-port- and the USB-protocol is not published until now.
+A: UMAX published their SCSI-protocol for scanners. However they
+   have not so far published parallel port and USB protocols. Without
+   the protocol documentation I will not work on a driver.
 
-   As far as I know there are no generic-USB-drivers on unix-systems in the
-   moment. For linux it is worked on a driver.
+   Martin Mevald <martinmv@penguin.cz> has worked on a parallel-port-driver
+   but stopped the development.
 
-   Without such informations I will not work on a driver!
+   The Astra 2200W does work when connected via SCSI.
+   It could work with SCSI-via-USB-driver and connected via USB, but that
+   is not tested.
 
 -------------------------------------------------------------------------------
 
@@ -85,6 +79,22 @@ A: There are people using the sane-umax on a LinuxPPC (big endian) machine.
 
    The "MESH" SCSI card is reported to work. The NCR53C94 SCSI card
    seems not to work.
+
+-------------------------------------------------------------------------------
+
+Q: I am using an AM53C974 based scsi card with a umax scanner, the system
+   freezes when I start a scan, what can I do?
+
+A: Try the recent driver for the scsi card, take a look at:
+   http://www.garloff.de/kurt/linux/dc390/index.html
+
+-------------------------------------------------------------------------------
+
+Q: Sane hangs or crashes when I start a frontend for sane, what can I do?
+
+A: Sometimes the backends that are not used make problems.
+   Edit /usr/(local)/etc/sane.d/dll.conf
+   and comment out everything but the backend you need.
 
 -------------------------------------------------------------------------------
 

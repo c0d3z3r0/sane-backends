@@ -3,7 +3,7 @@
 /* umax-scsidef.h: scsi-definiton header file for UMAX scanner driver.
 
     Copyright (C) 1996-1997 Michael K. Johnson
-    Copyright (C) 1997-1999 Oliver Rauch
+    Copyright (C) 1997-2000 Oliver Rauch
 
     This program is free software; you can redistribute it and/or
     modify it under the terms of the GNU General Public License as
@@ -152,6 +152,7 @@ static scsiblk inquiry = { inquiryC, sizeof(inquiryC) };
 #define get_inquiry_0x01_bit6(in)				getbitfield(in + 0x01, 0x01, 6)
 #define get_inquiry_0x01_bit5(in)				getbitfield(in + 0x01, 0x01, 5)
 #define get_inquiry_CBHS(in)					getbitfield(in + 0x01, 0x03, 3)
+#define set_inquiry_CBHS(in, val)				setbitfield(in + 0x01, 0x03, 3, val)
 #  define IN_CBHS_50			0x00
 #  define IN_CBHS_255			0x01
 #  define IN_CBHS_auto			0x02
@@ -226,10 +227,16 @@ static scsiblk inquiry = { inquiryC, sizeof(inquiryC) };
 #define get_inquiry_sc_lineart(in)				getbitfield(in + 0x60, 1, 2)
 #define get_inquiry_sc_halftone(in)				getbitfield(in + 0x60, 1, 3)
 #define get_inquiry_sc_gray(in)					getbitfield(in + 0x60, 1, 4)
-#define get_inquiry_sc_gray(in)					getbitfield(in + 0x60, 1, 4)
 #define get_inquiry_sc_color(in)				getbitfield(in + 0x60, 1, 5)
 #define get_inquiry_sc_uta(in)					getbitfield(in + 0x60, 1, 6)
 #define get_inquiry_sc_adf(in)					getbitfield(in + 0x60, 1, 7)
+
+#define set_inquiry_sc_three_pass_color(in,val)			setbitfield(in + 0x60, 1, 0, val)
+#define set_inquiry_sc_one_pass_color(in,val)			setbitfield(in + 0x60, 1, 1, val)
+#define set_inquiry_sc_lineart(in,val)				setbitfield(in + 0x60, 1, 2, val)
+#define set_inquiry_sc_halftone(in,val)				setbitfield(in + 0x60, 1, 3, val)
+#define set_inquiry_sc_gray(in,val)				setbitfield(in + 0x60, 1, 4, val)
+#define set_inquiry_sc_color(in,val)				setbitfield(in + 0x60, 1, 5, val)
 #define set_inquiry_sc_uta(in,val)				setbitfield(in + 0x60, 1, 6, val)
 #define set_inquiry_sc_adf(in,val)				setbitfield(in + 0x60, 1, 7, val)
 
@@ -907,7 +914,7 @@ static scsiblk request_sense = { request_senseC, sizeof(request_senseC) };
 /* --------------------------------------------------------------------------------------------------------- */
 
 
-static char *cbhs_str[]       = { "78-178","0-255", "0-255 autoexposure", "reserved" };
+static char *cbhs_str[]       = { "0-50","0-255", "0-255 autoexposure", "reserved" };
 
 static char *scanmode_str[]   = { "flatbed (FB)", "automatic document feeder (ADF)" };
 

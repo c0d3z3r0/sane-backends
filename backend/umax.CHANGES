@@ -628,7 +628,41 @@ build-11 -> build-12
 
     * added error message after each call of sanei_scsi_cmd
 
-    * changed manipulation for ADF bit for Astra 2400S in umax_correct_inquiry
+    * changed manipulation of ADF bit for Astra 2400S in umax_correct_inquiry
       from dev->adf to set_inquiry_sc_adf()
 
+
+build-12 -> build-13
+--------------------
+
+    * changed inquiry data of UC1200SE
+
+    * added set_inquiry_CBHS(50) in correct_inquiry for UC1200SE
+
+    * correct_inquiry is called for scanners with short inquiry now
+
+    * dev->inquiry_max_calib_lines is preset to 66,
+      problem with Vist S6E V1.6 should be solved this way.
+
+    * inquiry block parameters > 0x93 are only used if block is long enough
+
+
+build-13 -> build-14
+--------------------
+    * changed inquiry_cbhs_[min,max] -> inquiry_[contrast, brightness, threshold,
+      highlight, shadow]_[min,max] and set correct values for CBHS_255 and CBHS_50
+
+    * changed cbhs_str[CBHS_50] from "78-178" to "0-50"
+
+    * changed umax-uc1200se.h inquiry byte 0x64 bit 5 to 0 (gamma download format != 2)
+      and wdb len from 0x30 to 0x31
+
+    * disabled halftone pattern download, and halftone dimension selection - not ready
+      preselected is a 8x8 built in halftone pattern
+
+    * removed set_inquiry_CBHS(50) from correct_inquiry for UC1200SE
+
+    * added "Astra 2200 " as supported scanner
+
+    * added cast from (void *) to (unsigned char*) in umax_send_gamma_data
 

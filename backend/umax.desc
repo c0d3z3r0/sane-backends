@@ -10,7 +10,7 @@
 ;
 
 :backend "umax"                   ; name of backend
-:version "1.0-12"                  ; version of backend
+:version "1.0-14"                 ; version of backend
 :status :stable                   ; :alpha, :beta, :stable, :new
 :manpage "sane-umax"              ; name of manpage (if it exists)
 :url "http://www.wolfsburg.de/~rauch/sane/sane-umax.html" ; backend's web page
@@ -39,7 +39,7 @@
 :model "UMAX S-6EG"
 :comment "OK"
 :model "Vista-S8"
-:comment "Not tested"
+:comment "OK"
 :model "Supervista S-12"
 :comment "OK"
 :model "UMAX S-12"
