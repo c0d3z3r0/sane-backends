@@ -3039,8 +3039,10 @@ sanei_scsi_cmd (int fd, const void *src, size_t src_size,
     }
   if (srb.status != SRB_Done ||
       srb.u.cmd.ha_status != SRB_NoError ||
-      srb.u.cmd.target_status != SRB_NoStatus)
+      srb.u.cmd.target_status != SRB_NoStatus) {
     DBG (1, "sanei_scsi_cmd:  command 0x%02x failed.\n", srb.u.cmd.cdb_st[0]);
+    return SANE_STATUS_IO_ERROR;
+  }
   if (dst_size && *dst_size)	/* Reading? */
     memcpy ((char *) dst, aspi_buf, *dst_size);
   return SANE_STATUS_GOOD;
