@@ -1,3 +1,9 @@
+2000-01-21  Petter Reinholdtsen <pere@td.org.uit.no>
+
+        * sanei/sanei_scsi.c: Bugfix: Added return type for dummy
+	sanei_scsi_open_extended() call.  Bugreport for Solaris from
+	Martin Spott.
+
 2000-01-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* sanei/sanei_ab306.c: Removed compiler warnings.
@@ -19,6 +25,7 @@
         * backend/epson.c added support for Expression family
 	  of scanners
 	* doc/sane-epson.man updated
+
 2000-01-10  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc fixed/updated. Now shows a link to
