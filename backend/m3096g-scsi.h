@@ -49,6 +49,9 @@ static const char RCSid_sh[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
+ * Revision 1.1.2.3  2000/02/14 14:20:18  pere
+ * Make lint_catcher static to avoid link problems with duplicate symbols.
+ *
  * Revision 1.1.2.2  2000/01/26 03:51:45  pere
  * Updated backends sp15c (v1.12) and m3096g (v1.11).
  *
@@ -523,7 +526,7 @@ static scsiblk window_descriptor_blockB =
 
 /* ==================================================================== */
 
-scsiblk *lint_catcher[] =
+static scsiblk *lint_catcher[] =
 {&reserve_unitB,
  &release_unitB,
  &inquiryB,
