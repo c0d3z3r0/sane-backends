@@ -755,15 +755,15 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
 
   if (dumpinquiry)
     {
-      fprintf (stderr, "\nCamera information:\n~~~~~~~~~~~~~~~~~\n\n");
-      fprintf (stderr, "Model...........: DC%x\n", Camera.model);
-      fprintf (stderr, "Firmware version: %d.%d\n", Camera.ver_major,
+      DBG (0, "\nCamera information:\n~~~~~~~~~~~~~~~~~\n\n");
+      DBG (0, "Model...........: DC%x\n", Camera.model);
+      DBG (0, "Firmware version: %d.%d\n", Camera.ver_major,
 	       Camera.ver_minor);
-      fprintf (stderr, "Pictures........: %d/%d\n", Camera.pic_taken,
+      DBG (0, "Pictures........: %d/%d\n", Camera.pic_taken,
 	       Camera.pic_taken + Camera.pic_left);
-      fprintf (stderr, "Resolution......: %s\n",
+      DBG (0, "Resolution......: %s\n",
 	       Camera.flags.low_res ? "low" : "high");
-      fprintf (stderr, "Battery state...: %s\n",
+      DBG (0, "Battery state...: %s\n",
 	       Camera.flags.low_batt ? "low" : "good");
     }
 
