@@ -1,3 +1,11 @@
+2000-07-09  Andreas Rick <andreas.rick@free.fr>
+
+	* AUTHORS: added myself as maintainer of the coolscan backend
+
+    * README: added Coolscan page link
+
+	* doc/sane-coolscan.man: first version of Coolscan manpage
+
 2000-07-09  Gerhard Jaeger <g.jaeger@earthling.net>
 
 	* AUTHORS: added myself as maintainer of the Plustek backend
