@@ -24,6 +24,7 @@
  *        made the cancel button work by using a child process during read
  *		  added version code to driver interface
  *        cleaned up the code a bit
+ *		  fixed sane compatibility problems
  *
  *.............................................................................
  *
@@ -72,7 +73,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <wait.h>
+
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
@@ -211,7 +213,7 @@ static SANE_Status drvopen(Plustek_Scanner * s, const char *dev_name)
     DBG( _DBG_INFO, "drvopen()\n" );
 
 	if ((s->fd = open(dev_name, O_RDONLY)) < 0) {
-	    DBG(_DBG_FATAL, "open: can't open %s as a device\n", dev_name);
+	    DBG(_DBG_ERROR, "open: can't open %s as a device\n", dev_name);
     	return SANE_STATUS_IO_ERROR;
 	}
 	
@@ -610,7 +612,6 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 	 */
 	status = drvopen( s, dev_name );
 	if (SANE_STATUS_GOOD != status ) {
-		DBG( _DBG_FATAL, "attach: open failed: %s\n", sane_strstatus (status));
 		return status;
     }
 
@@ -733,24 +734,26 @@ SANE_Status sane_init( SANE_Int *version_code, SANE_Auth_Callback authorize )
 
 	/* default to /dev/pt_drv instead of insisting on config file */
 	if ((fp = sanei_config_open( PLUSTEK_CONFIG_FILE ))) {
-		
-		while (fgets (line, sizeof (line), fp))	{
 
-			if (line[0] == '#')		/* ignore line comments */
-				continue;
+		while (sanei_config_read (line, sizeof (line), fp)) {
 
+			DBG( _DBG_SANE_INIT, "sane_init, >%s<\n", line);
+			if( line[0] == '#')		/* ignore line comments */
+	    		continue;
+			
 			len = strlen (line);
-			if (line[len - 1] == '\n')
-				line[--len] = '\0';
-			if (!len)
-				continue;			/* ignore empty lines */
+			if( line[len - 1] == '\n' )
+            	line[--len] = '\0';
+			if( !len)
+            	continue;			/* ignore empty lines */
 
-			DBG( _DBG_SANE_INIT, "sane_init: >%s<\n", line );
-			strcpy( dev_name, line );
+			DBG( _DBG_SANE_INIT, "sane_init, >%s<\n", line);
+
 		}
-		fclose (fp);
+      	fclose (fp);
 	}
 
+/* FIXME: Use this to attach each device ! --> next release */
 	sanei_config_attach_matching_devices( dev_name, attach_one );
 
 	return SANE_STATUS_GOOD;
