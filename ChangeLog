@@ -1,5 +1,7 @@
 2000-02-19  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/os2_srb.h sanei/sanei_scsi.c: Include OS/2 SCSI header file.
+
 	* include/sane/sanei_config.h sanei/sanei_config.c: New function
 	sanei_config_read().  Use this instead of fgets() when reading
 	config files to remove line ending chars on all known platforms.
