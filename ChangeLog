@@ -1,5 +1,10 @@
 1999-08-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* aclocal.m4 configure.in configure: Generate configure and
+ 	aclocal.m4 with autoconf 2.13.  Adding AC_PROG_LD, trying to get
+ 	this compiling on CygWin32.  Add AM_PROG_CC_STDC to get it to
+ 	compile out of the box on HP/UX.
+
 	* lib/dll.c: Use calloc() instead of malloc() and memset().  Use
  	dlerror() instead of strerror() when dlopen fails
  	(bugfix from Ingo Wilkens).
