@@ -1363,7 +1363,8 @@ List of available devices:", prog_name);
       do
 	{
 	  char path [PATH_MAX];
-	  sprintf (path, format, n);	/* love --(C++) */
+	  if (batch) /* format is NULL unless batch mode */
+	    sprintf (path, format, n);	/* love --(C++) */
 
 	  if (batch && NULL == freopen (path, "w", stdout) )
 	    {
