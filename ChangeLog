@@ -7,6 +7,8 @@
 
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/sanei_scsi.c: Make sure the file is valid ANSI C.
+
 	* configure: Regenerated based on current configure.in.
 
 	* include/sane/sanei_backend.h: Typedef u_int{8,16,32}_t.
