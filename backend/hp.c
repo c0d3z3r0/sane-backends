@@ -46,6 +46,8 @@
 static char *hp_backend_version = "0.88";
 /* Changes:
 
+   V 0.88, 25-Jul-2000, PK:
+      - remove inlines
    V 0.88, 20-Jul-2000, PK:
       - Use sanei_config_read()
       - dont write chars < 32 to DBG
@@ -162,12 +164,6 @@ static char *hp_backend_version = "0.88";
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
-#endif
-
-#if (defined(__IBMC__) || defined(__IBMCPP__))
-#ifndef _AIX
-#define inline /* */
-#endif
 #endif
 
 #ifndef NDEBUG
@@ -418,13 +414,13 @@ hp_device_list_remove (HpDeviceList * list, HpDevice dev)
   return SANE_STATUS_GOOD;
 }
 
-static inline SANE_Status
+static SANE_Status
 hp_handle_list_add (HpDeviceList * list, HpHandle h)
 {
   return hp_device_list_add(list, (HpDevice)h);
 }
 
-static inline SANE_Status
+static SANE_Status
 hp_handle_list_remove (HpDeviceList * list, HpHandle h)
 {
   return hp_device_list_remove(list, (HpDevice)h);

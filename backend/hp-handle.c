@@ -66,12 +66,6 @@ extern int sanei_debug_hp;
 #include "hp-scsi.h"
 #include "hp-scl.h"
 
-#if (defined(__IBMC__) || defined(__IBMCPP__))
-#ifndef _AIX
-#define inline /* */
-#endif
-#endif
-
 struct hp_handle_s
 {
     HpData		data;
@@ -86,7 +80,7 @@ struct hp_handle_s
 };
 
 
-static inline hp_bool_t
+static hp_bool_t
 hp_handle_isScanning (HpHandle this)
 {
   return this->reader_pid != 0;

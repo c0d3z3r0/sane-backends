@@ -77,12 +77,6 @@ extern int sanei_debug_hp;
 #include "hp-device.h"
 
 
-#if (defined(__IBMC__) || defined(__IBMCPP__))
-#ifndef _AIX
-#define inline /* */
-#endif
-#endif
-
 /* FIXME: descriptors should be static? */
 
 typedef SANE_Option_Descriptor *	_HpSaneOption;
@@ -306,13 +300,13 @@ _cenable_notcolor (HpChoice this, HpOptSet optset, HpData data,
 /*
  * class HpAccessorOptd
  */
-static inline HpAccessorOptd
+static HpAccessorOptd
 hp_accessor_optd_new (HpData data)
 {
   return sanei_hp_accessor_new(data, sizeof(SANE_Option_Descriptor));
 }
 
-static inline _HpSaneOption
+static _HpSaneOption
 hp_accessor_optd_data (HpAccessorOptd this, HpData data)
 {
   return sanei__hp_accessor_data(this, data);
@@ -468,7 +462,7 @@ hp_option_get (HpOption this, HpData data, void * valp)
   return sanei_hp_accessor_get(this->data_acsr, data, valp);
 }
 
-static inline hp_bool_t
+static hp_bool_t
 _values_are_equal (HpOption this, HpData data,
 		   const void * val1, const void * val2)
 {
@@ -701,7 +695,7 @@ _set_range (HpOption opt, HpData data,
   return SANE_STATUS_GOOD;
 }
 
-static inline void
+static void
 _set_size (HpOption opt, HpData data, SANE_Int size)
 {
   _hp_option_saneoption(opt, data)->size = size;

@@ -69,12 +69,6 @@ extern int sanei_debug_hp;
 #include "hp-scsi.h"
 #include "hp-scl.h"
 
-#if (defined(__IBMC__) || defined(__IBMCPP__))
-#ifndef _AIX
-#define inline /* */
-#endif
-#endif
-
 #define HP_SCSI_INQ_LEN		(36)
 #define HP_SCSI_CMD_LEN		(6)
 #define HP_SCSI_BUFSIZ	(HP_SCSI_MAX_WRITE + HP_SCSI_CMD_LEN)
@@ -483,7 +477,7 @@ hp_scsi_flush (HpScsi this)
     return hp_nonscsi_write (this, this->buf+HP_SCSI_CMD_LEN, len, connect);
 }
 
-static inline size_t
+static size_t
 hp_scsi_room (HpScsi this)
 {
   return this->buf + HP_SCSI_BUFSIZ - this->bufp;
