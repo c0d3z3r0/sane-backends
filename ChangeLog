@@ -1,3 +1,6 @@
+
+===================== Code freeze until 1.0.2 release ======================
+
 2000-02-20  Karl Heinz Kremer <khk@khk.net
 
 	* backend/epson.c: Added some OS/2 compatibility fixes.
