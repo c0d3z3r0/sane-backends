@@ -10,9 +10,9 @@
 ;
 
 :backend "artec"                  ; name of backend
-:version "0.5.13"                  ; version of backend
+:version "0.5.13"                 ; version of backend
 :status :stable                   ; :alpha, :beta, :stable, :new
-;:manpage "?"                     ; name of manpage (if it exists)
+:manpage "sane-artec"             ; name of manpage (if it exists)
 :url "http://www4.infi.net/~cpinkham/sane/sane-artec-doc.html" ; backend's web page
 
 :devicetype :scanner              ; start of a list of devices....
@@ -21,18 +21,23 @@
 
 :mfg "Artec/Ultima"               ; name a manufacturer
 :url "http://www.artecusa.com/"
-:model "AT3"                      ; name models for above-specified mfg.
+;; name models for above-specified mfg.
+:model "AT3"
 :comment "all modes working"
 :model "A6000C"
 :comment "all modes working"
 :model "A6000C PLUS"
 :comment "f/w <= v1.92 alpha, f/w >= v1.93 OK"
 :model "AT6"
-:comment "testing in progress"
+:comment "Unknown - please try"
 :model "AT12"
 :comment "all modes working"
 :model "AM12S"
 :comment "all modes working"
+:model "parallel models"
+:comment "Unsupported, see <a href='http://as6edriver.sourceforge.net/'>http://as6edriver.sourceforge.net</a>"
+:model "USB models"
+:comment "Unsupported."
 
 :mfg "BlackWidow"
 :url "http://www.blackwidow.co.uk/"
