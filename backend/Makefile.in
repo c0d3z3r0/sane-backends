@@ -63,7 +63,8 @@ CONFIGS = $(addsuffix .conf,$(ALL_BACKENDS)) saned.conf
 EXTRA = sane_strstatus.lo ../sanei/sanei_init_debug.lo ../sanei/sanei_config.lo
 
 # With libtool-1.0, we have to mention each library object explicitly... ;-(
-LIBLIB_FUNCS = alloca getopt getopt1 snprintf strndup strsep strndup usleep
+LIBLIB_FUNCS = alloca getenv getopt getopt1 isfdtype sigprocmask snprintf \
+        strdup strndup strsep usleep vsyslog
 LIBOBJS = $(addprefix ../lib/,$(addsuffix .lo,$(LIBLIB_FUNCS)))
 
 libsane-%.la: %.lo %-s.lo $(EXTRA) $(LIBOBJS)

@@ -1,3 +1,12 @@
+2000-08-07  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* README.irix: Removed text about library version problems.
+	* README.linux: Added comment about idescsi problems.
+	* ltmain.sh: Changed Irix library version system (from Oliver Rauch).
+	  This should fix the library version problems under Irix.
+	* backend/Makefile.in: Added all files in lib/ to LIBLIB. This fixes
+	  a bug concerning linking with external frontends.
+	
 2000-08-06  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* backend/plustek.c: Removed "const" from function header. This fixes

@@ -1715,7 +1715,7 @@ compiler."
 	none) ;;
 
 	irix)
-	  major=`expr $current - $age + 1`
+	  major=`expr $current - $age`
 	  versuffix="$major.$revision"
 	  verstring="sgi$major.$revision"
 
