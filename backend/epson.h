@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.6a Date 8-Jan-2000
+   Version 0.1.8 Date 26-Jan-2000
 
    This file is part of the SANE package.
 
@@ -114,6 +114,16 @@ enum
 		, OPT_GAMMA_VECTOR_R
 		, OPT_GAMMA_VECTOR_G
 		, OPT_GAMMA_VECTOR_B
+	, OPT_CCT_GROUP
+		, OPT_CCT_1
+		, OPT_CCT_2
+		, OPT_CCT_3
+		, OPT_CCT_4
+		, OPT_CCT_5
+		, OPT_CCT_6
+		, OPT_CCT_7
+		, OPT_CCT_8
+		, OPT_CCT_9
 	, OPT_PREVIEW_GROUP
 		, OPT_PREVIEW
 		, OPT_PREVIEW_RESOLUTION

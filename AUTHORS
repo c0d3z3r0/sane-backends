@@ -19,7 +19,7 @@ Backends:
  dc210:		Brian J. Murrell
  dll:		David Mosberger
  dmc:		David F. Skoll
- epson:		Kazuhiro Sasayama
+ epson:		Karl Heinz Kremer
  hp:		Peter Kirchgessner
 		Geoffrey Dairiki
  m3096g:        Randolph Bentson
@@ -71,7 +71,7 @@ Helmut Koeberle <helmut.koeberle@bytec.de>
 Ingo Schneider <schneidi@informatik.tu-muenchen.de>
 Jeff Freedman <jsf@hevanet.com>
 Karl Anders Oygard <karlo@opera.no>
-Kazuhiro Sasayama <kaz@hypercore.co.jp>
+Karl Heinz Kremer <khk@khk.net>
 Kevin Charter <charter@cs.rice.edu>
 Manuel Panea <Manuel.Panea@rzg.mpg.de>
 Markus Mertinat <Markus.Mertinat@Physik.Uni-Augsburg.DE>

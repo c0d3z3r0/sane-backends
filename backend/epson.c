@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.6b Date 10-Jan-2000
+   Version 0.1.8 Date 26-Jan-2000
 
    This file is part of the SANE package.
 
@@ -52,6 +52,18 @@
    whether to permit this exception to apply to your modifications.
    If you do not wish that, delete this exception notice.  */
 
+/*
+   2000-01-26   fixed problem with resolution selection when using the
+		resolution list in xsane (KHK)
+   2000-01-25	moved the section where the device name is assigned 
+		in attach. This avoids the core dump of frontend
+		applications when no scanner is found (Dave Hill)
+   2000-01-24	reorganization of SCSI related "helper" functions
+		started support for user defined color correction -
+		this is not yet available via the UI (Christian Bucher)
+   2000-01-24	Removed C++ style comments '//' (KHK)
+*/
+
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
 #endif
@@ -72,6 +84,83 @@
 #include  <sane/sane.h>
 #include  <sane/saneopts.h>
 #include  <sane/sanei_scsi.h>
+
+/*
+//  NOTE: try to isolate scsi stuff in own section.
+//
+*/
+
+#define  TEST_UNIT_READY_COMMAND	0x00
+#define  READ_6_COMMAND			0x08
+#define  WRITE_6_COMMAND		0x0a
+#define  INQUIRY_COMMAND		0x12
+#define  TYPE_PROCESSOR			0x03
+
+/*
+//
+//
+*/
+
+static SANE_Status inquiry ( int fd, int page_code, void * buf, size_t * buf_size) {
+	unsigned char cmd [ 6];
+	int status;
+
+	memset( cmd, 0, 6);
+	cmd[ 0] = INQUIRY_COMMAND;
+	cmd[ 2] = page_code;
+	cmd[ 4] = *buf_size > 255 ? 255 : *buf_size;
+	status = sanei_scsi_cmd( fd, cmd, sizeof cmd, buf, buf_size);
+
+	return status;
+}
+
+/*
+//
+//
+*/
+
+static int scsi_read ( int fd, void * buf, size_t buf_size, SANE_Status * status) {
+	unsigned char cmd [ 6];
+
+	memset( cmd, 0, 6);
+	cmd[ 0] = READ_6_COMMAND;
+	cmd[ 2] = buf_size >> 16;
+	cmd[ 3] = buf_size >> 8;
+	cmd[ 4] = buf_size;
+
+	if( SANE_STATUS_GOOD == ( *status = sanei_scsi_cmd( fd, cmd, sizeof( cmd), buf, &buf_size)))
+		return buf_size;
+
+	return 0;
+}
+
+/*
+//
+//
+*/
+
+static int scsi_write ( int fd, const void * buf, size_t buf_size, SANE_Status * status) {
+	unsigned char * cmd;
+
+	cmd = alloca( 6 + buf_size);
+	memset( cmd, 0, 6);
+	cmd[ 0] = WRITE_6_COMMAND;
+	cmd[ 2] = buf_size >> 16;
+	cmd[ 3] = buf_size >> 8;
+	cmd[ 4] = buf_size;
+	memcpy( cmd + 6, buf, buf_size);
+
+	if( SANE_STATUS_GOOD == ( *status = sanei_scsi_cmd( fd, cmd, 6 + buf_size, NULL, NULL)))
+		return buf_size;
+
+	return 0;
+}
+
+/*
+//
+//
+*/
+
 #include  <sane/sanei_pio.h>
 #include  "epson.h"
 
@@ -85,12 +174,6 @@
 #	define  PATH_MAX	1024
 #endif
 
-#define  TEST_UNIT_READY_COMMAND	0x00
-#define  READ_6_COMMAND			0x08
-#define  WRITE_6_COMMAND		0x0a
-#define  INQUIRY_COMMAND		0x12
-#define  TYPE_PROCESSOR			0x03
-
 #define  walloc(x)	( x *) malloc( sizeof( x) )
 #define  walloca(x)	( x *) alloca( sizeof( x) )
 
@@ -100,11 +183,19 @@
 #	define  XtOffsetOf(s_type,field)  XtOffset(s_type*,field)
 #endif
 
+/* NOTE: you can find these codes with "man ascii". */
 #define	 STX	0x02
 #define	 ACK	0x06
 #define	 NAK	0x15
 #define	 CAN	0x18
 #define	 ESC	0x1B
+
+#define	 S_ACK	"\006"
+#define	 S_CAN	"\030"
+
+#define  STATUS_FER		0x80		/* fatal error */
+#define  STATUS_AREA_END	0x20		/* area end */
+#define  STATUS_OPTION		0x10		/* option installed */
 
 #define  EXT_STATUS_FER		0x80		/* fatal error */
 #define  EXT_STATUS_FBF		0x40		/* flat bed scanner */
@@ -220,7 +311,10 @@ ESC T + 4 byte
 #define SANE_NAME_SCAN_EXPOS_TIME_B	"scan-exposure-time-b"
 #define SANE_NAME_SELECT_EXPOSURE_TIME	"select-exposure-time"
 
+Einmal für Calibrierung, andere für Scan. lamp-density gibt es auch noch.
 One for calibration, other one for scan. There is also lamp-density defined.
+
+- da war noch mal die blöde mail wo ganz genau drinsteht wie das geht.
 
 .) 12 bit
 
@@ -370,7 +464,7 @@ static const SANE_String_Const dropout_list [ ] =
 
 static int color_params [ ] =
 	{ 0x00
-//	, 0x01
+/*	, 0x01	*/
 	, 0x10
 	, 0x20
 	, 0x40
@@ -379,7 +473,7 @@ static int color_params [ ] =
 
 static const SANE_String_Const color_list [ ] =
 	{ "No Correction"
-//	, "User defined"
+/*	, "User defined"	*/
 	, "Impact-dot printers"
 	, "Thermal printers"
 	, "Ink-jet printers"
@@ -419,6 +513,7 @@ static const SANE_String_Const bay_list [ ] =
 */
 
 static const SANE_Range u8_range = { 0, 255, 0};
+static const SANE_Range s8_range = { -127, 127, 0};
 
 static int mirror_params [ ] =
 	{ 0
@@ -429,7 +524,7 @@ static int mirror_params [ ] =
 #define  film_params	mirror_params
 
 static const SANE_Range outline_emphasis_range = { -2, 2, 0 };
-//static const SANE_Range gamma_range = { -2, 2, 0 };
+/* static const SANE_Range gamma_range = { -2, 2, 0 }; */
 
 struct qf_param {
 	SANE_Word tl_x;
@@ -479,22 +574,58 @@ max_string_size (const SANE_String_Const strings[])
 }
 
 
-static int scsi_write ( int fd, const void *buf, size_t buf_size, SANE_Status * status) {
-	unsigned char * cmd;
+#if 1
 
-	cmd = alloca( 6 + buf_size);
-	memset( cmd, 0, 6);
-	cmd[ 0] = WRITE_6_COMMAND;
-	cmd[ 2] = buf_size >> 16;
-	cmd[ 3] = buf_size >> 8;
-	cmd[ 4] = buf_size;
-	memcpy( cmd + 6, buf, buf_size);
+#pragma	pack(1)
 
-	if( SANE_STATUS_GOOD == ( *status = sanei_scsi_cmd( fd, cmd, 6 + buf_size, NULL, NULL)))
-		return buf_size;
+typedef struct {
+	u_char	code;
+	u_char	status;
+	u_short	count;
 
-	return 0;
-}
+	u_char	buf [ 1];
+
+} EpsonHdrRec, * EpsonHdr;
+
+typedef struct {
+	u_char	code;
+	u_char	status;
+	u_short	count;
+
+	u_char	type;
+	u_char	level;
+
+	u_char	buf [ 1];
+
+} EpsonIdentRec, * EpsonIdent;
+
+typedef struct {
+	u_char	code;
+	u_char	status;
+	u_short	count;
+
+	u_char	buf [ 1];
+
+} EpsonParameterRec, * EpsonParameter;
+
+typedef struct {
+	u_char	code;
+	u_char	status;
+
+	u_char	buf [ 4];
+
+} EpsonDataRec, * EpsonData;
+
+#pragma	pack()
+
+#endif
+
+/*
+//
+//
+*/
+
+static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd, size_t cmd_size, SANE_Status * status);
 
 /*
 //
@@ -547,26 +678,6 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 //
 */
 
-static int scsi_read ( int fd, void *buf, size_t buf_size, SANE_Status * status) {
-	unsigned char cmd[6];
-
-	memset( cmd, 0, 6);
-	cmd[ 0] = READ_6_COMMAND;
-	cmd[ 2] = buf_size >> 16;
-	cmd[ 3] = buf_size >> 8;
-	cmd[ 4] = buf_size;
-
-	if( SANE_STATUS_GOOD == ( *status = sanei_scsi_cmd( fd, cmd, sizeof( cmd), buf, &buf_size)))
-		return buf_size;
-
-	return 0;
-}
-
-/*
-//
-//
-*/
-
 static int receive ( Epson_Scanner * s, void *buf, size_t buf_size, SANE_Status * status) {
 	int n = 0;
 
@@ -603,24 +714,6 @@ static int receive ( Epson_Scanner * s, void *buf, size_t buf_size, SANE_Status 
 #endif
 
 	return n;
-}
-
-/*
-//
-//
-*/
-
-static SANE_Status inquiry ( int fd, int page_code, void *buf, size_t * buf_size) {
-	unsigned char cmd [ 6];
-	int status;
-
-	memset( cmd, 0, 6);
-	cmd[ 0] = INQUIRY_COMMAND;
-	cmd[ 2] = page_code;
-	cmd[ 4] = *buf_size > 255 ? 255 : *buf_size;
-	status = sanei_scsi_cmd( fd, cmd, sizeof cmd, buf, buf_size);
-
-	return status;
 }
 
 /*
@@ -691,11 +784,9 @@ static SANE_Status set_cmd ( Epson_Scanner * s, unsigned char cmd, int val) {
 #define  set_film_type(s,v)		set_cmd( s,(s)->hw->cmd->set_film_type, v)
 #define  set_exposure_time(s,v)		set_cmd( s,(s)->hw->cmd->set_exposure_time, v)
 #define  set_bay(s,v)			set_cmd( s,(s)->hw->cmd->set_bay, v)
-//#define  forward_feed(s)		direct_cmd( s,(s)->hw->cmd->forward_feed)
+/*#define  forward_feed(s)		direct_cmd( s,(s)->hw->cmd->forward_feed) */
 
-/*
-//#define  (s,v)		set_cmd( s,(s)->hw->cmd->, v)
-*/
+/*#define  (s,v)		set_cmd( s,(s)->hw->cmd->, v) */
 
 static SANE_Status set_resolution ( Epson_Scanner * s, int xres, int yres) {
 	SANE_Status status;
@@ -748,9 +839,47 @@ static SANE_Status set_scan_area ( Epson_Scanner * s, int x, int y, int width, i
 	params[ 6] = height;
 	params[ 7] = height >> 8;
 
-DBG( 1, "%p %d %d %d %d\n", ( void *) s, x, y, width, height);
+	DBG( 1, "%p %d %d %d %d\n", ( void *) s, x, y, width, height);
 
 	send( s, params, 8, &status);
+	status = expect_ack( s);
+
+	return status;
+}
+
+/*
+//
+//
+*/
+
+static SANE_Status set_color_correction_coefficients ( Epson_Scanner * s) {
+	SANE_Status status;
+	unsigned char cmd = s->hw->cmd->set_color_correction_coefficients;
+	unsigned char params [ 2];
+	const int length = 9;
+	signed char cct [ 9];
+
+	if( ! cmd)
+		return SANE_STATUS_UNSUPPORTED;
+
+	params[ 0] = '\033';
+	params[ 1] = cmd;
+
+	send( s, params, 2, &status);
+	if( SANE_STATUS_GOOD != ( status = expect_ack( s) ) )
+		return status;
+
+	cct[ 0] = s->val[ OPT_CCT_1].w;
+	cct[ 1] = s->val[ OPT_CCT_2].w;
+	cct[ 2] = s->val[ OPT_CCT_3].w;
+	cct[ 3] = s->val[ OPT_CCT_4].w;
+	cct[ 4] = s->val[ OPT_CCT_5].w;
+	cct[ 5] = s->val[ OPT_CCT_6].w;
+	cct[ 6] = s->val[ OPT_CCT_7].w;
+	cct[ 7] = s->val[ OPT_CCT_8].w;
+	cct[ 8] = s->val[ OPT_CCT_9].w;
+
+	send( s, cct, length, &status);
 	status = expect_ack( s);
 
 	return status;
@@ -833,6 +962,64 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 
 	send( s, gamma, length, &status);
 	status = expect_ack( s);
+
+	return status;
+}
+
+/*
+//
+//
+*/
+
+static SANE_Status check_ext_status ( Epson_Scanner * s) {
+	SANE_Status status;
+	unsigned char cmd = s->hw->cmd->request_extention_status;
+	unsigned char params [ 2];
+	unsigned char * buf;
+	EpsonHdr head;
+
+	if( ! cmd)
+		return SANE_STATUS_UNSUPPORTED;
+
+	params[ 0] = '\033';
+	params[ 1] = cmd;
+
+	if( NULL == ( head = ( EpsonHdr) command( s, params, 2, &status) ) ) {
+		DBG( 0, "Extended status flag request failed\n");
+		return status;
+	}
+
+	buf = &head->buf[ 0];
+
+	if( buf[ 0] & EXT_STATUS_FER) {
+		DBG( 0, "option: fatal error\n");
+		status = SANE_STATUS_INVAL;
+	}
+
+	if( buf[ 1] & EXT_STATUS_ERR) {
+		DBG( 0, "ADF: other error\n");
+		status = SANE_STATUS_INVAL;
+	}
+
+	if( buf[ 1] & EXT_STATUS_PE) {
+		DBG( 0, "ADF: no paper\n");
+		status = SANE_STATUS_INVAL;
+	}
+
+	if( buf[ 1] & EXT_STATUS_PJ) {
+		DBG( 0, "ADF: paper jam\n");
+		status = SANE_STATUS_INVAL;
+	}
+
+	if( buf[ 1] & EXT_STATUS_OPN) {
+		DBG( 0, "ADF: cover open\n");
+		status = SANE_STATUS_INVAL;
+	}
+
+	if( buf[ 6] & EXT_STATUS_ERR) {
+		DBG( 0, "TPU: other error\n");
+		status = SANE_STATUS_INVAL;
+	}
 
 	return status;
 }
@@ -989,49 +1176,6 @@ static Epson_Device dummy_dev =
 { { NULL, "Epson", NULL, "flatbed scanner" }
 };
 
-/*
-//
-//
-*/
-
-#if 1
-
-#pragma	pack(1)
-
-typedef struct {
-	u_char	code;
-	u_char	status;
-	u_short	count;
-
-	u_char	buf[1];
-
-} EpsonHdrRec, * EpsonHdr;
-
-typedef struct {
-	u_char	code;
-	u_char	status;
-	u_short	count;
-
-	u_char	type;
-	u_char	level;
-
-	u_char	buf[1];
-
-} EpsonIdentRec, * EpsonIdent;
-
-typedef struct {
-	u_char	code;
-	u_char	status;
-	u_short	count;
-
-	u_char	buf[1];
-
-} EpsonParameterRec, * EpsonParameter;
-
-
-#pragma	pack()
-
-#endif
 
 #if 1
 static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd, 
@@ -1192,12 +1336,6 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	}
 
 /*
-//	now we can finally set the device name
-*/
-	str = malloc( strlen( dev_name) + 1);
-	dummy_dev.sane.name = strcpy( str, dev_name);
-
-/*
 //  if interface is SCSI do an inquiry.
 */
 
@@ -1284,7 +1422,7 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 /*
 // Initialize (ESC @).
 */
-// NOTE: disabled cause of batch use of scanimage with ADF.
+/* NOTE: disabled cause of batch use of scanimage with ADF. */
 
 #if 1
 	{
@@ -1332,8 +1470,6 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 /*
 //  check if option equipment is installed.
 */
-
-#define  STATUS_OPTION	0x10
 
 		if( ident->status & STATUS_OPTION) {
 			DBG( 1, "option equipment is installed\n");
@@ -1580,8 +1716,11 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 #endif
 
 /*
-//
+//	now we can finally set the device name
 */
+	str = malloc( strlen( dev_name) + 1);
+	dummy_dev.sane.name = strcpy( str, dev_name);
+
 
 	close_scanner( s);
 
@@ -1593,8 +1732,7 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 */
 
 static SANE_Status attach_one ( const char *dev) {
-	attach( dev, 0);
-	return SANE_STATUS_GOOD;
+	return attach( dev, 0);
 }
 
 /*
@@ -1635,7 +1773,7 @@ SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
       fclose (fp);
     }
 
-  /* read the option section and assign a the connection type to the
+  /* read the option section and assign the connection type to the
      scanner structure - which we don't have at this time. So I have
      to come up with something :-) */
 
@@ -1858,7 +1996,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_COLOR_CORRECTION].cap |= SANE_CAP_ADVANCED;
 		s->opt[ OPT_COLOR_CORRECTION].constraint_type = SANE_CONSTRAINT_STRING_LIST;
 		s->opt[ OPT_COLOR_CORRECTION].constraint.string_list = color_list;
-//		s->val[ OPT_COLOR_CORRECTION].w = 5;		/* scanner default: CRT monitors */
+/*		s->val[ OPT_COLOR_CORRECTION].w = 5; */		/* scanner default: CRT monitors */
 		s->val[ OPT_COLOR_CORRECTION].w = 4;		/* scanner default: CRT monitors */
 
 		if( ! s->hw->cmd->set_color_correction) {
@@ -1888,6 +2026,117 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_PREVIEW_RESOLUTION].constraint_type = SANE_CONSTRAINT_RANGE;
 		s->opt[ OPT_PREVIEW_RESOLUTION].constraint.range = &s->hw->dpi_range;
 		s->val[ OPT_PREVIEW_RESOLUTION].w = s->hw->dpi_range.min;
+
+
+	/* "Advanced" group: */
+	s->opt[ OPT_CCT_GROUP].title	= "Color correction coefficients";
+	s->opt[ OPT_CCT_GROUP].desc	= "";
+	s->opt[ OPT_CCT_GROUP].type	= SANE_TYPE_GROUP;
+	s->opt[ OPT_CCT_GROUP].cap	= SANE_CAP_ADVANCED;
+
+
+		/* color correction coefficients */
+		s->opt[ OPT_CCT_1].name  = "cct-1";
+		s->opt[ OPT_CCT_2].name  = "cct-2";
+		s->opt[ OPT_CCT_3].name  = "cct-3";
+		s->opt[ OPT_CCT_4].name  = "cct-4";
+		s->opt[ OPT_CCT_5].name  = "cct-5";
+		s->opt[ OPT_CCT_6].name  = "cct-6";
+		s->opt[ OPT_CCT_7].name  = "cct-7";
+		s->opt[ OPT_CCT_8].name  = "cct-8";
+		s->opt[ OPT_CCT_9].name  = "cct-9";
+
+		s->opt[ OPT_CCT_1].title = "d1";
+		s->opt[ OPT_CCT_2].title = "d2";
+		s->opt[ OPT_CCT_3].title = "d3";
+		s->opt[ OPT_CCT_4].title = "d4";
+		s->opt[ OPT_CCT_5].title = "d5";
+		s->opt[ OPT_CCT_6].title = "d6";
+		s->opt[ OPT_CCT_7].title = "d7";
+		s->opt[ OPT_CCT_8].title = "d8";
+		s->opt[ OPT_CCT_9].title = "d9";
+
+		s->opt[ OPT_CCT_1].desc  = "";
+		s->opt[ OPT_CCT_2].desc  = "";
+		s->opt[ OPT_CCT_3].desc  = "";
+		s->opt[ OPT_CCT_4].desc  = "";
+		s->opt[ OPT_CCT_5].desc  = "";
+		s->opt[ OPT_CCT_6].desc  = "";
+		s->opt[ OPT_CCT_7].desc  = "";
+		s->opt[ OPT_CCT_8].desc  = "";
+		s->opt[ OPT_CCT_9].desc  = "";
+
+		s->opt[ OPT_CCT_1].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_2].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_3].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_4].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_5].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_6].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_7].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_8].type = SANE_TYPE_INT;
+		s->opt[ OPT_CCT_9].type = SANE_TYPE_INT;
+
+		s->opt[ OPT_CCT_1].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_2].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_3].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_4].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_5].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_6].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_7].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_8].cap |= SANE_CAP_ADVANCED;
+		s->opt[ OPT_CCT_9].cap |= SANE_CAP_ADVANCED;
+
+		s->opt[ OPT_CCT_1].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_2].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_3].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_4].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_5].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_6].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_7].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_8].unit = SANE_UNIT_NONE;
+		s->opt[ OPT_CCT_9].unit = SANE_UNIT_NONE;
+
+		s->opt[ OPT_CCT_1].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_2].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_3].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_4].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_5].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_6].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_7].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_8].constraint_type = SANE_CONSTRAINT_RANGE;
+		s->opt[ OPT_CCT_9].constraint_type = SANE_CONSTRAINT_RANGE;
+
+		s->opt[ OPT_CCT_1].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_2].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_3].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_4].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_5].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_6].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_7].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_8].constraint.range = &s8_range;
+		s->opt[ OPT_CCT_9].constraint.range = &s8_range;
+
+		s->val[ OPT_CCT_1].w = 0;
+		s->val[ OPT_CCT_2].w = 0;
+		s->val[ OPT_CCT_3].w = 0;
+		s->val[ OPT_CCT_4].w = 0;
+		s->val[ OPT_CCT_5].w = 0;
+		s->val[ OPT_CCT_6].w = 0;
+		s->val[ OPT_CCT_7].w = 0;
+		s->val[ OPT_CCT_8].w = 0;
+		s->val[ OPT_CCT_9].w = 0;
+
+/*		if( ! s->hw->cmd->set_color_correction_coefficients) */{
+			s->opt[ OPT_CCT_1].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_2].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_3].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_4].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_5].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_6].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_7].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_8].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_CCT_9].cap |= SANE_CAP_INACTIVE;
+		}
 
 
 	/* "Advanced" group: */
@@ -2244,6 +2493,15 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 		case OPT_BRIGHTNESS:
 		case OPT_SHARPNESS:
 		case OPT_AUTO_EJECT:
+		case OPT_CCT_1:
+		case OPT_CCT_2:
+		case OPT_CCT_3:
+		case OPT_CCT_4:
+		case OPT_CCT_5:
+		case OPT_CCT_6:
+		case OPT_CCT_7:
+		case OPT_CCT_8:
+		case OPT_CCT_9:
 			*( ( SANE_Word *) value) = s->val[ option].w;
 			break;
 
@@ -2298,7 +2556,7 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 			break;
 
 		case OPT_EJECT:
-//			return eject( s);
+/*			return eject( s); */
 			eject( s);
 			break;
 			
@@ -2323,9 +2581,9 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 
 /*
 // problem: does not reach all values cause of scroll bar resolution.
+//
 */
-
-			if( *last) {
+			if( (v != best) && *last) {
 				for( f = 0; f < s->hw->res_list_size; f++)
 					if( *last == s->hw->res_list[ f])
 						break;
@@ -2343,8 +2601,22 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 			*last = best;
 			s->val[ option].w = ( SANE_Word) best;
 
+			DBG(3, "Selected resolution %d dpi\n", best);
+
 			break;
 		}
+
+		case OPT_CCT_1:
+		case OPT_CCT_2:
+		case OPT_CCT_3:
+		case OPT_CCT_4:
+		case OPT_CCT_5:
+		case OPT_CCT_6:
+		case OPT_CCT_7:
+		case OPT_CCT_8:
+		case OPT_CCT_9:
+			s->val[ option].w = *( ( SANE_Word *) value);
+			break;
 
 		case OPT_TL_X:
 		case OPT_TL_Y:
@@ -2531,6 +2803,10 @@ SANE_Status sane_get_parameters ( SANE_Handle handle, SANE_Parameters * params) 
 	s->params.pixels_per_line = SANE_UNFIX( s->val[ OPT_BR_X].w - s->val[ OPT_TL_X].w) / 25.4 * ndpi;
 	s->params.lines = SANE_UNFIX( s->val[ OPT_BR_Y].w - s->val[ OPT_TL_Y].w) / 25.4 * ndpi;
 
+		DBG( 3, "Preview = %d\n", s->val[OPT_PREVIEW].w);
+		DBG( 3, "Preview Resolution = %d\n", s->val[OPT_PREVIEW_RESOLUTION].w);
+		DBG( 3, "Resolution = %d\n", s->val[OPT_RESOLUTION].w);
+
 		DBG( 1, "get para %p %p tlx %f tly %f brx %f bry %f [mm]\n"
 			, ( void * ) s
 			, ( void * ) s->val
@@ -2582,9 +2858,11 @@ SANE_Status sane_start ( SANE_Handle handle) {
 #endif
 
 	open_scanner( s);
+/*
 // NOTE: added cause there was error reported for some scanner.
 // NOTE: disabled cause of batch use scanimage and ADF.
 //	reset( s);
+*/
 
 /*
 //
@@ -2593,10 +2871,32 @@ SANE_Status sane_start ( SANE_Handle handle) {
 /*
 //  There is some undocumented special with TPU enable/disable.
 //      TPU power	ESC e		status
-//	on		0		NACK
+//	on		0		NAK
 //	on		1		ACK
 //	off		0		ACK
-//	off		1		NACK
+//	off		1		NAK
+//
+// probably it make no sense to scan with TPU powered on and source flatbed, cause light
+// will come from both sides.
+*/
+
+
+#if 0
+	if( s->hw->TPU) {
+
+/*
+// NOTE: should remove source TPU, and switch automatically.
+// NOTE: not shure if that is a good idea.
+*/
+
+
+
+
+	} else
+#endif
+
+/*
+//
 */
 
 	if( s->hw->extension) {
@@ -2604,8 +2904,6 @@ SANE_Status sane_start ( SANE_Handle handle) {
 		EpsonHdr head;
 
 		unsigned char params [ 1];
-
-		int error = 0;
 
 		DBG( 1, "use extension = %d\n", s->hw->use_extension);
 
@@ -2637,37 +2935,37 @@ SANE_Status sane_start ( SANE_Handle handle) {
 
 		if( buf[ 0] & EXT_STATUS_FER) {
 			DBG( 0, "option: fatal error\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
 		if( buf[ 1] & EXT_STATUS_ERR) {
 			DBG( 0, "ADF: other error\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
 		if( buf[ 1] & EXT_STATUS_PE) {
 			DBG( 0, "ADF: no paper\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
 		if( buf[ 1] & EXT_STATUS_PJ) {
 			DBG( 0, "ADF: paper jam\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
 		if( buf[ 1] & EXT_STATUS_OPN) {
 			DBG( 0, "ADF: cover open\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
 		if( buf[ 6] & EXT_STATUS_ERR) {
 			DBG( 0, "TPU: other error\n");
-			error = 1;
+			status = SANE_STATUS_INVAL;
 		}
 
-		if( error) {
+		if( SANE_STATUS_GOOD != status) {
 			close_scanner( s);
-			return SANE_STATUS_INVAL;
+			return status;
 		}
 	}
 
@@ -2676,7 +2974,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 */
 
 	mparam = mode_params + s->val[ OPT_MODE].w;
-//	status = set_data_format( s, s->params.depth);
+/*	status = set_data_format( s, s->params.depth); */
 	status = set_data_format( s, mparam->depth);
 
 	if( SANE_STATUS_GOOD != status) {
@@ -2810,7 +3108,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 		}
 	}
 #else
-//		status = set_gamma( s, s->params.depth == 1 ? 1 : 2);
+/*		status = set_gamma( s, s->params.depth == 1 ? 1 : 2); */
 		status = set_gamma( s, mparam->depth == 1 ? 1 : 2);
 
 		if( SANE_STATUS_GOOD != status) {
@@ -2850,6 +3148,16 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			return status;
 		}
 	}
+#if 0
+	if( 1 == s->val[ OPT_COLOR_CORRECTION].w) {	/* user defined. */
+		status = set_color_correction_coefficients( s);
+
+		if( SANE_STATUS_GOOD != status) {
+			DBG( 1, "sane_start: set_color_correction_coefficients failed: %s\n", sane_strstatus( status));
+			return status;
+		}
+	}
+#endif
 #endif
 
 	if( s->val[ OPT_PREVIEW].w)
@@ -2916,7 +3224,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 
 	if( SANE_TRUE == s->hw->extension) { /* make sure if any errors */
 
-// TODO
+/* TODO	*/
 
 		unsigned char result[ 4];		/* with an extension */
 		unsigned char * buf;
@@ -3045,6 +3353,41 @@ SANE_Status sane_auto_eject ( Epson_Scanner * s) {
 //
 */
 
+static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
+	SANE_Status status;
+
+	receive( s, result, s->block ? 6 : 4, &status);
+
+	if( SANE_STATUS_GOOD != status)
+		return status;
+
+	if( STX != result->code) {
+		DBG( 1, "code   %02x\n", ( int) result->code);
+		DBG( 1, "error, expected STX\n");
+
+		return SANE_STATUS_INVAL;
+	}
+
+	if( result->status & STATUS_FER) {
+
+		DBG( 1, "fatal error\n");
+
+/* TODO: check extended status here if ext bit set. */
+
+		if( result->status & STATUS_OPTION) {
+			status = check_ext_status( s);
+		} else
+			status = SANE_STATUS_INVAL;
+	}
+
+	return status;
+}
+
+/*
+//
+//
+*/
+
 SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_length, SANE_Int * length) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
 	SANE_Status status;
@@ -3052,10 +3395,8 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 	DBG( 5, "sane_read: beginn\n");
 
 	if( s->ptr == s->end) {
-		unsigned char result [ 6];
-		size_t len;
+		EpsonDataRec result;
 		size_t buf_len;
-
 
 		if( s->eof) {
 			free( s->buf);
@@ -3070,54 +3411,66 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 
 		DBG( 5, "sane_read: beginn scan1\n");
 
-		len = s->block ? 6 : 4;
-		receive( s, result, len, &status);
+		if( SANE_STATUS_GOOD != ( status = read_data_block( s, &result)))
+			return status;
 
-		buf_len = result[ 3] << 8 | result[ 2];
-
-
+		buf_len = result.buf[ 1] << 8 | result.buf[ 0];
 
 		DBG( 5, "sane_read: buf len = %lu\n", (u_long) buf_len);
 
 		if( s->block)
-			buf_len *= ( result[ 5] << 8 | result[ 4]);
+			buf_len *= ( result.buf[ 3] << 8 | result.buf[ 2]);
 
 		DBG( 5, "sane_read: buf len = %lu\n", (u_long) buf_len);
 
 		if( !s->block && SANE_FRAME_RGB == s->params.format) {
 
-			receive( s, s->buf + s->params.pixels_per_line, buf_len, &status);
-			send( s, "\006", 1, &status);
-			len = s->block ? 6 : 4;
-			receive( s, result, len, &status);
-			buf_len = result[ 3] << 8 | result[ 2];
+			if( SANE_STATUS_GOOD != ( status = read_data_block( s, &result)))
+				return status;
+
+			send( s, S_ACK, 1, &status);
+			if( SANE_STATUS_GOOD != ( status = read_data_block( s, &result)))
+				return status;
+
+			buf_len = result.buf[ 1] << 8 | result.buf[ 0];
 
 			if( s->block)
-				buf_len *= ( result[ 5] << 8 | result[ 4]);
+				buf_len *= ( result.buf[ 3] << 8 | result.buf[ 2]);
 
 			DBG( 5, "sane_read: buf len2 = %lu\n", (u_long) buf_len);
 
 			receive( s, s->buf, buf_len, &status);
-			send( s, "\006", 1, &status);
-			len = s->block ? 6 : 4;
-			receive( s, result, len, &status);
-			buf_len = result[ 3] << 8 | result[ 2];
+
+			if( SANE_STATUS_GOOD != status)
+				return status;
+
+			send( s, S_ACK, 1, &status);
+			if( SANE_STATUS_GOOD != ( status = read_data_block( s, &result)))
+				return status;
+
+			buf_len = result.buf[ 1] << 8 | result.buf[ 0];
 
 			if( s->block)
-				buf_len *= ( result[ 5] << 8 | result[ 4]);
+				buf_len *= ( result.buf[ 3] << 8 | result.buf[ 2]);
 
 			DBG( 5, "sane_read: buf len3 = %lu\n", (u_long) buf_len);
 
 			receive( s, s->buf + 2 * s->params.pixels_per_line, buf_len, &status);
+
+			if( SANE_STATUS_GOOD != status)
+				return status;
 		} else {
-			receive (s, s->buf, buf_len, &status);
+			receive( s, s->buf, buf_len, &status);
+
+			if( SANE_STATUS_GOOD != status)
+				return status;
 		}
 
-		if( result[ 1] & 0x20)
+		if( result.status & STATUS_AREA_END)
 			s->eof = SANE_TRUE;
 		else {
 			if( s->canceling) {
-				send( s, "\030", 1, &status);
+				send( s, S_CAN, 1, &status);
 				expect_ack( s);
 				free( s->buf);
 				s->buf = NULL;
@@ -3127,7 +3480,7 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 				*length = 0;
 				return SANE_STATUS_CANCELLED;
 			} else
-				send( s, "\006", 1, &status);
+				send( s, S_ACK, 1, &status);
 		}
 
 		s->end = s->buf + buf_len;
