@@ -1,3 +1,8 @@
+2000-07-13  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* frontend/saned.c: Correct cancel handling in saned.  Patch from
+	Jochen Eisinger.
+
 2000-07-12  Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
 
     * frontend/scanimage.c, doc/scanimage.man: Support for
