@@ -1,3 +1,31 @@
+2000-03-19  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/mustek.c: Updated backend to new version 0.76. Fixes for
+ 	600 II N (color stripes, cancel handling), ScanExpress ("XC06" is
+ 	now recognized), MFS-1200SP (linedistance correction in high
+ 	resolutions, patch from Andreas Beck), STORE makros (patch from
+ 	Norbert Mueller), ADF (patch from Joerg Anders), firmware
+ 	identification (patch from Marco G. Salvagno), sane_cancel (scan
+ 	will now be cancelled immediately, no new sane_read necessary),
+ 	sane_get_option_descriptor (test for option < 0). Added a more
+ 	verbose inquiry output. Adjusted debug levels. Changed the model
+ 	names (sane.model) to reflect the real scanner names. Removed some
+ 	compiler warnings. Added new maintainer.
+
+	* backend/mustek.desc: Added link to backend homepage. Added all
+ 	the different scanner names used for the same model. Added Trust
+ 	scanners known to work. Removed firmware versions and scanner ids. 
+
+	* backend/mustek.CHANGES: New file. More detailed changes for the
+ 	Mustek backend.
+	
+	* doc/sane-mustek.man: Documentation for the 600 II N linedistance
+ 	options. Added warning from PROBLEMS. Added link to backend homepage.
+	Changed supported scanners list (see mustek.desc). Added more bug
+	entries.
+
+	* AUTHORS: Added new maintainer and email address
+	
 2000-03-18  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/Makefile.in tools/libtool-get-dll-ext: New script to
