@@ -1,5 +1,5 @@
 2000-02-06  Abel Deuring <a.deuring@satzbau-gmbh.de>
-	* Sharp man page updated
+	* Sharp man page updated; man page added to doc/Makefile.in
 
 2000-02-26  Petter Reinholdtsen <pere@td.org.uit.no>
 
