@@ -1,6 +1,12 @@
-2000-02-14     Abel Deuring <a.deuring@satzbau-gmbh.de>
-	* new version of ths Sharp backend (0.31): added support for the JX350
-	(Thanks to Shuhei Tomita for providing the patch)
+2000-03-14  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* sanei/sanei_scsi.c: Test for 'USE == LINUX_INTERFACE' instead of
+	defined(__linux__).
+
+2000-03-14  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	
+	* new version of ths Sharp backend (0.31): added support for the
+	JX350 (Thanks to Shuhei Tomita for providing the patch)
 
 2000-03-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
