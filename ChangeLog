@@ -1,8 +1,16 @@
+2000-04-09  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend 
+	  1.0-79. Changed version system. Linedistance correction for
+	  the 600 II N is fixed. Added output of scanning time. Rewrite
+	  of the resolution encoding for the 3-pass scanners. Look at
+	  backend/mustek.CHANGES for details.
+
 2000-04-05  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* Updated umax backend to version 1.0.2-build-20
           take a look at backend/umax.CHANGES for details
 
-2000-04-05 Henning Meier-Geinitz <hmg@gmx.de>
+2000-04-05  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* frontend/xscanimage.c, frontend/preview.c: Fixed a small bug 
 	concerning 3-pass scanners. gdk_input_add() was called three times
