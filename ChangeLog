@@ -1,5 +1,8 @@
 2000-01-30  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/dll.c backend/dll.aliases doc/sane-dll.man: Aliased and
+	hidden backend patch from Ingo Wilken.
+
 	* config.sub configure.in include/sane/config.h.in sanei/sanei_scsi.c:
 	UnixWare 2.x and UnixWare 7 port by Wolfgang Rapp.
 
