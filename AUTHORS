@@ -33,6 +33,7 @@ Backends:
 		despeckling filter by Patrick Reynolds,
 		B&W fixes by Andrew Kuchling
  ricoh:		Feico W. Dillema
+ s9036:         Ingo Schneider
  sharp:		FUKUDA Kazuya and Abel Deuring
  snapscan:	Kevin Charter, Franck Schneider, and Michel Roelofs
  sp15c:         Randolph Bentson
