@@ -1,3 +1,9 @@
+2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* configure.in: New flag --enable-warnings to turn on or off more
+	GCC warnings.  Default should be 'on' for development snapshots,
+	and 'off' for releases.
+
 2000-02-19  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.*: Updated desc file with new version number and 
