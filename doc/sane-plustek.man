@@ -209,7 +209,7 @@ The Linux Kernelmodule.
 
 .SH "CONTACT AND BUG-REPORTS"
 .PP
-Please send any information adn bug-reports to:
+Please send any information and bug-reports to:
 .br
 .B Gerhard Jaeger <g.jaeger@earthling.net>
 .PP
