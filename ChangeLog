@@ -1,5 +1,7 @@
 2000-01-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/sanei_ab306.c: Removed compiler warnings.
+
 	* frontend/scanimage.c: Adds a "batch mode" to the software, that
 	can be used in conjunction with an ADF device, so that one can
 	e.g. scan a complete document consting of multiple pages with just
