@@ -1,3 +1,11 @@
+2000-02-19  Chris Pinkham <cpinkham@infi.net>
+
+	* backend/artec.c: Updated backend version to v0.5.13.  Corrected
+	matrix of which features/enhancements should be active for each
+	scan mode.  Fixed bug which causing Contrast to be INactive at
+	startup instead of Threshold.
+	* backend/artec.desc: updated backend version information.
+
 2000-02-19  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* sanei/sanei_thread.c include/sane/sanei_thread.h: These files
