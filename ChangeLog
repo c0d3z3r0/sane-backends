@@ -1,3 +1,10 @@
+2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
+
+    * backend/hp-handle.c, hp-scl.c, hp-scl.h, hp.c, hp.h, hp-option.c
+              hp-option.h: Add wait for front panel button
+
+    * backend/hp.desc: Changed version to 0.88
+
 2000-07-09  Andreas Rick <andreas.rick@free.fr>
 
 	* AUTHORS: added myself as maintainer of the coolscan backend
