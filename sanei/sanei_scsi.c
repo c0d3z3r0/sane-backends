@@ -733,7 +733,7 @@ sanei_scsi_open (const char *dev, int *fdp,
   char *real_dev = 0;
   void *pdata = 0;
   int fd;
-#ifdef __linux__
+#if USE == LINUX_INTERFACE
   static int first_time = 1;
 #endif
 
@@ -1185,12 +1185,12 @@ sanei_scsi_open (const char *dev, int *fdp,
         DBG(1, "sanei_scsi_open: SG driver can change buffer size at run time\n");
         if (fdpa->sg_queue_max > 1)
           DBG(1, "sanei_scsi_open: low level command queueing enabled\n");
-        #ifdef SG_IO
+#ifdef SG_IO
         if (sg_version >= 30000)
           {
             DBG(1, "sanei_scsi_open: using new SG header structure\n");
           }
-        #endif
+#endif
       }
   }
 #endif /* LINUX_INTERFACE */
