@@ -1,3 +1,8 @@
+2000-01-29 Karl Heinz Kremer <khk@Kk.net>
+	* backend/epson.[ch] Moved gamma "stuff" from advanced to standard
+	  options section to fix core dump in xscanimage
+	  Removed pragma pack() to make it easier to compile on non-gcc
+	  systems
 2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* preview (xscanimage): added GDK_INPUT_EXCEPTION to gdk_input_add
 
