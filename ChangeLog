@@ -1,5 +1,7 @@
 1999-08-16  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* configure.in: Turn on more gcc warnings.
+
 	* acinclude.m4 configure.in: Separate GTK_LIBS into LIBS and
  	LDFLAGS to get the X programs to link on HP/UX.
 	
