@@ -1,3 +1,8 @@
+2000-02-06  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/canon.c backend/snapscan-sources.c: Port to HP/UX.  Stop
+	using GCC specific features.
+
 2000-02-05  Rene Rebe <rene.rebe@myokay.net>
 	* backedn/avision.? only minor updates and the new home-page
 	  url ...
