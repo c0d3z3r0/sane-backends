@@ -1,3 +1,8 @@
+1999-11-11  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/canon-* NEWS doc/canon.*: Updated Canon backend to
+	v991108.
+
 1999-09-14  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
 	* removed ane-umax-*.gif and umaxlogo.gif,
@@ -57,7 +62,7 @@
  	compile out of the box on HP/UX.
 
 	* lib/dll.c: Use calloc() instead of malloc() and memset().  Use
- 	dlerror() instead of strerror() when dlopen fails
+	dlerror() instead of strerror() when dlopen fails
  	(bugfix from Ingo Wilkens).
 
 1999-08-11  Petter Reinholdtsen <pere@td.org.uit.no>
