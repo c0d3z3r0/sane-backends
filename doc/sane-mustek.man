@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "23 April 2000"
+.TH sane-mustek 5 "07 May 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -15,7 +15,7 @@ Paragon MFS-6000CX
 .br
 Paragon MFS-12000CX
 .br
-Paragon MFC-600S, MFC-600CD, 600 II CD, 600 II SP, ScanMagic 600 II SP 
+Paragon MFC-600S, 600 II CD, ScanMagic 600 II SP 
 .br
 Paragon MFC-800S, 800 II SP
 .br
@@ -27,13 +27,15 @@ Paragon MFS-1200SP, MFS-12000SP
 .br
 ScanExpress 6000SP
 .br
-ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, ScanMagic 9636S
+ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, ScanMagic 9636S, 9636S Plus
 .br
 Paragon 600 II N
 .br
 Trust Imagery 1200 SP
 .br
 Trust Imagery 4800 SP
+.br
+Trust SCSI Connect 19200
 .br
 .RE
 .PP
@@ -110,6 +112,7 @@ Options come in two flavors: global and positional ones.  Global
 options apply to all devices managed by the backend whereas positional
 options apply just to the most recently mentioned device.  Note that
 this means that the order in which the options appear matters!
+
 Option
 .B linedistance-fix
 is positional and works around a problem that occurs with some SCSI
@@ -289,8 +292,9 @@ sane\-scsi(5)
 David Mosberger and Andreas Czechanowski, SE extensions Andreas
 Bolsch, various bug fixes Henning Meier-Geinitz
 .SH BUGS
-Automatic document feeder support is severly lacking (due to absence
-of equipment to test this with).
+Automatic document feeder support is only tested for Paragon A4
+scanners (due to absence of equipment to test this with other
+scanners).
 
 Scanning with the SCSI adapters supplied by Mustek is very slow at
 high resolutions and wide scanareas. 
