@@ -1,3 +1,9 @@
+1999-11-20  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+
+	* ltmain.sh:
+        changed variable soname from "libsane-backendname.*"
+        to "libsane.*" by sed command.
+
 1999-11-14  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/artec.cbackend/artec.h backend/artec.desc
