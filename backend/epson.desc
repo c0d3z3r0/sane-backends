@@ -23,32 +23,32 @@
 :url "http://www.epson.com/"
 
 :model "GT-5000"                  ; name models for above-specified mfg.
-:interface "Parallel"
+:interface "Parport"
 
 :model "Actionscanner II"
 :comment "US version of GT-5000"
-:interface "Parallel"
+:interface "Parport"
 
 :model "GT-6000"
-:interface "Parallel"
+:interface "Parport"
 
 :model "ES-300C"
 :comment "US version of GT-6000"
-:interface "Parallel"
+:interface "Parport"
 
 :model "GT-5500"
 :interface "SCSI"
 
 :model "GT-6500"
-:interface "Parallel"
+:interface "Parport"
 
 :model "ES-600C"
 :comment "US version of GT-6500"
-:interface "Parallel"
+:interface "Parport"
 
 :model "ES-1200C"
 :comment "US version of GT-9000"
-:interface "Parallel"
+:interface "Parport"
 
 :model "GT-7000"
 :interface "SCSI"
