@@ -1,3 +1,12 @@
+2000-01-31  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/hp-accessor.c backend/hp-accessor.h backend/hp-device.c
+	backend/hp-device.h backend/hp-handle.c backend/hp-hpmem.c
+	backend/hp-option.c backend/hp-option.h backend/hp-scl.c
+	backend/hp-scl.h backend/hp-scsi.h backend/hp.TODO backend/hp.c
+	backend/hp.desc doc/sane-hp.man: Updated to v0.85 from Peter
+	Kirchgessner.
+
 2000-01-30  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/artec.c backend/artec.h: (v0.5.9) changes to get lineart
@@ -5,7 +14,7 @@
 	  eliminate hanging on some AT12 models.
 	* backend/artec.desc: version and model status updates
 
-2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+2000-01-30  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* corrected missing "/" in include/sane/config.h.in line 251
 
 2000-01-30  Rene Rebe <rene.rebe@myokay.net>
