@@ -88,7 +88,7 @@
    or your suspect problems with command queueing
 */
 #define QUEUEDEBUG
-/*#define DEBUG*/
+#define DEBUG
 #ifdef DEBUG
 #include <unistd.h>
 #include <sys/time.h>
@@ -118,6 +118,19 @@
 */
 #define USE_CUSTOM_GAMMA
 #define USE_COLOR_THRESHOLD
+/* enable a short list of some standard resolutions. XSane provides 
+   its own resolution list; therefore its is generally not reasonable
+   to enable this list, if you mainly using XSane. But it might be handy
+   if you are working with xscanimage
+*/
+/* #define USE_RESOLUTION_LIST */ 
+
+/* enable separate specification of resolution in X and Y direction.
+   XSane will show the Y-resolution at a quite different place than
+   the X-resolution
+*/
+/* #define USE_SEPARATE_Y_RESOLUTION */
+
 #include <sharp.h>
 
 #define BACKEND_NAME sharp
@@ -254,6 +267,7 @@ static const SANE_String_Const speed_list[] =
 };
 #endif
 
+#ifdef USE_RESOLUTION_LIST
 #define RESOLUTION_MAX_JX610 8
 static const SANE_String_Const resolution_list_jx610[] =
 {
@@ -267,6 +281,7 @@ static const SANE_String_Const resolution_list_jx250[] =
   "50", "75", "100", "150", "200", "300", "400", "Select",
   0
 };
+#endif
 
 #define EDGE_NONE    "None"
 #define EDGE_MIDDLE  "Middle"
@@ -1563,7 +1578,7 @@ set_gamma_caps(SHARP_Scanner *s)
       if (s->val[OPT_CUSTOM_GAMMA].w == SANE_FALSE)
         {
           s->opt[OPT_GAMMA].cap &= ~SANE_CAP_INACTIVE;
-          s->opt[OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
+          s->opt[OPT_GAMMA_VECTOR].cap   |= SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
@@ -1571,7 +1586,7 @@ set_gamma_caps(SHARP_Scanner *s)
       else
         {
           s->opt[OPT_GAMMA].cap |= SANE_CAP_INACTIVE;
-          s->opt[OPT_GAMMA_VECTOR].cap &= ~SANE_CAP_INACTIVE;
+          s->opt[OPT_GAMMA_VECTOR].cap   |= SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
           s->opt[OPT_GAMMA_VECTOR_B].cap &= ~SANE_CAP_INACTIVE;
@@ -1858,38 +1873,17 @@ init_options (SHARP_Scanner * s)
   s->opt[OPT_RESOLUTION_GROUP].constraint_type = SANE_CONSTRAINT_NONE;
 
   /* select resolution */
-#if 0
-  s->opt[OPT_RESOLUTION].name = "Resolution";
-  s->opt[OPT_RESOLUTION].title = "Resolution";
-  s->opt[OPT_RESOLUTION].desc = "Resolution";
-  s->opt[OPT_RESOLUTION].type = SANE_TYPE_STRING;
+#ifdef USE_RESOLUTION_LIST
   if (s->dev->sensedat.model == JX610 || s->dev->sensedat.model == JX330)
-    {
-      s->opt[OPT_RESOLUTION].size = max_string_size (resolution_list_jx610);
-      s->opt[OPT_RESOLUTION].constraint_type = SANE_CONSTRAINT_STRING_LIST;
-      s->opt[OPT_RESOLUTION].constraint.string_list = resolution_list_jx610;
-      s->val[OPT_RESOLUTION].s 
-        = strdup (resolution_list_jx610[RESOLUTION_MAX_JX610]);
-    }
-  else /* must be a JX 250 */
-    {
-      s->opt[OPT_RESOLUTION].size = max_string_size (resolution_list_jx250);
-      s->opt[OPT_RESOLUTION].constraint_type = SANE_CONSTRAINT_STRING_LIST;
-      s->opt[OPT_RESOLUTION].constraint.string_list = resolution_list_jx250;
-      s->val[OPT_RESOLUTION].s 
-        = strdup (resolution_list_jx250[RESOLUTION_MAX_JX250]);
-    }
-#endif
-  if (s->dev->sensedat.model == JX610 || s->dev->sensedat.model == JX330)
-    init_string_option(s, "Resolution", "Resolution", "Resolution", 
-      resolution_list_jx610, OPT_RESOLUTION, RESOLUTION_MAX_JX610);
+    init_string_option(s, "ResolutionList", "ResolutionList", "ResolutionList", 
+      resolution_list_jx610, OPT_RESOLUTION_LIST, RESOLUTION_MAX_JX610);
   else
-    init_string_option(s, "Resolution", "Resolution", "Resolution", 
-      resolution_list_jx250, OPT_RESOLUTION, RESOLUTION_MAX_JX250);
-  
+    init_string_option(s, "ResolutionList", "ResolutionList", "ResolutionList", 
+      resolution_list_jx250, OPT_RESOLUTION_LIST, RESOLUTION_MAX_JX250);
+#endif
   /* x resolution */
-  s->opt[OPT_X_RESOLUTION].name = "X" SANE_NAME_SCAN_RESOLUTION;
-  s->opt[OPT_X_RESOLUTION].title = "X " SANE_TITLE_SCAN_RESOLUTION;
+  s->opt[OPT_X_RESOLUTION].name = SANE_NAME_SCAN_RESOLUTION;
+  s->opt[OPT_X_RESOLUTION].title = SANE_TITLE_SCAN_RESOLUTION;
   s->opt[OPT_X_RESOLUTION].desc = SANE_DESC_SCAN_RESOLUTION;
   s->opt[OPT_X_RESOLUTION].type = SANE_TYPE_INT;
   s->opt[OPT_X_RESOLUTION].unit = SANE_UNIT_DPI;
@@ -1897,6 +1891,7 @@ init_options (SHARP_Scanner * s)
   s->opt[OPT_X_RESOLUTION].constraint.range = &s->dev->info.xres_range;
   s->val[OPT_X_RESOLUTION].w = s->dev->info.xres_default;
 
+#ifdef USE_SEPARATE_Y_RESOLUTION
   /* y resolution */
   s->opt[OPT_Y_RESOLUTION].name = "Y" SANE_NAME_SCAN_RESOLUTION;
   s->opt[OPT_Y_RESOLUTION].title = "Y " SANE_TITLE_SCAN_RESOLUTION;
@@ -1906,6 +1901,7 @@ init_options (SHARP_Scanner * s)
   s->opt[OPT_Y_RESOLUTION].constraint_type = SANE_CONSTRAINT_RANGE;
   s->opt[OPT_Y_RESOLUTION].constraint.range = &s->dev->info.yres_range;
   s->val[OPT_Y_RESOLUTION].w = s->dev->info.yres_default;
+#endif
 
   /* "Geometry" group: */
   s->opt[OPT_GEOMETRY_GROUP].title = "Geometry";
@@ -2171,6 +2167,7 @@ do_cancel (SHARP_Scanner * s)
       wait_ready(s->fd);
       sanei_scsi_cmd (s->fd, cmd, sizeof (cmd), 0, 0);
       /* if (s->adf_scan) */
+      if (s->dev->sensedat.model != JX610)
         object_position(s->fd, UNLOAD_PAPER);
     }
 
@@ -2228,6 +2225,10 @@ attach_and_list(const char *devnam)
   return res;
 }
 
+static int buffers[2] = {DEFAULT_BUFFERS, DEFAULT_BUFFERS};
+static int bufsize[2] = {DEFAULT_BUFSIZE, DEFAULT_BUFSIZE};
+static int queued_reads[2] = {DEFAULT_QUEUED_READS, DEFAULT_QUEUED_READS};
+
 SANE_Status
 sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
 {
@@ -2238,9 +2239,6 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   char *end;
   FILE *fp;
   int opt_index = 0;
-  int buffers[2] = {DEFAULT_BUFFERS, DEFAULT_BUFFERS};
-  int bufsize[2] = {DEFAULT_BUFSIZE, DEFAULT_BUFSIZE};
-  int queued_reads[2] = {DEFAULT_QUEUED_READS, DEFAULT_QUEUED_READS};
   int linecount = 0;
 #if 1
   SHARP_Device sd; 
@@ -2480,6 +2478,9 @@ sane_open (SANE_String_Const devnam, SANE_Handle * handle)
 	  status = attach (devnam, &dev);
 	  if (status != SANE_STATUS_GOOD)
 	    return (status);
+	  dev->info.buffers = buffers[0];
+	  dev->info.wanted_bufsize = bufsize[0];
+	  dev->info.queued_reads = queued_reads[0];
 	}
     }
   else
@@ -2587,7 +2588,9 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	{
 	  /* word options: */
 	case OPT_X_RESOLUTION:
+#ifdef USE_SEPARATE_Y_RESOLUTION
 	case OPT_Y_RESOLUTION:
+#endif
 	case OPT_TL_X:
 	case OPT_TL_Y:
 	case OPT_BR_X:
@@ -2626,7 +2629,9 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	case OPT_HALFTONE:
 	case OPT_PAPER:
 	case OPT_GAMMA:
-	case OPT_RESOLUTION:
+#ifdef USE_RESOLUTION_LIST
+	case OPT_RESOLUTION_LIST:
+#endif
 	case OPT_EDGE_EMPHASIS:
 	case OPT_LIGHTCOLOR:
 	case OPT_SCANSOURCE:
@@ -2653,7 +2658,9 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	{
 	  /* (mostly) side-effect-free word options: */
 	case OPT_X_RESOLUTION:
+#ifdef USE_SEPARATE_Y_RESOLUTION
 	case OPT_Y_RESOLUTION:
+#endif
 	case OPT_TL_X:
 	case OPT_TL_Y:
 	case OPT_BR_X:
@@ -2824,33 +2831,24 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	  }
 	  return (SANE_STATUS_GOOD);
 
-	case OPT_RESOLUTION:
+#ifdef USE_RESOLUTION_LIST
+	case OPT_RESOLUTION_LIST:
 	  if (info)
 	    *info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-#if 0
-	  if (s->val[option].s)
-	    free (s->val[option].s);
-	  s->val[option].s = strdup (val);
-#endif
-	  for (i = 0; s->opt[OPT_RESOLUTION].constraint.string_list[i]; i++) {
+	  for (i = 0; s->opt[OPT_RESOLUTION_LIST].constraint.string_list[i]; i++) {
 	    if (strcmp (val, 
-	          s->opt[OPT_RESOLUTION].constraint.string_list[i]) == 0){
+	          s->opt[OPT_RESOLUTION_LIST].constraint.string_list[i]) == 0){
 	      s->val[OPT_X_RESOLUTION].w 
-	        = atoi(s->opt[OPT_RESOLUTION].constraint.string_list[i]);
+	        = atoi(s->opt[OPT_RESOLUTION_LIST].constraint.string_list[i]);
 	      s->val[OPT_Y_RESOLUTION].w 
-	        = atoi(s->opt[OPT_RESOLUTION].constraint.string_list[i]);
+	        = atoi(s->opt[OPT_RESOLUTION_LIST].constraint.string_list[i]);
 	      if (info)
 	        *info |= SANE_INFO_RELOAD_PARAMS;
 	      break;
 	    }
 	  }
-#if 0
-	  if (s->val[option].s)
-	    free (s->val[option].s);
-	  s->val[option].s 
-	    = strdup (resolution_list_jx610[RESOLUTION_MAX_JX610]);
-#endif
 	  return (SANE_STATUS_GOOD);
+#endif
 #ifdef USE_CUSTOM_GAMMA
 	  /* side-effect-free word-array options: */
 	case OPT_GAMMA_VECTOR:
@@ -2888,7 +2886,11 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
   DBG (10, "<< sane_get_parameters ");
 
   xres = s->val[OPT_X_RESOLUTION].w;
+#ifdef USE_SEPARATE_Y_RESOLUTION
   yres = s->val[OPT_Y_RESOLUTION].w;
+#else
+  yres = xres;
+#endif
   if (!s->scanning)
     {
       /* make best-effort guess at what parameters will look like once
@@ -2937,7 +2939,11 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
     }
 
   xres = s->val[OPT_X_RESOLUTION].w;
+#ifdef USE_SEPARATE_Y_RESOLUTION
   yres = s->val[OPT_Y_RESOLUTION].w;
+#else
+  yres = xres;
+#endif
 
   mode = s->val[OPT_MODE].s;
 
@@ -3273,16 +3279,23 @@ s->dev->sensedat.complain_on_adf_error = 1;
   lightcolor = s->val[OPT_LIGHTCOLOR].s;
   adf_fsu = s->val[OPT_SCANSOURCE].s;
   s->speed = s->val[OPT_SPEED].w;
+
+  s->xres = s->val[OPT_X_RESOLUTION].w;
   if (s->val[OPT_PREVIEW].w == SANE_FALSE)
     {
-      s->xres = s->val[OPT_X_RESOLUTION].w;
+#ifdef USE_SEPARATE_Y_RESOLUTION
       s->yres = s->val[OPT_Y_RESOLUTION].w;
+#else
+      s->yres = s->val[OPT_X_RESOLUTION].w;
+#endif
+      s->speed = s->val[OPT_SPEED].w;
     }
   else
     {
-      s->xres = 75;
-      s->yres = 75;
+      s->yres = s->val[OPT_X_RESOLUTION].w;
+      s->speed = SANE_TRUE;
     }
+
   s->ulx = MM_TO_PIX(SANE_UNFIX(s->val[OPT_TL_X].w), s->dev->info.mud);
   s->uly = MM_TO_PIX(SANE_UNFIX(s->val[OPT_TL_Y].w), s->dev->info.mud);
   s->threshold = s->val[OPT_THRESHOLD].w;
@@ -3758,7 +3771,7 @@ s->dev->sensedat.complain_on_adf_error = 1;
 
   DBG (1, "%d pixels per line, %d bytes, %d lines high, total %lu bytes, "
        "dpi=%d\n", s->params.pixels_per_line, s->params.bytes_per_line,
-       s->params.lines, (u_long) s->bytes_to_read, s->val[OPT_Y_RESOLUTION].w);
+       s->params.lines, (u_long) s->bytes_to_read, s->val[OPT_X_RESOLUTION].w);
 
   s->busy = SANE_FALSE;
   s->buf_used = 0;
@@ -3827,7 +3840,8 @@ sane_read_shuffled (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
   SHARP_Scanner *s = handle;
   SANE_Status status;
   SANE_Byte *dest, *red, *green, *blue, mask;
-  size_t nread, ntest, transfer, pixel, max_pixel, line, max_line;
+  SANE_Int transfer;
+  size_t nread, ntest, pixel, max_pixel, line, max_line;
   size_t start_input, bytes_per_line_in;
   DBG (10, "<< sane_read_shuffled ");
 
@@ -3889,7 +3903,7 @@ sane_read_shuffled (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
       status = read_data (s, &(s->buffer[start_input]), &nread);
 #else
       wait_ready(s->fd);
-      status = read_data (s->fd, &(s->buffer[start_input]), &nread);
+      status = read_data (s, &(s->buffer[start_input]), &nread);
 #endif
       if (status != SANE_STATUS_GOOD)
         {
