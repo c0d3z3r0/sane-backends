@@ -80,8 +80,8 @@
 
 #define ARTEC_MAJOR     0
 #define ARTEC_MINOR     5
-#define ARTEC_SUB       11
-#define ARTEC_LAST_MOD  "02/11/2000 19:52 EST"
+#define ARTEC_SUB       13
+#define ARTEC_LAST_MOD  "02/19/2000 09:52 EST"
 
 #define MM_PER_INCH	25.4
 
@@ -2286,6 +2286,7 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_FILTER_TYPE].constraint_type = SANE_CONSTRAINT_STRING_LIST;
   s->opt[OPT_FILTER_TYPE].constraint.string_list = filter_type_list;
   s->val[OPT_FILTER_TYPE].s = strdup (filter_type_list[0]);
+  s->opt[OPT_FILTER_TYPE].cap |= SANE_CAP_INACTIVE;
 
   /* contrast */
   s->opt[OPT_CONTRAST].name = SANE_NAME_CONTRAST;
@@ -2326,6 +2327,7 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_THRESHOLD].constraint_type = SANE_CONSTRAINT_RANGE;
   s->opt[OPT_THRESHOLD].constraint.range = &s->hw->threshold_range;
   s->val[OPT_THRESHOLD].w = 0x80;
+  s->opt[OPT_THRESHOLD].cap |= SANE_CAP_INACTIVE;
 
   /* halftone pattern */
   s->opt[OPT_HALFTONE_PATTERN].name = SANE_NAME_HALFTONE_PATTERN;
@@ -2336,11 +2338,7 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_HALFTONE_PATTERN].constraint_type = SANE_CONSTRAINT_STRING_LIST;
   s->opt[OPT_HALFTONE_PATTERN].constraint.string_list = halftone_pattern_list;
   s->val[OPT_HALFTONE_PATTERN].s = strdup (halftone_pattern_list[1]);
-
-  if (!(s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN))
-    {
-      s->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
-    }
+  s->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
 
   /* pixel averaging */
   s->opt[OPT_PIXEL_AVG].name = "pixel-avg";
@@ -2360,11 +2358,7 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_EDGE_ENH].desc = "Enable HardWare Lineart Line Edge Enhancement";
   s->opt[OPT_EDGE_ENH].type = SANE_TYPE_BOOL;
   s->val[OPT_EDGE_ENH].w = SANE_FALSE;
-
-  if (!(s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE))
-    {
-      s->opt[OPT_EDGE_ENH].cap |= SANE_CAP_INACTIVE;
-    }
+  s->opt[OPT_EDGE_ENH].cap |= SANE_CAP_INACTIVE;
 
   /* custom-gamma table */
   s->opt[OPT_CUSTOM_GAMMA].name = SANE_NAME_CUSTOM_GAMMA;
@@ -2439,7 +2433,6 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_TRANSPARENCY].desc = "Use transparency adaptor";
   s->opt[OPT_TRANSPARENCY].type = SANE_TYPE_BOOL;
   s->val[OPT_TRANSPARENCY].w = SANE_FALSE;
-/*  s->opt[OPT_TRANSPARENCY].cap = SANE_CAP_ADVANCED; */
 
   /* ADF */
   s->opt[OPT_ADF].name = "adf";
@@ -2447,7 +2440,6 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_ADF].desc = "Use ADF";
   s->opt[OPT_ADF].type = SANE_TYPE_BOOL;
   s->val[OPT_ADF].w = SANE_FALSE;
-/*  s->opt[OPT_ADF].cap = SANE_CAP_ADVANCED; */
 
   /* Calibration group: */
   s->opt[OPT_CALIBRATION_GROUP].title = "Calibration";
@@ -2911,8 +2903,6 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 
 	case OPT_MODE:
 	  {
-	    int halftoning;
-
 	    if (s->val[option].s)
 	      free (s->val[option].s);
 
@@ -2928,39 +2918,38 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	    s->opt[OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
-	    s->opt[OPT_CONTRAST].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_THRESHOLD].cap |= SANE_CAP_INACTIVE;
-	    s->opt[OPT_FILTER_TYPE].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_SOFTWARE_CAL].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_EDGE_ENH].cap |= SANE_CAP_INACTIVE;
 
-	    halftoning = (strcmp (val, "Halftone") == 0);
+	    /* options VISIBLE by default */
+	    s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
+	    s->opt[OPT_FILTER_TYPE].cap &= ~SANE_CAP_INACTIVE;
 
-	    if (halftoning || (strcmp (val, "Lineart") == 0))
+	    if (strcmp (val, "Lineart") == 0)
 	      {
-		s->opt[OPT_FILTER_TYPE].cap &= ~SANE_CAP_INACTIVE;
+	        /* Lineart mode */
+	        s->opt[OPT_CONTRAST].cap |= SANE_CAP_INACTIVE; /* OFF */
+	        s->opt[OPT_THRESHOLD].cap &= ~SANE_CAP_INACTIVE;
 
-		if (halftoning)
-		  {
-		    /* halftone mode */
-		    if (s->hw->flags & ARTEC_FLAG_OPT_CONTRAST)
-		      s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
-
-		    if (s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN)
-		      s->opt[OPT_HALFTONE_PATTERN].cap &= ~SANE_CAP_INACTIVE;
-		  }
-		else
-		  {
-		    /* lineart mode */
-		    s->opt[OPT_THRESHOLD].cap &= ~SANE_CAP_INACTIVE;
-
-		    if (s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE)
-		      s->opt[OPT_EDGE_ENH].cap &= ~SANE_CAP_INACTIVE;
-		  }
+	        if (s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE)
+		  s->opt[OPT_EDGE_ENH].cap &= ~SANE_CAP_INACTIVE;
+	      }
+	    else if (strcmp (val, "Halftone") == 0)
+	      {
+		/* Halftone mode */
+		if (s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN)
+		  s->opt[OPT_HALFTONE_PATTERN].cap &= ~SANE_CAP_INACTIVE;
+	      }
+	    else if (strcmp (val, "Gray") == 0)
+	      {
+		/* Grayscale mode */
 	      }
 	    else if (strcmp (val, "Color") == 0)
 	      {
+	        /* Color mode */
+	        s->opt[OPT_FILTER_TYPE].cap |= SANE_CAP_INACTIVE;
 		s->opt[OPT_SOFTWARE_CAL].cap &= ~SANE_CAP_INACTIVE;
 	      }
 	  }
