@@ -1,3 +1,6 @@
+2000-02-06  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* Sharp man page updated
+
 2000-02-26  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in: Don't use -ansi and -pedantic unless
