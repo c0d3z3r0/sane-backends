@@ -98,7 +98,7 @@ static const SANE_String_Const mode_list[] =
     "Line Art", "Dithered", "Gray", "Color", 0
 };
 
-//avision_res will be overwritten in init_options() !!!
+/* avision_res will be overwritten in init_options() !!! */
 
 
 static const SANE_Range u8_range =
@@ -198,286 +198,279 @@ wait_ready (int fd)
 static SANE_Status
 sense_handler (int fd, u_char *sense, void *arg)
 {
-     /*MCC*/
+    /*MCC*/
+    
+    int i;
+    
+    
+    SANE_Status status;
+    
+    SANE_Bool ASC_switch;
+    
+    DBG(3, "sense_handler\n");
+    
+    ASC_switch = SANE_FALSE;
+    
+    switch (sense[0])
+	{
+	case 0x00:
+	    status = SANE_STATUS_GOOD;
+	    
+	default:
+	    DBG(1, "sense_handler: got unknown sense code %02x\n", sense[0]);
+	    status = SANE_STATUS_IO_ERROR;
+	}
+    
+    for (i = 0; i < 21; i++)
+	{
+	    printf("%d:[%x]\n", i, sense[i]); 
+	}
+    
+    if (sense[VALID_BYTE] & VALID)
+	{
+	    switch (sense[ERRCODE_BYTE] & ERRCODEMASK)
+		{
+		case ERRCODESTND:
+		    {
+			DBG (5, "SENSE: STANDARD ERROR CODE\n" );
+			break;
+		    }
+		case ERRCODEAV:
+		    {
+			DBG (5, "SENSE: AVISION SPECIFIC ERROR CODE\n" );
+			break;
+		    }
+		    
+		}
+	    
+	    switch (sense[SENSEKEY_BYTE] & SENSEKEY_MASK)
+		{
+		    
+		case NOSENSE          :
+		    {
+			DBG (5, "SENSE: NO SENSE\n" );
+			break;
+		    }
+		case NOTREADY         :
+		    {
+			DBG (5, "SENSE: NOT READY\n" );
+			break;
+		    }
+		case MEDIUMERROR      :
+		    {
+			DBG (5, "SENSE: MEDIUM ERROR\n" );
+			break;
+		    }
+		case HARDWAREERROR    :
+		    {
+			DBG (5, "SENSE: HARDWARE FAILURE\n" );
+			break;
+		    }
+		case ILLEGALREQUEST   :
+		    {
+			DBG (5, "SENSE: ILLEGAL REQUEST\n" );
+			ASC_switch = SANE_TRUE;                   
+			break;
+		    }
+		case UNIT_ATTENTION   :
+		    {
+			DBG (5, "SENSE: UNIT ATTENTION\n" );
+			break;
+		    }
+		case VENDORSPEC       :
+		    {
+			DBG (5, "SENSE: VENDOR SPECIFIC\n" );
+			break;
+		    }
+		case ABORTEDCOMMAND   :
+		    {
+			DBG (5, "SENSE: COMMAND ABORTED\n" );
+			break;
+		    }
+		}
 
-     int i;
+	    if (sense[EOS_BYTE] & EOSMASK)
+		{
+		    DBG (5, "SENSE: END OF SCAN\n" );
+		}
+	    else
+		{
+		    DBG (5, "SENSE: SCAN HAS NOT YET BEEN COMPLETED\n" );
+		}
+
+	    if (sense[ILI_BYTE] & INVALIDLOGICLEN)
+		{
+		    DBG (5, "SENSE: INVALID LOGICAL LENGTH\n" );
+		}
 
 
-     SANE_Status status;
+	    if ((sense[ASC_BYTE] != 0) && (sense[ASCQ_BYTE] != 0))
+		{
+		    if (sense[ASC_BYTE] == ASCFILTERPOSERR)
+			{
+			    DBG (5, "X\n");
+			}
 
-     SANE_Bool ASC_switch;
+		    if (sense[ASCQ_BYTE] == ASCQFILTERPOSERR)
+			{
+			    DBG (5, "X\n");
+			}
 
-     DBG(3, "sense_handler\n");
-     
-     ASC_switch = SANE_FALSE;
+		    if (sense[ASCQ_BYTE] == ASCQFILTERPOSERR)
+			{
+			    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
+			}
 
-     switch (sense[0])
-     {
-         case 0x00:
-              status = SANE_STATUS_GOOD;
-              
-         default:
-              DBG(1, "sense_handler: got unknown sense code %02x\n", sense[0]);
-              status = SANE_STATUS_IO_ERROR;
-     }
+		    if ((sense[ASC_BYTE] == ASCFILTERPOSERR) && 
+			(sense[ASCQ_BYTE] == ASCQFILTERPOSERR))
+			{
+			    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
+			}
 
-     for( i=0; i<21; i++ )
-     {
-          printf( "%d:[%x]\n",i, sense[i] ); 
-     }
+		    if ((sense[ASC_BYTE] == ASCADFPAPERJAM) && 
+			(sense[ASCQ_BYTE] == ASCQADFPAPERJAM ))
+			{
+			    DBG(5, "ADF Paper Jam\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCADFCOVEROPEN) &&
+			(sense[ASCQ_BYTE] == ASCQADFCOVEROPEN))
+			{
+			    DBG(5, "ADF Cover Open\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCADFPAPERCHUTEEMPTY) &&
+			(sense[ASCQ_BYTE] == ASCQADFPAPERCHUTEEMPTY))
+			{
+			    DBG(5, "ADF Paper Chute Empty\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINTERNALTARGETFAIL) &&
+			(sense[ASCQ_BYTE] == ASCQINTERNALTARGETFAIL))
+			{
+			    DBG(5, "Internal Target Failure\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCSCSIPARITYERROR) &&
+			(sense[ASCQ_BYTE] == ASCQSCSIPARITYERROR))
+			{
+			    DBG(5, "SCSI Parity Error\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVALIDCOMMANDOPCODE) &&
+			(sense[ASCQ_BYTE] == ASCQINVALIDCOMMANDOPCODE))
+			{
+			    DBG(5, "Invalid Command Operation Code\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVALIDFIELDCDB) &&
+			(sense[ASCQ_BYTE] == ASCQINVALIDFIELDCDB))
+			{
+			    DBG(5, "Invalid Field in CDB\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCLUNNOTSUPPORTED) &&
+			(sense[ASCQ_BYTE] == ASCQLUNNOTSUPPORTED))
+			{
+			    DBG(5, "Logical Unit Not Supported\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVALIDFIELDPARMLIST) &&
+			(sense[ASCQ_BYTE] == ASCQINVALIDFIELDPARMLIST))
+			{
+			    DBG(5, "Invalid Field in parameter List\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVALIDCOMBINATIONWIN) &&
+			(sense[ASCQ_BYTE] == ASCQINVALIDCOMBINATIONWIN))
+			{
+			    DBG(5, "Invalid  Combination  of  Window  Specified\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCMSGERROR) &&
+			(sense[ASCQ_BYTE] == ASCQMSGERROR))
+			{
+			    DBG(5, "Message Error\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCCOMMCLREDANOTHINITIATOR) &&
+			(sense[ASCQ_BYTE] == ASCQCOMMCLREDANOTHINITIATOR))
+			{
+			    DBG(5, "Command Cleared By Another Initiator.\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCIOPROCTERMINATED) &&
+			(sense[ASCQ_BYTE] == ASCQIOPROCTERMINATED))
+			{
+			    DBG(5, "I/O process Terminated.\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVBITIDMSG) &&
+			(sense[ASCQ_BYTE] == ASCQINVBITIDMSG))
+			{
+			    DBG(5, "Invalid Bit in Identify Message\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCINVMSGERROR) &&
+			(sense[ASCQ_BYTE] == ASCQINVMSGERROR))
+			{
+			    DBG(5, "Invalid Message Error\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCLAMPFAILURE) &&
+			(sense[ASCQ_BYTE] == ASCQLAMPFAILURE))
+			{
+			    DBG(5, "Lamp Failure\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCMECHPOSERROR) &&
+			(sense[ASCQ_BYTE] == ASCQMECHPOSERROR))
+			{
+			    DBG(5, "Mechanical Positioning Error\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCPARAMLISTLENERROR) &&
+			(sense[ASCQ_BYTE] == ASCQPARAMLISTLENERROR))
+			{
+			    DBG(5, "Parameter List Length Error\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCPARAMNOTSUPPORTED) &&
+			(sense[ASCQ_BYTE] == ASCQPARAMNOTSUPPORTED))
+			{
+			    DBG(5, "Parameter Not Supported\n" );
+			}
+		    if ((sense[ASC_BYTE]  == ASCPARAMVALINVALID  ) &&
+			(sense[ASCQ_BYTE] == ASCQPARAMVALINVALID )  )
+			{
+			    DBG(5, "Parameter Value Invalid\n" );
+			}
+		    if ((sense[ASC_BYTE]  == ASCPOWERONRESET) &&
+			(sense[ASCQ_BYTE] == ASCQPOWERONRESET)) 
+			{
+			    DBG(5, "Power-on, Reset, or Bus Device Reset Occurred\n" );
+			}
+		    if ((sense[ASC_BYTE] == ASCSCANHEADPOSERROR) &&
+			(sense[ASCQ_BYTE] == ASCQSCANHEADPOSERROR))
+			{
+			    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
+			}
 
-   
-     if( sense[VALID_BYTE] & VALID )
-     {
-          switch ( sense[ERRCODE_BYTE] & ERRCODEMASK )
-          {
-              case ERRCODESTND:
-              {
-                   DBG (5, "SENSE: STANDARD ERROR CODE\n" );
-                   break;
-              }
-              case ERRCODEAV       :
-              {
-                   DBG (5, "SENSE: AVISION SPECIFIC ERROR CODE\n" );
-                   break;
-              }
-              
-          }
+		}
+	    else
+		{
+		    DBG(5, "No Additional Sense Information\n" );
+		}
 
-          switch ( sense[SENSEKEY_BYTE] & SENSEKEY_MASK )
-          {
+	    if (ASC_switch == SANE_TRUE)
+		{
+		    if (sense[SKSV_BYTE] & SKSVMASK)
+			{
+			    if (sense[CD_BYTE] & CDMASK)
+				{
+				    DBG (5, "SENSE: ERROR IN COMMAND PARAMETER...\n" );
+				}
+			    else
+				{
+				    DBG (5, "SENSE: ERROR IN DATA PARAMETER...\n" );
+				}
+                    
+			    if (sense[BPV_BYTE] & BPVMASK)
+				{
+				    DBG(5, "BIT %d ERRORNOUS OF\n", (int)sense[BITPOINTER_BYTE] & BITPOINTERMASK);
+				}
+                    
+			    DBG(5, "ERRORNOUS BYTE %d \n", (int)sense[BYTEPOINTER_BYTE1] );
+                    
+			}
                
-              case NOSENSE          :
-              {
-                   DBG (5, "SENSE: NO SENSE\n" );
-                   break;
-              }
-              case NOTREADY         :
-              {
-                   DBG (5, "SENSE: NOT READY\n" );
-                   break;
-              }
-              case MEDIUMERROR      :
-              {
-                   DBG (5, "SENSE: MEDIUM ERROR\n" );
-                   break;
-              }
-              case HARDWAREERROR    :
-              {
-                   DBG (5, "SENSE: HARDWARE FAILURE\n" );
-                   break;
-              }
-              case ILLEGALREQUEST   :
-              {
-                   DBG (5, "SENSE: ILLEGAL REQUEST\n" );
-                   ASC_switch = SANE_TRUE;                   
-                   break;
-              }
-              case UNIT_ATTENTION   :
-              {
-                   DBG (5, "SENSE: UNIT ATTENTION\n" );
-                   break;
-              }
-              case VENDORSPEC       :
-              {
-                   DBG (5, "SENSE: VENDOR SPECIFIC\n" );
-                   break;
-              }
-              case ABORTEDCOMMAND   :
-              {
-                   DBG (5, "SENSE: COMMAND ABORTED\n" );
-                   break;
-              }
-          }
-
-          if( sense[EOS_BYTE] & EOSMASK )
-          {
-               DBG (5, "SENSE: END OF SCAN\n" );
-          }
-          else
-          {
-               DBG (5, "SENSE: SCAN HAS NOT YET BEEN COMPLETED\n" );
-          }
-
-          if( sense[ILI_BYTE] & INVALIDLOGICLEN )
-          {
-               DBG (5, "SENSE: INVALID LOGICAL LENGTH\n" );
-          }
-
-
-          if( ( sense[ASC_BYTE]  != 0  ) &&
-              ( sense[ASCQ_BYTE] != 0  )  )
-          {
-
-               if( ( sense[ASC_BYTE]  == ASCFILTERPOSERR  )
-                                                             )
-               {
-                    printf("x" );
-               }
-
-               if(                                            
-                   ( sense[ASCQ_BYTE] == ASCQFILTERPOSERR )  )
-               {
-                    printf("x" );
-               }
-
-               if( /*( sense[ASC_BYTE]  == ASCFILTERPOSERR  )*/ // &&
-                   ( sense[ASCQ_BYTE] == ASCQFILTERPOSERR )  )
-               {
-                    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
-               }
-
-               if( ( sense[ASC_BYTE]  == ASCFILTERPOSERR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQFILTERPOSERR )  )
-               {
-                    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
-               }
-
-               if( ( sense[ASC_BYTE]  == ASCADFPAPERJAM  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQADFPAPERJAM )  )
-               {
-                    DBG(5, "ADF Paper Jam\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCADFCOVEROPEN  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQADFCOVEROPEN )  )
-               {
-                    DBG(5, "ADF Cover Open\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCADFPAPERCHUTEEMPTY  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQADFPAPERCHUTEEMPTY )  )
-               {
-                    DBG(5, "ADF Paper Chute Empty\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINTERNALTARGETFAIL  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINTERNALTARGETFAIL )  )
-               {
-                    DBG(5, "Internal Target Failure\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCSCSIPARITYERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQSCSIPARITYERROR )  )
-               {
-                    DBG(5, "SCSI Parity Error\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVALIDCOMMANDOPCODE  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVALIDCOMMANDOPCODE )  )
-               {
-                    DBG(5, "Invalid Command Operation Code\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVALIDFIELDCDB  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVALIDFIELDCDB )  )
-               {
-                    DBG(5, "Invalid Field in CDB\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCLUNNOTSUPPORTED  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQLUNNOTSUPPORTED )  )
-               {
-                    DBG(5, "Logical Unit Not Supported\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVALIDFIELDPARMLIST  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVALIDFIELDPARMLIST )  )
-               {
-                    DBG(5, "Invalid Field in parameter List\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVALIDCOMBINATIONWIN  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVALIDCOMBINATIONWIN )  )
-               {
-                    DBG(5, "Invalid  Combination  of  Window  Specified\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCMSGERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQMSGERROR )  )
-               {
-                    DBG(5, "Message Error\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCCOMMCLREDANOTHINITIATOR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQCOMMCLREDANOTHINITIATOR )  )
-               {
-                    DBG(5, "Command Cleared By Another Initiator.\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCIOPROCTERMINATED  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQIOPROCTERMINATED )  )
-               {
-                    DBG(5, "I/O process Terminated.\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVBITIDMSG  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVBITIDMSG )  )
-               {
-                    DBG(5, "Invalid Bit in Identify Message\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCINVMSGERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQINVMSGERROR )  )
-               {
-                    DBG(5, "Invalid Message Error\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCLAMPFAILURE  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQLAMPFAILURE )  )
-               {
-                    DBG(5, "Lamp Failure\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCMECHPOSERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQMECHPOSERROR )  )
-               {
-                    DBG(5, "Mechanical Positioning Error\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCPARAMLISTLENERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQPARAMLISTLENERROR )  )
-               {
-                    DBG(5, "Parameter List Length Error\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCPARAMNOTSUPPORTED  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQPARAMNOTSUPPORTED )  )
-               {
-                    DBG(5, "Parameter Not Supported\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCPARAMVALINVALID  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQPARAMVALINVALID )  )
-               {
-                    DBG(5, "Parameter Value Invalid\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCPOWERONRESET  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQPOWERONRESET )  )
-               {
-                    DBG(5, "Power-on, Reset, or Bus Device Reset Occurred\n" );
-               }
-               if( ( sense[ASC_BYTE]  == ASCSCANHEADPOSERROR  ) &&
-                   ( sense[ASCQ_BYTE] == ASCQSCANHEADPOSERROR )  )
-               {
-                    DBG (5, "SENSE: FILTER POSITIONING ERROR\n" );
-               }
-
-          }
-          else
-          {
-               DBG(5, "No Additional Sense Information\n" );
-          }
-
-          if( ASC_switch == SANE_TRUE )
-          {
-               if( sense[SKSV_BYTE] & SKSVMASK )
-               {
-                    if( sense[CD_BYTE] & CDMASK )
-                    {
-                         DBG (5, "SENSE: ERROR IN COMMAND PARAMETER...\n" );
-                    }
-                    else
-                    {
-                         DBG (5, "SENSE: ERROR IN DATA PARAMETER...\n" );
-                    }
-                    
-                    if( sense[BPV_BYTE] & BPVMASK )
-                    {
-                         DBG(5, "BIT %d ERRORNOUS OF\n", 
-                             (int)sense[BITPOINTER_BYTE] & BITPOINTERMASK );
-                    }
-                    
-                    DBG(5, "ERRORNOUS BYTE %d \n", (int)sense[BYTEPOINTER_BYTE1] );
-                    
-               }
-               
-          }
+		}
           
           
-     }
-     return( status );                   
+	}
+    return status;
 }
 
 

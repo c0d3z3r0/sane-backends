@@ -21,6 +21,6 @@
 :url "http://www.avision.com/"
 
 :model "AV 630 CS"                    ; name models for above-specified mfg.
-:comment "1 pass, 1200*600 DPI        ;
+:comment "1 pass, 1200*600 DPI"       ;
 
 
