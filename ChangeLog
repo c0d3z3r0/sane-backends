@@ -1,37 +1,42 @@
 2000-07-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* README.os2 configure.os2 include/sane/sanei_backend.h
+	sanei/os2_srb.h sanei/sanei_init_debug.c backend/dll.c
+	backend/net.c frontend/saned.c : Some of the OS/2 patches from
+	Yuri Dario.
+
 	* frontend/saned.c: Correct cancel handling in saned.  Patch from
 	Jochen Eisinger.
 
 2000-07-12  Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
 
-    * frontend/scanimage.c, doc/scanimage.man: Support for
-          environment variable SANE_DEFAULT_DEVICE.
+	* frontend/scanimage.c, doc/scanimage.man: Support for
+	  environment variable SANE_DEFAULT_DEVICE.
 	
 2000-07-11  Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
 
-    * backend/st400.c, backend/st400.conf, backend/st400.h,
-      doc/sane-st400.man: new files
-    * backend/st400.desc: updated information
-    * README, backend/Makefile.in, doc/Makefile.in: added st400 backend
-    * AUTHORS: added myself as maintainer of st400 backend
+	* backend/st400.c, backend/st400.conf, backend/st400.h,
+	doc/sane-st400.man: new files
+	* backend/st400.desc: updated information
+	* README, backend/Makefile.in, doc/Makefile.in: added st400 backend
+	* AUTHORS: added myself as maintainer of st400 backend
 	
 2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
 
-    * doc/sane-hp.man: Updated manual page (scantype --> scan source)
+	* doc/sane-hp.man: Updated manual page (scantype --> scan source)
 
 2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
 
-    * backend/hp-handle.c, hp-scl.c, hp-scl.h, hp.c, hp.h, hp-option.c
+	* backend/hp-handle.c, hp-scl.c, hp-scl.h, hp.c, hp.h, hp-option.c
               hp-option.h: Add wait for front panel button
 
-    * backend/hp.desc: Changed version to 0.88
+	* backend/hp.desc: Changed version to 0.88
 
 2000-07-09  Andreas Rick <andreas.rick@free.fr>
 
 	* AUTHORS: added myself as maintainer of the coolscan backend
 
-    * README: added Coolscan page link
+	* README: added Coolscan page link
 
 	* doc/sane-coolscan.man: first version of Coolscan manpage
 
@@ -39,7 +44,7 @@
 
 	* AUTHORS: added myself as maintainer of the Plustek backend
 
-    * README: added Plustek manpage entry
+	* README: added Plustek manpage entry
 
 	* backend/plustek.desc: updated description
 
