@@ -742,7 +742,7 @@ sane_close (SANE_Handle handle)
   if (prev)
     prev->next = s->next;
   else
-    first_handle = s;
+    first_handle = s->next;
 
   if (s->scanning)
     sane_cancel (handle);
