@@ -1,5 +1,12 @@
 2000-02-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/hp-accessor.c backend/hp-device.c backend/hp-handle.c
+	backend/hp-hpmem.c backend/hp-option.c backend/hp-option.h
+	backend/hp-scl.c backend/hp-scsi.h backend/hp.c backend/hp.desc
+	backend/hp.h doc/sane-hp.man: Updated HP backend to v0.86 from
+	Peter Kirchgessner.  Enable scan depths > 8 and add option
+	enable-image-buffering to config file.
+
 	* AUTHORS: Added author for backend s9036.
 	* backend/qcam.desc: Updated with more information.
 
