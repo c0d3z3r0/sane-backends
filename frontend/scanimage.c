@@ -853,8 +853,10 @@ scan_it (void)
 	      image.x = image.width - 1;
 	      image.y = -1;
 	      if (!advance (&image))
-		status = SANE_STATUS_NO_MEM;
-		goto cleanup;
+		{
+		  status = SANE_STATUS_NO_MEM;
+		  goto cleanup;
+		}
 	    }
 	}
       else
@@ -892,8 +894,10 @@ scan_it (void)
 		    {
 		      image.data[offset + 3*i] = buffer[i];
 		      if (!advance (&image))
-			status = SANE_STATUS_NO_MEM;
-			goto cleanup;
+			{
+			  status = SANE_STATUS_NO_MEM;
+			  goto cleanup;
+			}
 		    }
 		  offset += 3*len;
 		  break;
@@ -903,8 +907,10 @@ scan_it (void)
 		    {
 		      image.data[offset + i] = buffer[i];
 		      if ((offset + i) % 3 == 0 && !advance (&image))
-			status = SANE_STATUS_NO_MEM;
-			goto cleanup;
+			{
+			  status = SANE_STATUS_NO_MEM;
+			  goto cleanup;
+			}
 		    }
 		  offset += len;
 		  break;
@@ -914,8 +920,10 @@ scan_it (void)
 		    {
 		      image.data[offset + i] = buffer[i];
 		      if (!advance (&image))
-			status = SANE_STATUS_NO_MEM;
-			goto cleanup;
+			{
+			  status = SANE_STATUS_NO_MEM;
+			  goto cleanup;
+			}
 		    }
 		  offset += len;
 		  break;
