@@ -749,5 +749,17 @@ build-19 -> build-20
     * made dev->pause_after_reposition = -1; as default, so as default sane-umax does not wait
       any more while the scanhead is moving back - this may break the support of some scanners
       so it may have to be changed (dev->pause_after_reposition = 0;) for some scanners.
+      reported to work for:
+      - Supervista S12
+      - PowerLook III
+      - Astra 2200
 
+
+build-20 -> build-21
+--------------------
+
+    * Added Linotype "JADE" as supported scanner
+
+    * Removed bug in sane_close that caused segfault when
+      sane_close was called twice with the same scanner handle
 

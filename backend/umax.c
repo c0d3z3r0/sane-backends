@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 20
+#define BUILD 21
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -256,9 +256,9 @@ static const SANE_Range percentage_range_100 =
      0 << SANE_FIXED_SCALE_SHIFT  /* quantization */
 };
 
-static int num_devices;
-static Umax_Device *first_dev;
-static Umax_Scanner *first_handle;
+static int num_devices = 0;
+static Umax_Device *first_dev     = NULL;
+static Umax_Scanner *first_handle = NULL;
 
 
 /* ------------------------------------------------------------ MATH-HELPERS ------------------------------- */
@@ -3497,7 +3497,7 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
     fflush(fp);
 
     data_left -= data_to_read;
-    DBG(DBG_read, "reader_process: buffer of %d bytes read; %d bytes to go\n", data_to_read, data_left);
+    DBG(DBG_read, "umax_reader_process: buffer of %d bytes read; %d bytes to go\n", data_to_read, data_left);
   } while (data_left);
 
   free(dev->pixelbuffer);
@@ -4984,6 +4984,12 @@ void sane_close(SANE_Handle handle)
 
   DBG(DBG_sane_init,"sane_close\n");
 
+  if (!first_handle)
+  {
+    DBG(DBG_error, "sane_close: no handles opened\n");
+    return;
+  }
+
 								 /* remove handle from list of open handles: */
   prev = 0;
 
@@ -4999,7 +5005,7 @@ void sane_close(SANE_Handle handle)
   
   if (!scanner)
   {
-    DBG(DBG_error, "close: invalid handle %p\n", handle);
+    DBG(DBG_error, "sane_close: invalid handle %p\n", handle);
     return;								 /* oops, not a handle we know about */
   }
 
@@ -5014,7 +5020,7 @@ void sane_close(SANE_Handle handle)
   }
   else
   {
-    first_handle = scanner;
+    first_handle = scanner->next;
   }
 
   free(scanner->gamma_table[0]);						 /* free custom gamma tables */
