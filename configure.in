@@ -7,7 +7,7 @@ AC_ARG_PROGRAM
 # version code:
 V_MAJOR=1
 V_MINOR=0
-V_REV=2
+V_REV=3
 
 PACKAGE=sane
 VERSION=${V_MAJOR}.${V_MINOR}.${V_REV}
