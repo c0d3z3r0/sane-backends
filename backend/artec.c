@@ -56,7 +56,7 @@
    *********************************************************************
  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <limits.h>
@@ -68,11 +68,11 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-#include <sane/sane.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <sane/sanei_backend.h>
-#include <sane/sanei_config.h>
+#include "sane/sane.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "sane/sanei_backend.h"
+#include "sane/sanei_config.h"
 
 #include <artec.h>
 
