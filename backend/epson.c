@@ -15,7 +15,7 @@
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.22 - 2000-04-21"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.27 - 2000-05-21"
 
 /*
    This file is part of the SANE package.
@@ -57,6 +57,18 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-05-21   In sane_close use close_scanner instead of just the 
+		SCSI close function.
+   2000-05-20   ... finally fixed the problem with the 610
+                Added resolution_list to Epson_Device structure in
+		epson.h - this fixes a bug that caused problems when 
+		more than one EPSON scanner was connected.
+   2000-05-13   Fixed the color problem with the Perfection 610. The few
+		lines with "garbage" at the beginning of the scan are not
+		yet removed. 
+   2000-05-06   Added support for multiple EPSON scanners. At this time
+		this may not be bug free, but it's a start and it seems
+		to work well with just one scanner.
    2000-04-06   Did some cleanup on the gamma correction part. The user
 		defined table is now initialized to gamma=1, the gamma
 		handling is also no longer depending on platform specific
@@ -143,9 +155,9 @@
 #include  <sane/sanei_scsi.h>
 
 /*
-//  NOTE: try to isolate scsi stuff in own section.
-//
-*/
+ *  NOTE: try to isolate scsi stuff in own section.
+ *
+ */
 
 #define  TEST_UNIT_READY_COMMAND	0x00
 #define  READ_6_COMMAND			0x08
@@ -154,12 +166,12 @@
 #define  TYPE_PROCESSOR			0x03
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status inquiry ( int fd, int page_code, void * buf, size_t * buf_size) {
-	unsigned char cmd [ 6];
+	u_char cmd [ 6];
 	int status;
 
 	memset( cmd, 0, 6);
@@ -172,12 +184,12 @@ static SANE_Status inquiry ( int fd, int page_code, void * buf, size_t * buf_siz
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static int scsi_read ( int fd, void * buf, size_t buf_size, SANE_Status * status) {
-	unsigned char cmd [ 6];
+	u_char cmd [ 6];
 
 	memset( cmd, 0, 6);
 	cmd[ 0] = READ_6_COMMAND;
@@ -192,12 +204,12 @@ static int scsi_read ( int fd, void * buf, size_t buf_size, SANE_Status * status
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static int scsi_write ( int fd, const void * buf, size_t buf_size, SANE_Status * status) {
-	unsigned char * cmd;
+	u_char * cmd;
 
 	cmd = alloca( 6 + buf_size);
 	memset( cmd, 0, 6);
@@ -214,9 +226,9 @@ static int scsi_write ( int fd, const void * buf, size_t buf_size, SANE_Status *
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 #include  <sane/sanei_pio.h>
 #include  "epson.h"
@@ -289,62 +301,63 @@ static int scsi_write ( int fd, const void * buf, size_t buf_size, SANE_Status *
 static EpsonCmdRec epson_cmd [ ] =
 {
 /*
-//       request identity
-//       |   request status
-//       |   |   request condition
-//       |   |   |   set color mode
-//       |   |   |   |   start scanning
-//       |   |   |   |   |   set data format
-//       |   |   |   |   |   |   set resolution
-//       |   |   |   |   |   |   |   set zoom
-//       |   |   |   |   |   |   |   |   set scan area
-//       |   |   |   |   |   |   |   |   |   set brightness
-//       |   |   |   |   |   |   |   |   |   |            set gamma
-//       |   |   |   |   |   |   |   |   |   |            |   set halftoning
-//       |   |   |   |   |   |   |   |   |   |            |   |   set color correction
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   initialize scanner
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   set speed
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   set lcount
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   mirror image
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   set gamma table
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   set outline emphasis
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   set dither
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   set color correction coefficients
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   request extension status
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   control an extension
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    forward feed / eject
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   request push button status
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   control auto area segmentation
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   set film type
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   set exposure time
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   set bay
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   set threshold
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   |
-//       |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   |
-*/
-  {"A1",'I','F','S', 0 ,'G', 0 ,'R', 0 ,'A', 0 ,{ 0,0,0}, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+ *       request identity
+ *       |   request identity2
+ *       |   |   request status
+ *       |   |   |   request condition
+ *       |   |   |   |   set color mode
+ *       |   |   |   |   |   start scanning
+ *       |   |   |   |   |   |   set data format
+ *       |   |   |   |   |   |   |   set resolution
+ *       |   |   |   |   |   |   |   |   set zoom
+ *       |   |   |   |   |   |   |   |   |   set scan area
+ *       |   |   |   |   |   |   |   |   |   |   set brightness
+ *       |   |   |   |   |   |   |   |   |   |   |            set gamma
+ *       |   |   |   |   |   |   |   |   |   |   |            |   set halftoning
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   set color correction
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   initialize scanner
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   set speed
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   set lcount
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   mirror image
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   set gamma table
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   set outline emphasis
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   set dither
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   set color correction coefficients
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   request extension status
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   control an extension
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    forward feed / eject
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   request push button status
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   control auto area segmentation
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   set film type
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   set exposure time
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   set bay
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   set threshold
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   |
+ *       |   |   |   |   |   |   |   |   |   |   |            |   |   |   |   |   |   |   |   |   |   |   |   |    |   |   |   |   |   |   |
+ */
+  {"A1",'I', 0 ,'F','S', 0 ,'G', 0 ,'R', 0 ,'A', 0 ,{ 0,0,0}, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,
-  {"A2",'I','F','S', 0 ,'G','D','R','H','A','L',{-3,3,0},'Z','B', 0 ,'@', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"A2",'I', 0 ,'F','S', 0 ,'G','D','R','H','A','L',{-3,3,0},'Z','B', 0 ,'@', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B1",'I','F','S','C','G','D','R', 0 ,'A', 0 ,{ 0,0,0}, 0 ,'B', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B1",'I', 0 ,'F','S','C','G','D','R', 0 ,'A', 0 ,{ 0,0,0}, 0 ,'B', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B2",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B', 0 ,'@', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B2",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B', 0 ,'@', 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ,  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B3",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@', 0 , 0 , 0 , 0 , 0 , 0 ,'m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B3",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@', 0 , 0 , 0 , 0 , 0 , 0 ,'m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B4",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d', 0 ,'z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B4",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d', 0 ,'z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B5",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B5",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,
-  {"B6",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
+  {"B6",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 , 0 , 0 , 0 , 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"B7",'I','F','S','C','G','D','R','H','A','L',{-4,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e','\f','!','s','N', 0 , 0 ,'t'}
+  {"B7",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-4,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e','\f','!','s','N', 0 , 0 ,'t'}
   ,	      	      	      	      	
-  {"B8",'I','F','S','C','G','D','R','H','A','L',{-4,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 ,'!','s','N', 0 , 0 , 0 }
+  {"B8",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-4,3,0},'Z','B','M','@','g','d','K','z','Q','b','m','f','e',  0 ,'!','s','N', 0 , 0 , 0 }
   ,	      	      	      	      	
-  {"F5",'I','F','S','C','G','D','R','H','A','L',{-3,3,0},'Z', 0 ,'M','@','g','d','K','z','Q', 0 ,'m','f','e','\f', 0 , 0 ,'N','T','P', 0 }
+  {"F5",'I', 0 ,'F','S','C','G','D','R','H','A','L',{-3,3,0},'Z', 0 ,'M','@','g','d','K','z','Q', 0 ,'m','f','e','\f', 0 , 0 ,'N','T','P', 0 }
   ,
-  {"D1",'I','F', 0 ,'C','G','D','R', 0 ,'A', 0 ,{ 0,0,0},'Z', 0 , 0 ,'@','g','d', 0 ,'z', 0 , 0 , 0 ,'f', 0 ,  0 ,'!', 0 , 0 , 0 , 0 , 0 }
+  {"D1",'I','i','F', 0 ,'C','G','D','R', 0 ,'A', 0 ,{ 0,0,0},'Z', 0 , 0 ,'@','g','d', 0 ,'z', 0 , 0 , 0 ,'f', 0 ,  0 ,'!', 0 , 0 , 0 , 0 , 0 }
 };
 
 
@@ -357,8 +370,8 @@ static EpsonCmdRec epson_cmd [ ] =
 
 - from epson_31101999.c
 
-unsigned char default_tval[4] = {2, 0x80, 0x80, 0x80};
-unsigned char     neg_tval[4] = {2, 0x8e, 0x86, 0x92};
+u_char default_tval[4] = {2, 0x80, 0x80, 0x80};
+u_char     neg_tval[4] = {2, 0x8e, 0x86, 0x92};
 
 ESC T + 4 byte
 
@@ -394,9 +407,9 @@ One for calibration, other one for scan. There is also lamp-density defined.
 */
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 struct mode_param {
 	int color;
@@ -436,9 +449,9 @@ static const SANE_String_Const mode_list_5 [ ] =
 #define  ADF_STR	"Automatic Document Feeder"
 
 /*
-// source list need one dummy entry (save device settings is crashing).
-// NOTE: no const.
-*/
+ * source list need one dummy entry (save device settings is crashing).
+ * NOTE: no const.
+ */
 
 static SANE_String_Const source_list [ ] =
 	{ FBF_STR
@@ -454,8 +467,8 @@ static const SANE_String_Const film_list [ ] =
 	};
 
 /*
-// TODO: add some missing const.
-*/
+ * TODO: add some missing const.
+ */
 
 static int halftone_params [ ] =
 	{ 0x01
@@ -522,8 +535,8 @@ static const SANE_String_Const dropout_list [ ] =
 	};
 
 /*
-// NOTE: if enable "User defined" change also default from 4 to 5.
-*/
+ * NOTE: if enable "User defined" change also default from 4 to 5.
+ */
 
 static int color_params [ ] =
 	{ 0x00
@@ -601,8 +614,8 @@ static const SANE_String_Const bay_list [ ] =
 	};
 
 /*
-//  minimum, maximum, quantization.
-*/
+ *  minimum, maximum, quantization.
+ */
 
 static const SANE_Range u8_range = { 0, 255, 0};
 static const SANE_Range s8_range = { -127, 127, 0};
@@ -646,12 +659,17 @@ static const SANE_String_Const qf_list [ ] =
 	, NULL
 	};
 
+/* 
+ * this is now stored in the s->hw->resolution_list field
+
 static SANE_Word * resolution_list = NULL;
 
+ */
+
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static size_t
 max_string_size (const SANE_String_Const strings[])
@@ -688,6 +706,7 @@ typedef struct {
 
 } EpsonIdentRec, * EpsonIdent;
 
+
 typedef struct {
 	u_char	code;
 	u_char	status;
@@ -706,16 +725,22 @@ typedef struct {
 } EpsonDataRec, * EpsonData;
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd, size_t cmd_size, SANE_Status * status);
+static SANE_Status get_identity_information(SANE_Handle handle);
+static SANE_Status get_identity2_information(SANE_Handle handle);
+static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Status * status);
+static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_Status * status);
+static SANE_Status color_shuffle(SANE_Handle handle, int *new_length);
+
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Status * status) {
 
@@ -724,7 +749,7 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 #if 1
 	{
 		size_t k;
-		const unsigned char * s = buf;
+		const u_char * s = buf;
 
 		for( k = 0; k < buf_size; k++) {
 			DBG( 125, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
@@ -759,9 +784,9 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_Status * status) {
 	ssize_t n = 0;
@@ -799,7 +824,7 @@ static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_St
 	if (n > 0)
 	{
 		ssize_t k;
-		const unsigned char * s = buf;
+		const u_char * s = buf;
 
 		for( k = 0; k < n; k++) {
 			DBG( 127, "buf[%u] %02x %c\n", k, s[ k], isprint( s[ k]) ? s[ k] : '.');
@@ -811,12 +836,12 @@ static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_St
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status expect_ack ( Epson_Scanner * s) {
-	unsigned char result [ 1];
+	u_char result [ 1];
 	size_t len;
 	SANE_Status status;
 
@@ -834,18 +859,18 @@ static SANE_Status expect_ack ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
-static SANE_Status set_cmd ( Epson_Scanner * s, unsigned char cmd, int val) {
+static SANE_Status set_cmd ( Epson_Scanner * s, u_char cmd, int val) {
 	SANE_Status status;
-	unsigned char params [ 2];
+	u_char params [ 2];
 
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
-	params[ 0] = '\033';
+	params[ 0] = ESC;
 	params[ 1] = cmd;
 
 	send( s, params, 2, &status);
@@ -860,9 +885,9 @@ static SANE_Status set_cmd ( Epson_Scanner * s, unsigned char cmd, int val) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 #define  set_color_mode(s,v)		set_cmd(s,(s)->hw->cmd->set_color_mode,v)
 #define  set_data_format(s,v)		set_cmd( s,(s)->hw->cmd->set_data_format, v)
@@ -885,13 +910,13 @@ static SANE_Status set_cmd ( Epson_Scanner * s, unsigned char cmd, int val) {
 static SANE_Status set_zoom ( Epson_Scanner * s, int x_zoom, int y_zoom) 
 {
 	SANE_Status status;
-	unsigned char cmd[2];
-	unsigned char params[2];
+	u_char cmd[2];
+	u_char params[2];
 
 	if( ! s->hw->cmd->set_zoom)
 		return SANE_STATUS_GOOD;
 
-	cmd[0] = '\033';
+	cmd[0] = ESC;
 	cmd[1] = s->hw->cmd->set_zoom;
 
 	send( s, cmd, 2, &status);
@@ -912,12 +937,15 @@ static SANE_Status set_zoom ( Epson_Scanner * s, int x_zoom, int y_zoom)
 
 static SANE_Status set_resolution ( Epson_Scanner * s, int xres, int yres) {
 	SANE_Status status;
-	unsigned char params[4];
+	u_char params[4];
 
 	if( ! s->hw->cmd->set_resolution)
 		return SANE_STATUS_GOOD;
 
-	send( s, "\033R", 2, &status);
+	params[0] = ESC;
+	params[1] = s->hw->cmd->set_resolution;
+
+	send( s, params, 2, &status);
 	status = expect_ack( s);
 
 	if( status != SANE_STATUS_GOOD)
@@ -935,19 +963,22 @@ static SANE_Status set_resolution ( Epson_Scanner * s, int xres, int yres) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status set_scan_area ( Epson_Scanner * s, int x, int y, int width, int height) {
 	SANE_Status status;
-	unsigned char params[ 8];
+	u_char params[ 8];
 
 	if( ! s->hw->cmd->set_scan_area) {
 		return SANE_STATUS_GOOD;
 	}
 
-	send( s, "\033A", 2, &status);
+	params[0] = ESC;
+	params[1] = s->hw->cmd->set_scan_area;
+
+	send( s, params, 2, &status);
 	status = expect_ack( s);
 	if( status != SANE_STATUS_GOOD)
 		return status;
@@ -970,21 +1001,21 @@ static SANE_Status set_scan_area ( Epson_Scanner * s, int x, int y, int width, i
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status set_color_correction_coefficients ( Epson_Scanner * s) {
 	SANE_Status status;
-	unsigned char cmd = s->hw->cmd->set_color_correction_coefficients;
-	unsigned char params [ 2];
+	u_char cmd = s->hw->cmd->set_color_correction_coefficients;
+	u_char params [ 2];
 	const int length = 9;
 	signed char cct [ 9];
 
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
-	params[ 0] = '\033';
+	params[ 0] = ESC;
 	params[ 1] = cmd;
 
 	send( s, params, 2, &status);
@@ -1008,27 +1039,48 @@ static SANE_Status set_color_correction_coefficients ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 	SANE_Status status;
-	unsigned char cmd = s->hw->cmd->set_gamma_table;
-	unsigned char params [ 2];
+	u_char cmd = s->hw->cmd->set_gamma_table;
+	u_char params [ 2];
 	const int length = 257;
-	unsigned char gamma [ 257];
+	u_char gamma [ 257];
 	int n;
 
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
-	params[ 0] = '\033';
+	params[ 0] = ESC;
 	params[ 1] = cmd;
 
 /*
-// TODO: &status in send make no sense like that.
-*/
+ * TODO: &status in send make no sense like that.
+ */
+
+#if 0
+{
+  /* print the gamma tables before sending them to the scanner */
+  int	c, i, j;
+
+  fprintf(stderr, "set_gamma_table()\n");
+  for (c=0; c<4; c++) 
+  {
+    for (i=0; i<256; i+= 16)
+    {
+	fprintf(stderr, "Gamma Table[%d][%d] ", c, i);
+	for (j=0; j<16; j++)
+	{
+		fprintf(stderr, " %02x", s->gamma_table[c][i+j]);
+	}
+	fprintf(stderr, "\n");
+    }
+  }
+}
+#endif
 
 	send( s, params, 2, &status);
 	if( SANE_STATUS_GOOD != ( status = expect_ack( s) ) )
@@ -1089,21 +1141,21 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status check_ext_status ( Epson_Scanner * s) {
 	SANE_Status status;
-	unsigned char cmd = s->hw->cmd->request_extention_status;
-	unsigned char params [ 2];
-	unsigned char * buf;
+	u_char cmd = s->hw->cmd->request_extension_status;
+	u_char params [ 2];
+	u_char * buf;
 	EpsonHdr head;
 
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
-	params[ 0] = '\033';
+	params[ 0] = ESC;
 	params[ 1] = cmd;
 
 	if( NULL == ( head = ( EpsonHdr) command( s, params, 2, &status) ) ) {
@@ -1114,7 +1166,7 @@ static SANE_Status check_ext_status ( Epson_Scanner * s) {
 	buf = &head->buf[ 0];
 
 	if( buf[ 0] & EXT_STATUS_WU) {
-		DBG( 1, "option: warming up\n");
+		DBG( 10, "option: warming up\n");
 		status = SANE_STATUS_DEVICE_BUSY;
 	}
 
@@ -1152,25 +1204,29 @@ static SANE_Status check_ext_status ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status reset ( Epson_Scanner * s) {
 	SANE_Status status;
+	u_char param[2];
 
 	if( ! s->hw->cmd->initialize_scanner)
 		return SANE_STATUS_GOOD;
 
-	send (s, "\033@", 2, &status);
+	param[0] = ESC;
+	param[1] = s->hw->cmd->initialize_scanner;
+
+	send (s, param, 2, &status);
 	status = expect_ack( s);
 	return status;
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static void close_scanner ( Epson_Scanner * s) {
 
@@ -1185,12 +1241,14 @@ static void close_scanner ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status open_scanner ( Epson_Scanner * s) {
 	SANE_Status status = 0;
+
+	DBG(5, "open_scanner()\n");
 
 	if( s->hw->connection == SANE_EPSON_SCSI) {
 		if( SANE_STATUS_GOOD != ( status = sanei_scsi_open( s->hw->sane.name, &s->fd, NULL, NULL))) {
@@ -1237,14 +1295,16 @@ static SANE_Status open_scanner ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status eject ( Epson_Scanner * s) {
 	SANE_Status status;
-	unsigned char params [ 2];
-	unsigned char cmd = s->hw->cmd->eject;
+	u_char params [ 2];
+	u_char cmd = s->hw->cmd->eject;
+
+	DBG(5, "eject()\n");
 
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
@@ -1266,16 +1326,21 @@ static SANE_Status eject ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
+#ifdef OBSOLETE
 static Epson_Device dummy_dev =
 { { NULL, "Epson", NULL, "flatbed scanner" }
 };
+#endif
+
+static int num_devices= 0;		/* number of EPSON scanners attached to backend */
+static Epson_Device *first_dev = NULL;	/* first EPSON scanner in list */
+static Epson_Scanner *first_handle = NULL;
 
 
-#if 1
 static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd, 
       size_t cmd_size, SANE_Status * status) 
 {
@@ -1365,21 +1430,18 @@ static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd,
             if( SANE_STATUS_GOOD != *status)
 	      return (EpsonHdr) 0;
 
-/*          buf += head->count; */
-
-/*          sanei_hexdmp( head, sizeof( EpsonHdrRec) + head->count, "epson"); */
-
             break;
         }
 
         return head;
 }
-#endif
+
 
 /*
-//
-//
-*/
+ * static SANE_Status attach()
+ *
+ * Attach one device with name *dev_name to the backend.
+ */
 
 static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	SANE_Status status;
@@ -1389,11 +1451,38 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 	DBG(1, "%s\n", SANE_EPSON_VERSION);
 
-/*
-//  set dummy values.
-*/
+	DBG(5, "attach(%s)\n", dev_name);
 
-	s->hw = dev = &dummy_dev;			/* use dummy device record */
+	for (dev = first_dev; dev; dev = dev->next)
+	{
+		if (strcmp(dev->sane.name, dev_name) == 0)
+		{
+			if (devp)
+			{
+				*devp = dev;
+			}
+			return SANE_STATUS_GOOD;
+		}
+	}
+
+	dev = malloc(sizeof(*dev));
+	if (!dev)
+     	 {
+	   return SANE_STATUS_NO_MEM;
+	 }
+
+	
+
+/*
+ *  set dummy values.
+ */
+
+	s->hw = dev;		
+	s->hw->sane.name = NULL;
+	s->hw->sane.type = "flatbed scanner";
+	s->hw->sane.vendor = "Epson";
+	s->hw->sane.model = NULL;
+	
 	s->hw->cmd = &epson_cmd[EPSON_LEVEL_DEFAULT];	/* use default function level */
         s->hw->connection = SANE_EPSON_NODEV;		/* no device configured yet */
 
@@ -1402,8 +1491,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	s->hw->last_res = s->hw->last_res_preview = 0;	/* set resolution to safe values */
 
 /*
-//  decide if interface is USB, SCSI or parallel.
-*/
+ *  decide if interface is USB, SCSI or parallel.
+ */
 
 	/*
 	 * if the config file contains a line "usb /dev/usbscanner", then handle this
@@ -1449,13 +1538,12 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	}
 
 /*
-//  if interface is SCSI do an inquiry.
-*/
+ *  if interface is SCSI do an inquiry.
+ */
 
 	if( s->hw->connection == SANE_EPSON_SCSI) {
 #define  INQUIRY_BUF_SIZE	36
-
-		unsigned char buf[ INQUIRY_BUF_SIZE + 1];
+		u_char buf[ INQUIRY_BUF_SIZE + 1];
 		size_t buf_size = INQUIRY_BUF_SIZE;
 
 		if( SANE_STATUS_GOOD != ( status = sanei_scsi_open( dev_name, &s->fd, NULL, NULL))) {
@@ -1494,8 +1582,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		}
 
 /*
-//  else parallel or USB.
-*/
+ *  else parallel or USB.
+ */
 
 	} else if (s->hw->connection == SANE_EPSON_PIO) {
 		if( SANE_STATUS_GOOD != ( status = sanei_pio_open( dev_name, &s->fd))) {
@@ -1534,194 +1622,59 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	}
 
 /*
-// Initialize (ESC @).
-*/
+ * Initialize (ESC @).
+ */
 /* NOTE: disabled cause of batch use of scanimage with ADF. */
 
 #if 1
 	{
-		(void) command( s, "\033@", 2, &status);
+		void	* ptr;
+		u_char	param[2];
+
+		param[0] = ESC;
+		param[1] = s->hw->cmd->initialize_scanner;
+
+		ptr = command( s, param, 2, &status);
+
+		free(ptr);
 	}
 #endif
 /*
-//  Identification Request (ESC I).
-*/
-
+ *  Identification Request (ESC I).
+ */
+	if (s->hw->cmd->request_identity != 0)
 	{
-		EpsonIdent ident;
-		u_char * buf;
+		status =  get_identity_information(s);
+		if (status != SANE_STATUS_GOOD)
+			return status;
+	}	/* request identity */
 
-/*
-//		if( ! s->hw->cmd->request_identity)
-//			return SANE_STATUS_INVAL;
-*/
-		if( NULL == ( ident = ( EpsonIdent) command( s, "\033I", 2, &status) ) ) {
-			DBG( 0, "ident failed\n");
-/*
-// status should be SANE_STATUS_INVAL anyway, only a try.
-//			return status;
-*/
-			return SANE_STATUS_INVAL;
-		}
 
-		DBG( 1, "type  %3c 0x%02x\n", ident->type, ident->type);
-		DBG( 1, "level %3c 0x%02x\n", ident->level, ident->level);
-
-		{
-			char * force = getenv( "SANE_EPSON_CMD_LVL");
-
-			if( force) {
-				ident->type = force[ 0];
-				ident->level = force[ 1];
-
-				DBG( 1, "type  %3c 0x%02x\n", ident->type, ident->type);
-				DBG( 1, "level %3c 0x%02x\n", ident->level, ident->level);
-
-				DBG( 1, "forced\n");
-			}
-		}
-
-/*
-//  check if option equipment is installed.
-*/
-
-		if( ident->status & STATUS_OPTION) {
-			DBG( 1, "option equipment is installed\n");
-			dev->extension = SANE_TRUE;
-		} else {
-			DBG( 1, "no option equipment installed\n");
-			dev->extension = SANE_FALSE;
-		}
-
-		dev->TPU = SANE_FALSE;
-		dev->ADF = SANE_FALSE;
-
-/*
-//  set command type and level.
-*/
-
-	    {
-		int n;
-
-		for( n = 0; n < NELEMS( epson_cmd); n++)
-			if( ! strncmp( &ident->type, epson_cmd[ n].level, 2) )
-				break;
-
-		if( n < NELEMS( epson_cmd) ) {
-			dev->cmd = &epson_cmd[ n];
-		} else {
-			dev->cmd = &epson_cmd[EPSON_LEVEL_DEFAULT];
-			DBG( 0, "Unknown type %c or level %c, using %s\n", 
-				ident->buf[0], ident->buf[1], dev->cmd->level);
-		}
-
-		s->hw->level = dev->cmd->level[ 1] - '0';
-	    }	/* set comand type and level */ 
-
-/*
-//  Setting available resolutions and xy ranges for sane frontend.
-*/
-
-	s->hw->res_list_size = 0;
-	s->hw->res_list = ( SANE_Int *) calloc( s->hw->res_list_size, sizeof( SANE_Int));
-
-	if( NULL == s->hw->res_list) {
-		DBG( 0, "out of memory\n");
-/*		exit( 0); */
-		return SANE_STATUS_NO_MEM;
-	}
-
-	{
-		int n, k;
-		int x = 0, y = 0;
-
-		for( n = ident->count, buf = ident->buf; n; n -= k, buf += k) {
-			switch (*buf) {
-			case 'R':
-			{
-				int val = buf[ 2] << 8 | buf[ 1];
-
-				s->hw->res_list_size++;
-				s->hw->res_list = ( SANE_Int *) realloc( s->hw->res_list, s->hw->res_list_size * sizeof( SANE_Int));
-
-				if( NULL == s->hw->res_list) {
-					DBG( 0, "out of memory\n");
-/*					exit( 0); */
-					return SANE_STATUS_NO_MEM;
-				}
-
-				s->hw->res_list[ s->hw->res_list_size - 1] = ( SANE_Int) val;
-
-				DBG( 1, "resolution (dpi): %d\n", val);
-				k = 3;
-				continue;
-	    		}
-			case 'A':
-			{
-				x = buf[ 2] << 8 | buf[ 1];
-				y = buf[ 4] << 8 | buf[ 3];
-
-				DBG( 1, "maximum scan area: x %d y %d\n", x, y);
-				k = 5;
-				continue;
-	    		}
-			default:
-				break;
-			} /* case */
-
-			break;
-		} /* for */
-
-		dev->dpi_range.min = s->hw->res_list[ 0];
-		dev->dpi_range.max = s->hw->res_list[ s->hw->res_list_size - 1];
-		dev->dpi_range.quant = 0;
-
-		dev->fbf_x_range.min = 0;
-		dev->fbf_x_range.max = SANE_FIX( x * 25.4 / dev->dpi_range.max);
-		dev->fbf_x_range.quant = 0;
-
-		dev->fbf_y_range.min = 0;
-		dev->fbf_y_range.max = SANE_FIX( y * 25.4 / dev->dpi_range.max);
-		dev->fbf_y_range.quant = 0;
-
-		DBG( 5, "fbf tlx %f tly %f brx %f bry %f [mm]\n"
-			, SANE_UNFIX( dev->fbf_x_range.min)
-			, SANE_UNFIX( dev->fbf_y_range.min)
-			, SANE_UNFIX( dev->fbf_x_range.max)
-			, SANE_UNFIX( dev->fbf_y_range.max)
-			);
-
-	}
-	
 	/*
-	 * Copy the resolution list to the resolution_list array so that the frontend can
-	 * display the correct values
+	 * Check for "Request Identity 2" command. If this command is available
+	 * get the information from the scanner and store it in dev
 	 */
 
-	resolution_list = malloc( (s->hw->res_list_size +1) * sizeof(SANE_Word));
-
-	if (resolution_list == NULL)
+	if (s->hw->cmd->request_identity2 != 0)
 	{
-		DBG( 0, "out of memory\n");
-		return SANE_STATUS_NO_MEM;
-	}
-	*resolution_list = s->hw->res_list_size;
-	memcpy(&resolution_list[1], s->hw->res_list, s->hw->res_list_size * sizeof(SANE_Word));
+		 get_identity2_information(s);
+		if (status != SANE_STATUS_GOOD)
+			return status;
+	}	/* request identity 2 */
 
-
-	} /* ESC I */
+		
 
 /*
-//  Set defaults for no extension.
-*/
+ *  Set defaults for no extension.
+ */
 
 	dev->x_range = &dev->fbf_x_range;
 	dev->y_range = &dev->fbf_y_range;
 
 /*
-//  Extended status flag request (ESC f).
-//    this also requests the scanner device name from the the scanner
-*/
+ *  Extended status flag request (ESC f).
+ *    this also requests the scanner device name from the the scanner
+ */
 #if 0
 	if( SANE_TRUE == dev->extension) 
 #endif
@@ -1733,10 +1686,14 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	 */
 	{
 		u_char * buf;
+		u_char params[2];
 		EpsonHdr head;
 		SANE_String_Const * source_list_add = source_list;
 
-		if( NULL == ( head = ( EpsonHdr) command( s, "\033f", 2, &status) ) ) {
+		params[0] = ESC;
+		params[1] = s->hw->cmd->request_extension_status;
+
+		if( NULL == ( head = ( EpsonHdr) command( s, params, 2, &status) ) ) {
 			DBG( 0, "Extended status flag request failed\n");
 			return status;
 		}
@@ -1744,14 +1701,14 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		buf = &head->buf[ 0];
 
 /*
-//  FBF
-*/
+ *  FBF
+ */
 
 		*source_list_add++ = FBF_STR;
 
 /*
-//  ADF
-*/
+ *  ADF
+ */
 
 		if( buf[ 1] & EXT_STATUS_IST) {
 			DBG( 1, "ADF detected\n");
@@ -1784,8 +1741,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 
 /*
-//  TPU
-*/
+ *  TPU
+ */
 
 		if( buf[ 6] & EXT_STATUS_IST) {
 			DBG( 1, "TPU detected\n");
@@ -1845,13 +1802,13 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 			str[len] = '\0';
 
 			/* finally copy the device name to the structure */
-			dummy_dev.sane.model = ( char *) memcpy( str, device_name, len);
+			dev->sane.model = ( char *) memcpy( str, device_name, len);
 		}
 	}
 
 /*
-//  Set values for quick format "max" entry.
-*/
+ *  Set values for quick format "max" entry.
+ */
 
 	qf_params[ XtNumber( qf_params) - 1].tl_x = dev->x_range->min;
 	qf_params[ XtNumber( qf_params) - 1].tl_y = dev->y_range->min;
@@ -1859,8 +1816,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	qf_params[ XtNumber( qf_params) - 1].br_y = dev->y_range->max;
 
 /*
-//
-*/
+ *
+ */
 
 #if 0
 	{
@@ -1884,33 +1841,42 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 #endif
 
 /*
-//	now we can finally set the device name
-*/
+ *	now we can finally set the device name
+ */
 	str = malloc( strlen( dev_name) + 1);
-	dummy_dev.sane.name = strcpy( str, dev_name);
-
+	dev->sane.name = strcpy( str, dev_name);
 
 	close_scanner( s);
+
+	++num_devices;
+	dev->next = first_dev;
+	first_dev = dev;
+
+	if (devp)
+	{
+		*devp = dev;
+	}
 
 	return SANE_STATUS_GOOD;
 }
 
 /*
-//
-*/
+ *
+ */
 
 static SANE_Status attach_one ( const char *dev) {
 	return attach( dev, 0);
 }
 
 /*
-//
-*/
+ *
+ */
 
 SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
-  char dev_name[PATH_MAX] = "/dev/scanner";
   size_t len;
   FILE *fp;
+
+  authorize = authorize;	/* get rid of the compiler warning */
 
   DBG_INIT ();
 #if defined PACKAGE && defined VERSION
@@ -1936,7 +1902,8 @@ SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
 	  if( !len)
             continue;			/* ignore empty lines */
 	  DBG( 4, "sane_init, >%s<\n", line);
-	  strcpy (dev_name, line);
+
+          sanei_config_attach_matching_devices (line, attach_one);
 	}
       fclose (fp);
     }
@@ -1945,26 +1912,37 @@ SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
      scanner structure - which we don't have at this time. So I have
      to come up with something :-) */
 
-  sanei_config_attach_matching_devices (dev_name, attach_one);
   return SANE_STATUS_GOOD;
 }
 
 /*
-//
-//
-*/
+ * void sane_exit(void)
+ *
+ * Clean up the list of attached scanners. 
+ */
 
 void sane_exit ( void) {
-	free(dummy_dev.sane.model);
-	free(dummy_dev.sane.name);
+	Epson_Device *dev, *next;
+
+	for (dev = first_dev; dev; dev = next)
+	{
+		next = dev->next;
+		free((char *) dev->sane.name);
+		free((char *) dev->sane.model);
+		free(dev);
+	}
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
-SANE_Status sane_get_devices ( const SANE_Device * * * device_list, SANE_Bool local_only) {
+SANE_Status sane_get_devices ( const SANE_Device * * * device_list, SANE_Bool local_only) 
+{
+
+#if 0
+
 	static const SANE_Device *devlist [ 2];
 	int i;
 
@@ -1976,12 +1954,44 @@ SANE_Status sane_get_devices ( const SANE_Device * * * device_list, SANE_Bool lo
 
 	*device_list = devlist;
 	return SANE_STATUS_GOOD;
+#endif
+	static const SANE_Device **devlist = 0;
+	Epson_Device *dev;
+	int i;
+
+	DBG(5, "sane_get_devices()\n");
+
+	local_only = local_only;	/* just to get rid of the compiler warning */
+
+	if (devlist) 
+	{
+		free (devlist); 
+	}
+
+	devlist = malloc((num_devices + 1) * sizeof(devlist[0]));
+	if (!devlist)
+	{
+		return SANE_STATUS_NO_MEM;
+	}
+
+	i = 0;
+
+	for (dev = first_dev; i < num_devices; dev = dev->next)
+	{
+		devlist[i++] = &dev->sane;
+	}
+
+	devlist[i++] = 0;
+
+	*device_list = devlist;
+
+	return SANE_STATUS_GOOD;	
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status init_options ( Epson_Scanner * s) {
 	int i;
@@ -2164,8 +2174,8 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_B].constraint.range = &u8_range;
 		s->val[ OPT_GAMMA_VECTOR_B].wa = &s->gamma_table [ 3] [ 0];
 
-		if ( ((gamma_userdefined[s->val[ OPT_GAMMA_CORRECTION].w] == SANE_TRUE ) ||
-		        (gamma_userdefined[s->val[ OPT_GAMMA_CORRECTION].w] == SANE_TRUE)) ) {
+		if (gamma_userdefined[s->val[ OPT_GAMMA_CORRECTION].w] == SANE_TRUE )
+		{
 			s->opt[ OPT_GAMMA_VECTOR].cap &= ~SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
@@ -2177,14 +2187,6 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 			s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
 		}
-#if 0
-		if( ! s->hw->cmd->set_gamma_table) {
-			s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
-			s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
-			s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
-			s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
-		}
-#endif
 
 		/* initialize the Gamma tables */
 		memset(&s->gamma_table[0], 0, 256 * sizeof(SANE_Word));
@@ -2225,7 +2227,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_RESOLUTION].type = SANE_TYPE_INT;
 		s->opt[ OPT_RESOLUTION].unit = SANE_UNIT_DPI;
 		s->opt[ OPT_RESOLUTION].constraint_type = SANE_CONSTRAINT_WORD_LIST;
-		s->opt[ OPT_RESOLUTION].constraint.word_list = resolution_list;
+		s->opt[ OPT_RESOLUTION].constraint.word_list = s->hw->resolution_list;
 		s->val[ OPT_RESOLUTION].w = s->hw->dpi_range.min;
 
 		/* threshold */
@@ -2341,7 +2343,8 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->val[ OPT_CCT_8].w = 0;
 		s->val[ OPT_CCT_9].w = 0;
 
-/*		if( ! s->hw->cmd->set_color_correction_coefficients) */{
+/*		if( ! s->hw->cmd->set_color_correction_coefficients) */
+		{
 			s->opt[ OPT_CCT_1].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_CCT_2].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_CCT_3].cap |= SANE_CAP_INACTIVE;
@@ -2607,52 +2610,105 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
-SANE_Status sane_open ( SANE_String_Const devicename, SANE_Handle * handle) {
-	Epson_Scanner * s;
+SANE_Status sane_open ( SANE_String_Const devicename, SANE_Handle * handle) 
+{
+	Epson_Device	*dev;
+	Epson_Scanner	*s;
+	SANE_Status	status;
 
-/* ????? */
-	if( devicename[ 0] == '\0')
-		devicename = dummy_dev.sane.name;
+	DBG(5, "sane_open(%s)\n", devicename);
 
-/* ????? */
-	if( ! devicename || devicename[0] == '\0' || strcmp( devicename, dummy_dev.sane.name) != 0)
+	/* search for device */
+	if (devicename[0])
+	{
+		for (dev = first_dev; dev; dev = dev->next)
+		{
+			if (strcmp(dev->sane.name, devicename) == 0)
+			{
+				break;
+			}
+		}
+
+		if (!dev)
+		{
+			status = attach(devicename, &dev);
+			if (status != SANE_STATUS_GOOD)
+			{
+				return status;
+			}
+		}
+	}
+	else
+	{
+		dev = first_dev;
+	}
+
+	if (!dev)
+	{
 		return SANE_STATUS_INVAL;
+	}
 
-	if( NULL == ( s = calloc( 1, sizeof( Epson_Scanner) ) ) )
+	s = calloc(sizeof( Epson_Scanner), 1);
+	if (!s)
+	{
 		return SANE_STATUS_NO_MEM;
+	}
 
 	s->fd = -1;
-	s->hw = &dummy_dev;
+	s->hw = dev;
+
 	init_options( s);
+
+	/* insert newly opened handle into list of open handles */
+	s->next = first_handle;	
+	first_handle = s;
 
 	*handle = ( SANE_Handle) s;
 	return SANE_STATUS_GOOD;
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 void sane_close ( SANE_Handle handle) {
-	Epson_Scanner * s = ( Epson_Scanner *) handle;
+	Epson_Scanner *s, *prev;
 
-	free( s->buf);
+	/* remove handle from list of open handles */
+	prev = 0;
+	for (s = first_handle; s; s = s->next)
+	{
+		if (s == handle)
+			break;
+		prev = s;
+	}
 
-	if( s->fd != -1)
-		sanei_scsi_close( s->fd);
+	if (!s)
+	{
+		DBG(1, "close: invalid handle (0x%p)\n", handle);
+		return;
+	}
 
-	free( s);
+	if (prev)
+		prev->next = s->next;
+	else
+		first_handle = s;
+
+	if (s->fd != -1)
+		close(scanner(s));
+
+	free(s);
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 const SANE_Option_Descriptor * sane_get_option_descriptor ( SANE_Handle handle, SANE_Int option) {
 	Epson_Scanner *s = (Epson_Scanner *) handle;
@@ -2664,9 +2720,9 @@ const SANE_Option_Descriptor * sane_get_option_descriptor ( SANE_Handle handle, 
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static const SANE_String_Const * search_string_list ( const SANE_String_Const * list, SANE_String value) {
 	while( *list != NULL && strcmp( value, *list) != 0)
@@ -2679,9 +2735,9 @@ static const SANE_String_Const * search_string_list ( const SANE_String_Const * 
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Action action, void * value, SANE_Int * info) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
@@ -2811,9 +2867,9 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 			}
 
 /*
-// problem: does not reach all values cause of scroll bar resolution.
-//
-*/
+ * problem: does not reach all values cause of scroll bar resolution.
+ *
+ */
 			if( (v != best) && *last) {
 				for( f = 0; f < s->hw->res_list_size; f++)
 					if( *last == s->hw->res_list[ f])
@@ -2874,8 +2930,7 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 		  && s->val[ OPT_BR_X].w == s->hw->x_range->max
 		  && s->val[ OPT_BR_Y].w == s->hw->y_range->max
 		  )
-			force_max = SANE_TRUE;
-
+		force_max = SANE_TRUE;
 		if( ! strcmp( ADF_STR,( char *) value) ) {
 			s->hw->x_range = &s->hw->adf_x_range;
 			s->hw->y_range = &s->hw->adf_y_range;
@@ -2978,9 +3033,9 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 
 /*
  * If "User defined", then enable custom gamma tables.
-*/
-			if ( ((gamma_userdefined[s->val[ option].w] == SANE_TRUE ) ||
-			        (gamma_userdefined[s->val[ option].w] == SANE_TRUE)) ) {
+ */
+			if ( gamma_userdefined[s->val[ option].w] == SANE_TRUE )
+			{
 				s->opt[ OPT_GAMMA_VECTOR].cap &= ~SANE_CAP_INACTIVE;
 				s->opt[ OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
 				s->opt[ OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
@@ -3045,13 +3100,15 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 SANE_Status sane_get_parameters ( SANE_Handle handle, SANE_Parameters * params) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
 	int ndpi;
+
+	DBG(5, "sane_get_parameters()\n");
 
 	memset( &s->params, 0, sizeof( SANE_Parameters));
 
@@ -3093,17 +3150,19 @@ SANE_Status sane_get_parameters ( SANE_Handle handle, SANE_Parameters * params) 
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 SANE_Status sane_start ( SANE_Handle handle) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
 	SANE_Status status;
 	const struct mode_param * mparam;
+	u_char params[4];
 	int ndpi;
 	int left, top;
 	int lcount;
+	int i, j;	/* loop counter */
 
 	DBG( 1, "preview %d\n", s->val[ OPT_PREVIEW].w);
 
@@ -3115,35 +3174,35 @@ SANE_Status sane_start ( SANE_Handle handle) {
 
 	open_scanner( s);
 /*
-// NOTE: added cause there was error reported for some scanner.
-// NOTE: disabled cause of batch use scanimage and ADF.
-//	reset( s);
-*/
+ * NOTE: added cause there was error reported for some scanner.
+ * NOTE: disabled cause of batch use scanimage and ADF.
+ *	reset( s);
+ */
 
 /*
-//
-*/
+ *
+ */
 
 /*
-//  There is some undocumented special with TPU enable/disable.
-//      TPU power	ESC e		status
-//	on		0		NAK
-//	on		1		ACK
-//	off		0		ACK
-//	off		1		NAK
-//
-// probably it make no sense to scan with TPU powered on and source flatbed, cause light
-// will come from both sides.
-*/
+ *  There is some undocumented special with TPU enable/disable.
+ *      TPU power	ESC e		status
+ *	on		0		NAK
+ *	on		1		ACK
+ *	off		0		ACK
+ *	off		1		NAK
+ *
+ * probably it make no sense to scan with TPU powered on and source flatbed, cause light
+ * will come from both sides.
+ */
 
 
 #if 0
 	if( s->hw->TPU) {
 
 /*
-// NOTE: should remove source TPU, and switch automatically.
-// NOTE: not shure if that is a good idea.
-*/
+ * NOTE: should remove source TPU, and switch automatically.
+ * NOTE: not shure if that is a good idea.
+ */
 
 
 
@@ -3152,18 +3211,19 @@ SANE_Status sane_start ( SANE_Handle handle) {
 #endif
 
 /*
-//
-*/
+ *
+ */
 
 	if( s->hw->extension) {
-		unsigned char * buf;
+		u_char * buf;
 		EpsonHdr head;
-
-		unsigned char params [ 1];
 
 		DBG( 1, "use extension = %d\n", s->hw->use_extension);
 
-		if( NULL == ( head = ( EpsonHdr) command( s, "\033e", 2, &status) ) ) {
+		params[0] = ESC;
+		params[1] = s->hw->cmd->control_an_extension;
+
+		if( NULL == ( head = ( EpsonHdr) command( s, params, 2, &status) ) ) {
 			DBG( 0, "control of an extension failed\n");
 			return status;
 		}
@@ -3182,7 +3242,10 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			return status;
 		}
 
-		if( NULL == ( head = ( EpsonHdr) command( s, "\033f", 2, &status) ) ) {
+		params[0] = ESC;
+		params[1] = s->hw->cmd->request_extension_status;
+
+		if( NULL == ( head = ( EpsonHdr) command( s, params, 2, &status) ) ) {
 			DBG( 0, "Extended status flag request failed\n");
 			return status;
 		}
@@ -3226,8 +3289,8 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	}
 
 /*
-//
-*/
+ *
+ */
 
 	mparam = mode_params + s->val[ OPT_MODE].w;
 	status = set_data_format( s, mparam->depth);
@@ -3242,16 +3305,12 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	 
 	 */
 
-#define FORCE_LINE_SEQUENCE
-
-#ifdef FORCE_LINE_SEQUENCE
 	if( (s->hw->cmd->level[0] == 'D' || 
             (s->hw->cmd->level[0] == 'B' && s->hw->level >= 5)) && mparam->mode_flags == 0x02)
 	{
 		status = set_color_mode( s, 0x13);
 	}
 	else
-#endif
 	{
 		status = set_color_mode( s , mparam->mode_flags
 			  | ( mparam->dropout_mask
@@ -3316,9 +3375,9 @@ SANE_Status sane_start ( SANE_Handle handle) {
 #endif
 
 /*
-//  use of speed_params is ok here since they are false and true.
-//  NOTE: I think I should throw that "params" stuff as long w is already the value.
-*/
+ *  use of speed_params is ok here since they are false and true.
+ *  NOTE: I think I should throw that "params" stuff as long w is already the value.
+ */
 
 	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_AAS].cap) ) {
 
@@ -3393,8 +3452,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 		}
 	}
 
-	if((gamma_params[s->val[ OPT_GAMMA_CORRECTION].w] == 0x03) ||
-	   (gamma_params[s->val[ OPT_GAMMA_CORRECTION].w] == 0x04))
+	if (gamma_userdefined[s->val[ OPT_GAMMA_CORRECTION].w])
 	{	/* user defined. */
 		status = set_gamma_table( s);
 
@@ -3413,8 +3471,8 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	}
 #else
 /*
-// TODO: think about if SANE_OPTION_IS_ACTIVE is a good criteria to send commands.
-*/
+ * TODO: think about if SANE_OPTION_IS_ACTIVE is a good criteria to send commands.
+ */
 
 	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_COLOR_CORRECTION].cap) ) {
 		int val = color_params[ s->val[ OPT_COLOR_CORRECTION].w];
@@ -3479,21 +3537,66 @@ SANE_Status sane_start ( SANE_Handle handle) {
 
 
 /*
-//  Now s->params is initialized.
-*/
+ *  Now s->params is initialized.
+ */
 
 /*
-//  in file:frontend/preview.c
-//
-//  The preview strategy is as follows:
-//
-//   1) A preview always acquires an image that covers the entire
-//      scan surface.  This is necessary so the user can see not
-//      only what is, but also what isn't selected.
-*/
+ *  in file:frontend/preview.c
+ *
+ *  The preview strategy is as follows:
+ *
+ *   1) A preview always acquires an image that covers the entire
+ *      scan surface.  This is necessary so the user can see not
+ *      only what is, but also what isn't selected.
+ */
 
 	left = SANE_UNFIX( s->val[OPT_TL_X].w) / 25.4 * ndpi + 0.5;
 	top = SANE_UNFIX( s->val[OPT_TL_Y].w) / 25.4 * ndpi + 0.5;
+
+	/*
+	 * Calculate correction for line_distance in D1 scanner:
+	 * Start line_distance lines earlier and add line_distance lines at the end
+	 *
+	 * Because the actual line_distance is not yet calculated we have to do this
+	 * first. !!!
+	 */
+
+	s->hw->color_shuffle = SANE_FALSE;
+	s->current_output_line = 0;
+	s->lines_written = 0;
+
+	if ((s->hw->optical_res != 0) && (mparam->depth == 8) && (mparam->mode_flags != 0))
+	 {
+
+	  s->line_distance = s->hw->max_line_distance * ndpi / s->hw->optical_res;
+	  if (s->line_distance != 0)
+	  {
+		  s->hw->color_shuffle = SANE_TRUE;
+	  }
+	  else
+		  s->hw->color_shuffle = SANE_FALSE;
+	 }
+
+
+	/* modify the scan area */
+	if (s->hw->color_shuffle == SANE_TRUE) 
+	 {
+#if 0
+	   top -= s->line_distance;
+	   if (top < 0)
+	    {
+	      top = 0;
+	    }
+#endif
+
+           s->params.lines += 2* s->line_distance;
+	 }
+
+	if (SANE_UNFIX( s->val[ OPT_BR_Y].w) / 25.4 * ndpi < s->params.lines)
+	{
+	 	s->params.lines = (int) SANE_UNFIX(s->val[OPT_BR_Y].w) / 25.4 * ndpi + 0.5;
+	}
+
 
 	status = set_scan_area( s, left, top, s->params.pixels_per_line, s->params.lines);
 
@@ -3506,7 +3609,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	lcount = 1;
 
 	/*
-	 * The set line count commands needs to be sent for certain scanneirs in 
+	 * The set line count commands needs to be sent for certain scanners in 
 	 * color mode. The D1 level requires it, we are however only testing for
 	 * 'D' and not for the actual numeric level.
 	 */
@@ -3537,11 +3640,14 @@ SANE_Status sane_start ( SANE_Handle handle) {
 
 /* TODO	*/
 
-		unsigned char result[ 4];		/* with an extension */
-		unsigned char * buf;
+		u_char result[ 4];		/* with an extension */
+		u_char * buf;
 		size_t len;
 
-		send( s, "\033f", 2, &status);		/* send ESC f (request extension status) */
+		params[0] = ESC;
+		params[1] = s->hw->cmd->request_extension_status;
+
+		send( s, params, 2, &status);		/* send ESC f (request extension status) */
 
 		if( SANE_STATUS_GOOD != status)
 			return status;
@@ -3564,69 +3670,98 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	}
 
 /*
-//  for debug purpose
-//  check scanner conditions
-*/
+ *  for debug purpose
+ *  check scanner conditions
+ */
 #if 1
-{
-	unsigned char result [ 4];
-	unsigned char * buf;
-	size_t len;
-/*     int i; */
+	if (s->hw->cmd->request_condition != 0)
+	  {
+	    u_char result [ 4];
+	    u_char * buf;
+	    size_t len;
 
-	send( s, "\033S", 2, &status);		/* send ESC S (request scanner setting status) */
+	    params[0] = ESC;
+	    params[1] = s->hw->cmd->request_condition;
 
-    if( SANE_STATUS_GOOD != status)
-      return status;
+	    send( s, params, 2, &status);	/* send request condition */
 
-    len = 4;
-    receive( s, result, len, &status);
+	    if( SANE_STATUS_GOOD != status)
+	      return status;
 
-    if( SANE_STATUS_GOOD != status)
-      return status;
+	    len = 4;
+	    receive( s, result, len, &status);
 
-    len = result[ 3] << 8 | result[ 2];
-    buf = alloca( len);
-    receive( s, buf, len, &status);
+	    if( SANE_STATUS_GOOD != status)
+	      return status;
 
-    if( SANE_STATUS_GOOD != status)
-      return status;
+	    len = result[ 3] << 8 | result[ 2];
+	    buf = alloca( len);
+	    receive( s, buf, len, &status);
 
-/*     DBG(10, "SANE_START: length=%d\n", len); */
-/*     for (i = 1; i <= len; i++) { */
-/*       DBG(10, "SANE_START: %d: %c\n", i, buf[i-1]); */
-/*     } */
-    DBG( 5, "SANE_START: color: %d\n", (int) buf[1]);
-    DBG( 5, "SANE_START: resolution (x, y): (%d, %d)\n", 
-        (int) (buf[4]<<8|buf[3]), (int) (buf[6]<<8|buf[5]));
-    DBG( 5, "SANE_START: area[dots] (x-offset, y-offset), (x-range, y-range): (%d, %d), (%d, %d)\n",
-	(int) (buf[9]<<8|buf[8]), (int) (buf[11]<<8|buf[10]), 
-        (int) (buf[13]<<8|buf[12]), (int) (buf[15]<<8|buf[14]));
-    DBG( 5, "SANE_START: data format: %d\n", (int) buf[17]);
-    DBG( 5, "SANE_START: halftone: %d\n", (int) buf[19]);
-    DBG( 5, "SANE_START: brightness: %d\n", (int) buf[21]);
-    DBG( 5, "SANE_START: gamma: %d\n", (int) buf[23]);
-    DBG( 5, "SANE_START: zoom[percentage] (x, y): (%d, %d)\n", (int) buf[26], (int) buf[25]);
-    DBG( 5, "SANE_START: color correction: %d\n", (int) buf[28]);
-    DBG( 5, "SANE_START: outline emphasis: %d\n", (int) buf[30]);
-    DBG( 5, "SANE_START: read mode: %d\n", (int) buf[32]);
-    DBG( 5, "SANE_START: mirror image: %d\n", (int) buf[34]);
-    DBG( 5, "SANE_START: (new B6 or B7 command ESC s): %d\n", (int) buf[36]);
-    DBG( 5, "SANE_START: (new B6 or B7 command ESC t): %d\n", (int) buf[38]);
-    DBG( 5, "SANE_START: line counter: %d\n", (int) buf[40]);
-    DBG( 5, "SANE_START: extension control: %d\n", (int) buf[42]);
-    DBG( 5, "SANE_START: (new B6 or B7 command ESC N): %d\n", (int) buf[44]);
-}
+	    if( SANE_STATUS_GOOD != status)
+	      return status;
+
+#if 0
+	    DBG(10, "SANE_START: length=%d\n", len);
+	    for (i = 1; i <= len; i++) { 
+	      DBG(10, "SANE_START: %d: %c\n", i, buf[i-1]); 
+	    }
 #endif
-/*
-//  for debug purpose
-//  check scanner conditions
-*/
 
-	/* set the block count to 0 */
+	    DBG( 5, "SANE_START: color: %d\n", (int) buf[1]);
+	    DBG( 5, "SANE_START: resolution (x, y): (%d, %d)\n", 
+		 (int) (buf[4]<<8|buf[3]), (int) (buf[6]<<8|buf[5]));
+	    DBG( 5, "SANE_START: area[dots] (x-offset, y-offset), (x-range, y-range): (%d, %d), (%d, %d)\n",
+		 (int) (buf[9]<<8|buf[8]), (int) (buf[11]<<8|buf[10]), 
+		 (int) (buf[13]<<8|buf[12]), (int) (buf[15]<<8|buf[14]));
+	    DBG( 5, "SANE_START: data format: %d\n", (int) buf[17]);
+	    DBG( 5, "SANE_START: halftone: %d\n", (int) buf[19]);
+	    DBG( 5, "SANE_START: brightness: %d\n", (int) buf[21]);
+	    DBG( 5, "SANE_START: gamma: %d\n", (int) buf[23]);
+	    DBG( 5, "SANE_START: zoom[percentage] (x, y): (%d, %d)\n", (int) buf[26], (int) buf[25]);
+	    DBG( 5, "SANE_START: color correction: %d\n", (int) buf[28]);
+	    DBG( 5, "SANE_START: outline emphasis: %d\n", (int) buf[30]);
+	    DBG( 5, "SANE_START: read mode: %d\n", (int) buf[32]);
+	    DBG( 5, "SANE_START: mirror image: %d\n", (int) buf[34]);
+	    DBG( 5, "SANE_START: (new B6 or B7 command ESC s): %d\n", (int) buf[36]);
+	    DBG( 5, "SANE_START: (new B6 or B7 command ESC t): %d\n", (int) buf[38]);
+	    DBG( 5, "SANE_START: line counter: %d\n", (int) buf[40]);
+	    DBG( 5, "SANE_START: extension control: %d\n", (int) buf[42]);
+	    DBG( 5, "SANE_START: (new B6 or B7 command ESC N): %d\n", (int) buf[44]);
+	  }
+#endif
+
+
+	/* set the retry count to 0 */
 	s->retry_count = 0;
 
-	send( s, "\033G", 2, &status);
+	if (s->hw->color_shuffle == SANE_TRUE)
+	{
+
+	/* initialize the line buffers */
+	  for (i = 0; i < s->line_distance * 2 + 1; i++)
+	   {
+	     if (s->line_buffer[i] != NULL)
+	       free(s->line_buffer[i]);
+
+	     s->line_buffer[i] = malloc(s->params.bytes_per_line);  
+	     if (s->line_buffer[i] == NULL)
+	      {
+	        /* free the memory we've malloced so far */
+	        for (j = 0; j < i; j++)
+	         {
+	           free(s->line_buffer[j]);
+		   s->line_buffer[j] = NULL;
+	         }
+	        return SANE_STATUS_NO_MEM;
+	      }
+	   }
+	}
+
+	params[0] = ESC;
+	params[1] = s->hw->cmd->start_scanning;
+
+	send( s, params, 2, &status);
 
 	if( SANE_STATUS_GOOD != status) {
 		DBG( 1, "sane_start: start failed: %s\n", sane_strstatus( status));
@@ -3642,17 +3777,17 @@ SANE_Status sane_start ( SANE_Handle handle) {
 } /* sane_start */
 
 /*
-//
-// TODO: clean up the eject and direct cmd mess.
-*/
+ *
+ * TODO: clean up the eject and direct cmd mess.
+ */
 
 SANE_Status sane_auto_eject ( Epson_Scanner * s) {
 
 	if( s->hw->ADF && s->hw->use_extension && s->val[ OPT_AUTO_EJECT].w) {		/* sequence! */
 		SANE_Status status;
 
-		unsigned char params [ 1];
-		unsigned char cmd = s->hw->cmd->eject;
+		u_char params [ 1];
+		u_char cmd = s->hw->cmd->eject;
 
 		if( ! cmd)
 			return SANE_STATUS_UNSUPPORTED;
@@ -3670,12 +3805,13 @@ SANE_Status sane_auto_eject ( Epson_Scanner * s) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
 	SANE_Status status;
+        u_char param[3];
 
 	receive( s, result, s->block ? 6 : 4, &status);
 
@@ -3743,7 +3879,10 @@ static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
 			DBG(1, "retrying ESC G - %d\n", ++(s->retry_count)); 
 			sleep(1);
 
-			send( s, "\033G", 2, &status);
+			param[0] = ESC;
+			param[1] = s->hw->cmd->start_scanning;
+
+			send( s, param, 2, &status);
 
 			if( SANE_STATUS_GOOD != status) {
 				DBG( 1, "read_data_block: start failed: %s\n", sane_strstatus( status));
@@ -3759,25 +3898,34 @@ static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
 }
 
 /*
-//
-//
-*/
+ *
+ *
+ */
 
 #define GET_COLOR(x)	((x.status>>2) & 0x03)
 
 SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_length, SANE_Int * length) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
 	SANE_Status status;
-	int index;
+	int index = 0;
 	SANE_Bool reorder = SANE_FALSE;
+	int i;	/* loop counter */
+	int bytes_to_process = 0;
 
+START_READ:
 	DBG( 5, "sane_read: begin\n");
 
-	if( s->ptr == s->end) {
+	if( s->ptr == s->end) 
+	{
 		EpsonDataRec result;
 		size_t buf_len;
 
 		if( s->eof) {
+			if (s->hw->color_shuffle) 
+			{
+				DBG(1, "Written %d lines after color shuffle\n", s->lines_written);
+				DBG(1, "Lines requested: %d\n", s->params.lines);
+			}
 			free( s->buf);
 			s->buf = NULL;
 			sane_auto_eject( s);
@@ -3785,8 +3933,22 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 			s->fd = -1;
 			*length = 0;
 
+			/*
+			 * free the line-buffers
+			 */
+
+			for (i = 0; i< s->line_distance; i++)
+			{
+				if (s->line_buffer[i] != NULL)
+				{
+					free(s->line_buffer[i]);
+					s->line_buffer[i] = NULL;
+				}
+			}
+
 			return SANE_STATUS_EOF;
 		}
+
 
 		DBG( 5, "sane_read: begin scan1\n");
 
@@ -3804,13 +3966,18 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 		}
 
 		if( !s->block && SANE_FRAME_RGB == s->params.format) {
+			/*
+			 * Read color data in line mode
+			 */
+
+
 			/* 
 			 * read the first color line - the number of bytes to read
 			 * is already known (from last call to read_data_block()
 			 * We determine where to write the line from the color information
 			 * in the data block. At the end we want the order RGB, but the
 			 * way the data is delivered does not guarantee this - actually it's
-			 * most likely that the order is GRB!
+			 * most likely that the order is GRB if it's not RGB!
 			 */
 			switch (GET_COLOR(result)) 
 			{
@@ -3893,20 +4060,19 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 			if( SANE_STATUS_GOOD != status)
 				return status;
 		} else {
-			/* do we have to reorder the data */
+			/*
+			 * Read data in block mode
+			 */
 
+			/* do we have to reorder the data ? */
 			if (GET_COLOR(result) == 0x01)
 			{
 				reorder = SANE_TRUE;
 			}
-#if 0
-			if (s->hw->cmd->level[0] == 'D')
-			{
-				reorder = SANE_TRUE;
-			}
-#endif
 
 			receive( s, s->buf, buf_len, &status);
+
+			bytes_to_process = buf_len;
 
 			if( SANE_STATUS_GOOD != status)
 				return status;
@@ -3924,6 +4090,19 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 				close_scanner( s);
 				s->fd = -1;
 				*length = 0;
+				/*
+				 * free the line-buffers 
+				 */
+
+				for (i = 0; i< s->line_distance; i++)
+				{
+					if (s->line_buffer[i] != NULL)
+					{
+						free(s->line_buffer[i]);
+						s->line_buffer[i] = NULL;
+					}
+				}
+
 				return SANE_STATUS_CANCELLED;
 			} else
 				send( s, S_ACK, 1, &status);
@@ -3954,10 +4133,42 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 			}
 		}
 
+		/* 
+		 * Do the color_shuffle if everything else is correct - at this time
+		 * most of the stuff is hardcoded for the Perfection 610
+		 */
+
+		if (s->hw->cmd->level[0] == 'D' && SANE_FRAME_RGB == s->params.format && s->block)
+		{
+			int new_length = 0;
+
+			status = color_shuffle(s, &new_length);
+
+			/* !!!
+			 * If no bytes are returned, check if the scanner is already done, if so, 
+			 * we'll probably just return, but if there is more data to process get
+			 * the next batch.
+			 */
+
+			if (new_length == 0 && s->end != s->ptr)
+			{
+				goto START_READ;
+			}
+
+			s->end = s->buf + new_length;
+			s->ptr = s->buf;
+
+		}
+
 
 		DBG( 5, "sane_read: begin scan2\n");
 	}
 
+
+
+	/* 
+	 * copy the image data to the data memory area
+	 */
 
 	if( ! s->block && SANE_FRAME_RGB == s->params.format) {
 
@@ -3995,10 +4206,429 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 	return SANE_STATUS_GOOD;
 }
 
+
+static SANE_Status
+color_shuffle(SANE_Handle handle, int *new_length)
+{
+	Epson_Scanner * s = ( Epson_Scanner *) handle;
+	SANE_Byte	*buf = s->buf;
+	int	length = s->end - s->buf;
+
+	if (s->hw->color_shuffle == SANE_TRUE)
+	{
+		SANE_Byte * data_ptr;		/* ptr to data to process */
+		SANE_Byte * data_end;		/* ptr to end of processed data */
+		SANE_Byte * out_data_ptr;	/* ptr to memory when writing data */
+		int	i;			/* loop counter */
+
+		/*
+		 * It looks like we are dealing with a scanner that has an odd way
+		 * of dealing with colors... The red and blue scan lines are shifted
+		 * up or down by a certain number of lines relative to the green line.
+		 */
+		DBG( 5, "sane_read: color_shuffle\n");
+
+
+		/*
+		 * Initialize the variables we are going to use for the 
+		 * copying of the data. data_ptr is the pointer to
+		 * the currently worked on scan line. data_end is the
+		 * end of the data area as calculated from adding *length 
+		 * to the start of data.
+		 * out_data_ptr is used when writing out the processed data
+		 * and always points to the beginning of the next line to
+		 * write.
+		 */
+
+		data_ptr = out_data_ptr = buf;
+		data_end = data_ptr + length;
+
+		/*
+		 * The image data is in *buf, we know that the buffer contains s->end - s->buf ( = length)
+		 * bytes of data. The width of one line is in s->params.bytes_per_line
+		 */
+
+		/*
+		 * The buffer area is supposed to have a number of full scan
+		 * lines, let's test if this is the case. 
+		 */
+
+		if (length % s->params.bytes_per_line != 0)
+		{
+			DBG(0, "ERROR in size of buffer: %d / %d\n", 
+				length, s->params.bytes_per_line);
+			return SANE_STATUS_INVAL;
+		}
+
+		while (data_ptr < data_end)
+		{
+			SANE_Byte * source_ptr, *dest_ptr;
+			int	loop;
+
+			/* copy the green information into the current line */
+
+			source_ptr = data_ptr + 1;
+			dest_ptr = s->line_buffer[s->color_shuffle_line] +1;
+
+			for (i=0; i< s->params.bytes_per_line /3; i++)
+			{
+				*dest_ptr = *source_ptr;
+				dest_ptr += 3;
+				source_ptr += 3;
+			}
+
+			/* copy the red information n lines back */
+
+			if (s->color_shuffle_line >= s->line_distance)
+			{
+				source_ptr = data_ptr + 2;
+				dest_ptr = s->line_buffer[s->color_shuffle_line - s->line_distance] + 2;
+
+/*				while (source_ptr < s->line_buffer[s->color_shuffle_line] + s->params.bytes_per_line) */
+				for (loop=0; loop < s->params.bytes_per_line / 3 ; loop++)
+	
+				{
+					*dest_ptr = *source_ptr;
+					dest_ptr += 3;
+					source_ptr += 3;
+				}
+			}
+
+			/* copy the blue information n lines forward */
+
+			source_ptr = data_ptr;
+			dest_ptr = s->line_buffer[s->color_shuffle_line + s->line_distance];
+
+/*			while (source_ptr < s->line_buffer[s->color_shuffle_line] + s->params.bytes_per_line) */
+			for (loop=0; loop < s->params.bytes_per_line / 3 ; loop++)
+			{
+				*dest_ptr = *source_ptr;
+				dest_ptr += 3;
+				source_ptr += 3;
+			}
+
+			data_ptr += s->params.bytes_per_line;
+
+			if (s->color_shuffle_line == s->line_distance)
+			{
+				/*
+				 * we just finished the line in line_buffer[0] - write it to the
+				 * output buffer and continue.
+				 */
+
+
+				/*
+				 * The ouput buffer ist still "buf", but because we are
+				 * only overwriting from the beginning of the memory area
+				 * we are not interfering with the "still to shuffle" data
+				 * in the same area.
+				 */
+
+				/*
+				 * Strip the first and last n lines and limit to 
+				 */
+				if ((s->current_output_line >= s->line_distance) &&
+				    (s->current_output_line < s->params.lines + s->line_distance))
+				{
+					memcpy(out_data_ptr, s->line_buffer[0], s->params.bytes_per_line);
+					out_data_ptr += s->params.bytes_per_line;
+
+					s->lines_written++;
+				}
+
+				s->current_output_line++;
+
+
+				/*
+				 * Now remove the 0-entry and move all other 
+				 * lines up by one. There are 2*line_distance + 1 
+				 * buffers, * therefore the loop has to run from 0 
+				 * to * 2*line_distance, and because we want to
+				 * copy every n+1st entry to n the loop runs
+				 * from - to 2*line_distance-1!
+				 */
+
+				free(s->line_buffer[0]);
+
+				for (i = 0; i < s->line_distance*2; i++)
+				{
+					s->line_buffer[i] = s->line_buffer[i+1];
+				}
+
+				/*
+				 * and create one new buffer at the end
+				 */
+
+				s->line_buffer[s->line_distance*2] = malloc(s->params.bytes_per_line);
+				if (s->line_buffer[s->line_distance*2] == NULL)
+				{
+					int i;
+					for (i=0; i<s->line_distance*2; i++)
+					{
+						free(s->line_buffer[i]);
+						s->line_buffer[i] = NULL;
+					}
+					return SANE_STATUS_NO_MEM;
+				}
+			} else {
+				s->color_shuffle_line++;		/* increase the buffer number */
+			}
+		}
+
+		/*
+		 * At this time we've used up all the new data from the scanner, some of
+		 * it is still in the line_buffers, but we are ready to return some of it
+		 * to the front end software. To do so we have to adjust the size of the
+		 * data area and the *new_length variable.
+		 */
+
+		*new_length = out_data_ptr - buf;
+	}
+
+	return SANE_STATUS_GOOD;
+
+}
+
+
+
+
 /*
-//
-//
-*/
+ * static SANE_Status get_identity_information ( SANE_Handle handle)
+ *
+ * Request Identity information from scanner and fill in information
+ * into dev and/or scanner structures.
+ */
+static SANE_Status
+get_identity_information(SANE_Handle handle)
+{
+	Epson_Scanner * s = ( Epson_Scanner *) handle;
+	Epson_Device  * dev = s->hw;
+	EpsonIdent ident;
+	u_char param[3];
+	SANE_Status	status;
+	u_char * buf;
+
+	DBG(5, "get_identity_information()\n");
+
+	if( ! s->hw->cmd->request_identity)
+		return SANE_STATUS_INVAL;
+
+
+	param[0] = ESC;
+	param[1] = s->hw->cmd->request_identity;
+	param[2] = '\0';
+
+	if( NULL == ( ident = ( EpsonIdent) command( s, param, 2, &status) ) ) {
+		DBG( 0, "ident failed\n");
+		return SANE_STATUS_INVAL;
+	}
+
+	DBG( 1, "type  %3c 0x%02x\n", ident->type, ident->type);
+	DBG( 1, "level %3c 0x%02x\n", ident->level, ident->level);
+
+	{
+		char * force = getenv( "SANE_EPSON_CMD_LVL");
+
+		if( force) {
+			ident->type = force[ 0];
+			ident->level = force[ 1];
+
+			DBG( 1, "type  %3c 0x%02x\n", ident->type, ident->type);
+			DBG( 1, "level %3c 0x%02x\n", ident->level, ident->level);
+
+			DBG( 1, "forced\n");
+		}
+	}
+
+/*
+ *  check if option equipment is installed.
+ */
+
+	if( ident->status & STATUS_OPTION) {
+		DBG( 1, "option equipment is installed\n");
+		dev->extension = SANE_TRUE;
+	} else {
+		DBG( 1, "no option equipment installed\n");
+		dev->extension = SANE_FALSE;
+	}
+
+	dev->TPU = SANE_FALSE;
+	dev->ADF = SANE_FALSE;
+
+/*
+ *  set command type and level.
+ */
+
+    {
+	int n;
+
+	for( n = 0; n < NELEMS( epson_cmd); n++)
+		if( ! strncmp( &ident->type, epson_cmd[ n].level, 2) )
+			break;
+
+	if( n < NELEMS( epson_cmd) ) {
+		dev->cmd = &epson_cmd[ n];
+	} else {
+		dev->cmd = &epson_cmd[EPSON_LEVEL_DEFAULT];
+		DBG( 0, "Unknown type %c or level %c, using %s\n", 
+			ident->buf[0], ident->buf[1], dev->cmd->level);
+	}
+
+	s->hw->level = dev->cmd->level[ 1] - '0';
+    }	/* set comand type and level */ 
+
+/*
+ *  Setting available resolutions and xy ranges for sane frontend.
+ */
+
+	s->hw->res_list_size = 0;
+	s->hw->res_list = ( SANE_Int *) calloc( s->hw->res_list_size, sizeof( SANE_Int));
+
+	if( NULL == s->hw->res_list) {
+		DBG( 0, "out of memory\n");
+		return SANE_STATUS_NO_MEM;
+	}
+
+	{
+		int n, k;
+		int x = 0, y = 0;
+
+		for( n = ident->count, buf = ident->buf; n; n -= k, buf += k) {
+			switch (*buf) {
+			case 'R':
+			{
+				int val = buf[ 2] << 8 | buf[ 1];
+
+				s->hw->res_list_size++;
+				s->hw->res_list = ( SANE_Int *) realloc( s->hw->res_list, s->hw->res_list_size * sizeof( SANE_Int));
+
+				if( NULL == s->hw->res_list) {
+					DBG( 0, "out of memory\n");
+					return SANE_STATUS_NO_MEM;
+				}
+
+				s->hw->res_list[ s->hw->res_list_size - 1] = ( SANE_Int) val;
+
+				DBG( 1, "resolution (dpi): %d\n", val);
+				k = 3;
+				continue;
+	    		}
+			case 'A':
+			{
+				x = buf[ 2] << 8 | buf[ 1];
+				y = buf[ 4] << 8 | buf[ 3];
+
+				DBG( 1, "maximum scan area: x %d y %d\n", x, y);
+				k = 5;
+				continue;
+	    		}
+			default:
+				break;
+			} /* case */
+
+			break;
+		} /* for */
+
+		dev->dpi_range.min = s->hw->res_list[ 0];
+		dev->dpi_range.max = s->hw->res_list[ s->hw->res_list_size - 1];
+		dev->dpi_range.quant = 0;
+
+		dev->fbf_x_range.min = 0;
+		dev->fbf_x_range.max = SANE_FIX( x * 25.4 / dev->dpi_range.max);
+		dev->fbf_x_range.quant = 0;
+
+		dev->fbf_y_range.min = 0;
+		dev->fbf_y_range.max = SANE_FIX( y * 25.4 / dev->dpi_range.max);
+		dev->fbf_y_range.quant = 0;
+
+		DBG( 5, "fbf tlx %f tly %f brx %f bry %f [mm]\n"
+			, SANE_UNFIX( dev->fbf_x_range.min)
+			, SANE_UNFIX( dev->fbf_y_range.min)
+			, SANE_UNFIX( dev->fbf_x_range.max)
+			, SANE_UNFIX( dev->fbf_y_range.max)
+			);
+
+	}
+	
+	/*
+	 * Copy the resolution list to the resolution_list array so that the frontend can
+	 * display the correct values
+	 */
+
+	s->hw->resolution_list = malloc( (s->hw->res_list_size +1) * sizeof(SANE_Word));
+
+	if (s->hw->resolution_list == NULL)
+	{
+		DBG( 0, "out of memory\n");
+		return SANE_STATUS_NO_MEM;
+	}
+	*(s->hw->resolution_list) = s->hw->res_list_size;
+	memcpy(&(s->hw->resolution_list[1]), s->hw->res_list, s->hw->res_list_size * sizeof(SANE_Word));
+	
+	return SANE_STATUS_GOOD;
+
+} /* request identity */
+
+
+/*
+ * static SANE_Status get_identity2_information ( SANE_Handle handle)
+ *
+ * Request Identity2 information from scanner and fill in information
+ * into dev and/or scanner structures.
+ */
+static SANE_Status
+get_identity2_information(SANE_Handle handle)
+{
+	Epson_Scanner * s = ( Epson_Scanner *) handle;
+	SANE_Status	status;
+	int len;
+	u_char param[3];
+	u_char result[4];
+	u_char *buf;
+
+	DBG(5, "get_identity2_information()\n");
+
+	if (s->hw->cmd->request_identity2 == 0)
+		return SANE_STATUS_UNSUPPORTED;
+
+	param[0] = ESC;
+	param[1] = s->hw->cmd->request_identity2;
+	param[2] = '\0';
+
+	send( s, param, 2, &status);
+
+	if( SANE_STATUS_GOOD != status)
+		return status;
+
+	len = 4;				/* receive header */
+
+	receive( s, result, len, &status);
+    	if( SANE_STATUS_GOOD != status)
+      		return status;
+
+	len = result[ 3] << 8 | result[ 2];
+	buf = alloca( len);
+
+	receive( s, buf, len, &status);		/* reveive actual status data */
+
+	if( buf[ 0] & 0x80) {
+		close_scanner( s);
+		return SANE_STATUS_INVAL;
+	}
+
+	/* replace this with the values from the scanner !!! */
+	s->hw->max_line_distance = 8;
+	s->hw->optical_res = 600;
+
+	return SANE_STATUS_GOOD;
+}
+
+/*
+ * void sane_cancel(SANE_Handle handle)
+ * 
+ * Set the cancel flag to true. The next time the backend requests data
+ * from the scanner the CAN message will be sent.
+ */
 
 void sane_cancel ( SANE_Handle handle) {
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
@@ -4008,19 +4638,31 @@ void sane_cancel ( SANE_Handle handle) {
 }
 
 /*
-//
-//
-*/
+ * SANE_Status sane_set_io_mode()
+ *
+ * not supported - for asynchronous I/O
+ */
 
-SANE_Status sane_set_io_mode ( SANE_Handle handle, SANE_Bool non_blocking) {
+SANE_Status sane_set_io_mode ( SANE_Handle handle, SANE_Bool non_blocking) 
+{
+	/* get rid of compiler warning */
+	handle = handle;
+	non_blocking = non_blocking;
+
 	return SANE_STATUS_UNSUPPORTED;
 }
 
 /*
-//
-//
-*/
+ * SANE_Status sane_get_select_fd()
+ *
+ * not supported - for asynchronous I/O
+ */
 
-SANE_Status sane_get_select_fd ( SANE_Handle handle, SANE_Int * fd) {
+SANE_Status sane_get_select_fd ( SANE_Handle handle, SANE_Int * fd) 
+{
+	/* get rid of compiler warnings */
+	handle = handle;
+	fd = fd;
+
 	return SANE_STATUS_UNSUPPORTED;
 }
