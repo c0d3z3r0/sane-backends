@@ -1,3 +1,11 @@
+2000-06-28  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/mustek.* Update to Mustek backend 1.0-88. Small bugfixes.
+	  Details in backend/mustek.CHANGES.
+
+	* backend/sp15.desc backend/dc25.desc backend/m3096g.desc: Added
+	  :interface entries.
+	
 2000-06-28  Oliver Rauch
 	* Updated umax backend to version 1.0.21
           take a look at backend/umax.CHANGES for details

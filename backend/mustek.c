@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 87
+#define BUILD 88
 /**************************************************************************/
 
 #include <sane/config.h>
@@ -1040,11 +1040,12 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       /* Earlier versions of this source code used MUSTEK_FLAG_LD_MFS
 	 for firmware versions < 1.02 and LD_NONE for the rest. This
 	 didn't work for my scanners.  1.00 doesn't need any LD
-	 correction, 1.02 does need normal LD corrections. Bug reports
-	 suggest that 1.11 needs no LD correction.  Maybe this is true
-	 for all 1.x x!=02 scanners. */
+	 correction, 1.02 and 1.07 does need normal LD
+	 corrections. Bug reports suggest that 1.11 needs no LD
+	 correction.  Maybe this is true for all 1.x x!=02, x!=07
+	 scanners. */
 
-      if (fw_revision != 0x102)
+      if ((fw_revision != 0x107) && (fw_revision != 0x102))
 	dev->flags |= MUSTEK_FLAG_LD_NONE;
       dev->sane.model = "MFS-12000SP";
     }
@@ -3938,7 +3939,6 @@ reader_process (Mustek_Scanner *s, int fd)
 	 some MFS-12000SP scanners.  */
       if (s->mode == 0 && (s->hw->flags & MUSTEK_FLAG_LINEART_FIX)) 
 	usleep (200000);
-	
     }
   
   fclose (fp);

@@ -1,5 +1,18 @@
 CHANGES for the SANE Mustek backend
 
+2000-06-28
+  * Changed again linedistance handling for the Paragon 1200SP. This
+    time version 1.07 seems to need a special treetment. Even with normal
+    linedistance correction the image is corrupted at buffer boundaries
+    in color mode. Maybe a firmware bug? Thanks to Michael Prechtl for
+    all his tests.
+
+2000-06-25
+  * added missing newline to mustek.conf
+
+2000-06-25
+  * Released backend version 1.0-87
+
 2000-06-25
   * updated manpage concerning parport and USB scanners
   * added example for 600 II N to mustek.conf 
