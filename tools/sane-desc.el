@@ -68,7 +68,7 @@ the print name of the status, the color to use, and a description.")
 (defvar sane-desc-home-url "http://www.mostang.com/sane/"
   "URL for the SANE homepage.")
 
-(defvar sane-desc-sane-logo "http://www.mostang.com/sane/sane.gif"
+(defvar sane-desc-sane-logo "http://www.mostang.com/sane/sane.png"
   "URL for SANE logo.")
 
 (defvar sane-desc-backend-html-bgcolor "FFFFFF"

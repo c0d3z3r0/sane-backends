@@ -1,3 +1,6 @@
+2000-08-12  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* changed tools/sane-desc.el sane.gif->sane.png
+
 2000-08-10  Henning Meier-Geinitz <hmg@gmx.de>
         * backend/avision.c: Changed // comment to /* */. This broke 
 	  compilation on AIX cc, Irix cc and Sun cc.
