@@ -1,5 +1,10 @@
 2000-01-09  Karl Heinz Kremer <khk@khk.net>
 
+	* backend/epson.desc fixed/updated. Now shows a link to
+	  the alternative FilmScan 200 backend.
+
+2000-01-10  Karl Heinz Kremer <khk@khk.net>
+
 	* backend/epson.* updated. This is a new backend still based 
 	  on the origial Sane 1.0.1 version, but with lots of work 
 	  done: Support for ADF/TPU, more function levels (up to B9 
