@@ -69,7 +69,7 @@ vim: ts=4 sw=4 noexpandtab
    1.6 (08 Apr 2000): Minor cleanups.
 */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -674,15 +674,13 @@ sane_init( SANE_Int *versionP, SANE_Auth_Callback authorize )
 
 		linenum = 0;
 		DBG(DCODE, "sane_init: reading config file\n");
-		while( fgets(line, sizeof(line), fp) ) {
+		while( sanei_config_read(line, sizeof(line), fp) ) {
 			++linenum;
 			str = line;
 			if( str[0] == '#' )
 				continue;	/* ignore comments */
 			str = (char *)sanei_config_skip_whitespace(str);
 			len = strlen(str);
-			if( len > 0  &&  str[len - 1] == '\n' )
-				str[--len] = '\0';
 			if( !len )
 				continue;	/* ignore empty lines */
 			if( strncmp(str, "option", 6) == 0 && isspace(str[6]) ) {

@@ -49,7 +49,7 @@
 /* $Id$
    SANE SnapScan backend */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -66,9 +66,9 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_scsi.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_scsi.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX	1024
@@ -78,12 +78,12 @@
 #define MINOR_VERSION	3
 #define BUILD		0
 
-#include <snapscan.h>
+#include "snapscan.h"
 
 #define BACKEND_NAME snapscan
 
-#include <sane/sanei_backend.h>
-#include <sane/saneopts.h>
+#include "sane/sanei_backend.h"
+#include "sane/saneopts.h"
 
 #define MIN(x,y) ((x)<(y) ? (x) : (y))
 #define MAX(x,y) ((x)>(y) ? (x) : (y))
@@ -92,7 +92,7 @@
 #define P_200_TO_255(per) SANE_UNFIX(255.0*((per + 100)/200.0))
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define SNAPSCAN_CONFIG_FILE "snapscan.conf"
 
 /* debug levels */
@@ -230,9 +230,9 @@ static u_char depths12[MD_NUM_MODES] =	{12, 1, 12, 1};
 
 /* external routines */
 
-#include <snapscan-utils.c>
-#include <snapscan-scsi.c>
-#include <snapscan-sources.c>
+#include "snapscan-utils.c"
+#include "snapscan-scsi.c"
+#include "snapscan-sources.c"
 
 /* Remove comment from following line to enable USB instead of SCSI */
 /* #include "snapscan-usb.c" */
@@ -2632,6 +2632,35 @@ SANE_Status sane_get_select_fd (SANE_Handle h, SANE_Int * fd)
 
 /*
  * $Log$
+ * Revision 1.1.1.1.2.5  2000/07/29 16:04:33  hmg
+ * 2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/GUIDE: Added some comments about portability and
+ * 	  documentation.
+ * 	* backend/abaton.c backend/agfafocus.c backend/apple.c
+ * 	  backend/canon.c backend/coolscan.c backend/dc210.c backend/dc25.c
+ * 	  backend/dll.c backend/dmc.c backend/microtek.c backend/microtek2.c
+ *  	  backend/microtek2.c backend/mustek_pp.c backend/net.c backend/pint.c
+ * 	  backend/pnm.c backend/qcam.c backend/ricoh.c backend/s9036.c
+ * 	  backend/sane_strstatus.c backend/sharp.c backend/snapscan.c
+ * 	  backend/st400.c backend/stubs.c backend/tamarack.c backend/v4l.c:
+ * 	  Changed include statements from #include <sane/...> to
+ * 	  #include "sane...".
+ * 	* backend/avision.c backend/dc25.c: Use DBG(0, ...) instead of
+ *  	  fprintf (stderr, ...)
+ * 	* backend/avision.c backend/canon-sane.c backend/coolscan.c
+ * 	  backend/dc25.c backend/microtek.c backend/microtek2.c
+ *  	  backend/st400.c: Use sanei_config_read() instead of fgets().
+ * 	* backend/coolscan.desc backend/microtek.desc backend/microtek2.desc
+ * 	  backend/st400.desc: Added :interface and :manpage entries.
+ * 	* backend/nec.desc: Status is beta now (was: new). Fixed typo.
+ * 	* doc/canon.README: Removed, because the information is included in
+ *  	  the manpage now.
+ * 	* doc/Makefile.in: Added sane-coolscan to list of mapages to install.
+ * 	* README: Added Link to coolscan manpage.
+ * 	* backend/mustek.*: Update to Mustek backend 1.0-94. Fixed the
+ * 	  #include <sane/...> bug.
+ *
  * Revision 1.1.1.1.2.4  2000/07/25 21:47:43  hmg
  * 2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
  *

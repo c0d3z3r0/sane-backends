@@ -43,11 +43,11 @@
    dynamic linking to load backends on demand.  */
 
 #ifdef _AIX
-# include <lalloca.h>   /* MUST come first for AIX! */
+# include "lalloca.h"   /* MUST come first for AIX! */
 #endif
 
-#include <sane/config.h>
-#include <lalloca.h>
+#include "sane/config.h"
+#include "lalloca.h"
 
 #include <errno.h>
 #include <limits.h>
@@ -79,17 +79,17 @@
 
 #include <sys/types.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
 
 #define BACKEND_NAME dll
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX       1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define DLL_CONFIG_FILE "dll.conf"
 #define DLL_ALIASES_FILE "dll.aliases"
 

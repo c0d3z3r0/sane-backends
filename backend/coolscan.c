@@ -65,11 +65,11 @@
  */
 
 #ifdef _AIX
-# include <lalloca.h>		/* MUST come first for AIX! */
+# include "lalloca.h"		/* MUST come first for AIX! */
 #endif
 
 #include "sane/config.h"
-#include <lalloca.h>
+#include "lalloca.h"
 
 #include <errno.h>
 #include <math.h>
@@ -90,7 +90,7 @@
 #include "sane/sanei_scsi.h"
 #include "sane/sanei_debug.h"
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define COOLSCAN_CONFIG_FILE "coolscan.conf"
 #include "sane/sanei_backend.h"
 
@@ -3233,15 +3233,11 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       return SANE_STATUS_GOOD;
     }
 
-  while (fgets (dev_name, sizeof (dev_name), fp))
+  while (sanei_config_read (dev_name, sizeof (dev_name), fp))
     {
       if (dev_name[0] == '#')
 	continue;		/* ignore line comments */
       len = strlen (dev_name);
-      if (dev_name[len - 1] == '\n')
-	{
-	  dev_name[--len] = '\0';
-	}
 
       if (!len)
 	continue;		/* ignore empty lines */

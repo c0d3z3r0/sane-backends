@@ -39,28 +39,28 @@
    whether to permit this exception to apply to your modifications.
    If you do not wish that, delete this exception notice.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 extern int errno;
 
-#include <sane/sane.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/saneopts.h"
 
 #include "pint.h"
 
 #include <unistd.h>
 #include <fcntl.h>
 
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define PINT_CONFIG_FILE "pint.conf"
 
 #define MM_PER_INCH		25.4

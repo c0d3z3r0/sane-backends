@@ -51,11 +51,11 @@
    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.  */
 
 #ifdef _AIX
-# include <lalloca.h>   /* MUST come first for AIX! */
+# include "lalloca.h"   /* MUST come first for AIX! */
 #endif
 
-#include <sane/config.h>
-#include <lalloca.h>
+#include "sane/config.h"
+#include "lalloca.h"
 
 #include <assert.h>
 #include <ctype.h>
@@ -79,9 +79,9 @@
 #include <sys/stat.h>
 
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
 
 #include <X11/Intrinsic.h>
 
@@ -95,16 +95,16 @@
 
 #define SYNC_TIMEOUT 1
 
-#include <v4l.h>
+#include "v4l.h"
 
 #define BACKEND_NAME v4l
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX       1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define V4L_CONFIG_FILE "v4l.conf"
 
 static int num_devices;

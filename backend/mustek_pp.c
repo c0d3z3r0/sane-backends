@@ -40,7 +40,7 @@
 
    This file implements a SANE backend for Mustek PP flatbed scanners.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -55,17 +55,17 @@
 #include <sys/time.h>
 #include <sys/types.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_pa4s2.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_pa4s2.h"
 
-#include <mustek_pp.h>
+#include "mustek_pp.h"
 
 #define BACKEND_NAME	mustek_pp
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define MUSTEK_PP_CONFIG_FILE "mustek_pp.conf"
 
 #define MIN(a,b)	((a) < (b) ? (a) : (b))

@@ -44,7 +44,7 @@
         This file implements a SANE backend for Ricoh flatbed scanners.  
 */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -54,19 +54,19 @@
 #include <unistd.h>
 #include <ctype.h>
 
-#include <sane/sane.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <ricoh.h>
+#include "sane/sane.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "ricoh.h"
 
 #define BACKEND_NAME ricoh
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define RICOH_CONFIG_FILE "ricoh.conf"
 
 #define MM_PER_INCH	25.4

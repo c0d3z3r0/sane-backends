@@ -37,7 +37,7 @@
  */
 
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -51,12 +51,12 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <sane/sanei_config.h>
-#include <tamarack.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "sane/sanei_config.h"
+#include "tamarack.h"
 
 /* For timeval... */
 #ifdef DEBUG
@@ -65,7 +65,7 @@
 
 
 #define BACKEND_NAME	tamarack
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024

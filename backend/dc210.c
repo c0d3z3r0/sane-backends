@@ -57,7 +57,7 @@
 
  ***************************************************************************/
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -65,15 +65,15 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <cdjpeg.h>
+#include "cdjpeg.h"
 #include <sys/ioctl.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
 
 #define BACKEND_NAME	dc210
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #include "dc210.h"
 

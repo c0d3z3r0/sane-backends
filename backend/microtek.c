@@ -67,14 +67,14 @@
 
 #include <math.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_config.h>
-#include <sane/sanei_scsi.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_config.h"
+#include "sane/sanei_scsi.h"
+#include "sane/saneopts.h"
 
 #define BACKEND_NAME microtek
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #include "microtek.h"
 
@@ -2889,7 +2889,7 @@ sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
     attach_scanner("/dev/scanner", 0);
     return SANE_STATUS_GOOD;
   }
-  while (fgets(dev_name, sizeof (dev_name), fp)) {
+  while (sanei_config_read(dev_name, sizeof (dev_name), fp)) {
     DBG(23, "sane_init:  config- %s", dev_name);
     if (dev_name[0] == '#') continue;	/* ignore comments */
     if (!(strncmp("noprecal", dev_name, 8))) {
@@ -2905,7 +2905,6 @@ sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
       continue;
     }
     len = strlen (dev_name);
-    if (dev_name[len - 1] == '\n') dev_name[--len] = '\0';
     if (!len) continue;			/* ignore empty lines */
     sanei_config_attach_matching_devices (dev_name, attach_one);
     }

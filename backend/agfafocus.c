@@ -21,7 +21,7 @@
 
    This file implements a SANE backend for AGFA Focus flatbed scanners.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <signal.h>
 #include <errno.h>
@@ -36,15 +36,15 @@
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_config.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <agfafocus.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_config.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "agfafocus.h"
 
 #define BACKEND_NAME	agfafocus
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #define MM_PER_INCH	25.4
 

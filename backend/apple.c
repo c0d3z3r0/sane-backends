@@ -43,7 +43,7 @@
 
    This file implements a SANE backend for Apple flatbed scanners.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -59,11 +59,11 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <apple.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "apple.h"
 
 
 /* SCSI commands that the Apple scanners understand: */
@@ -123,13 +123,13 @@
 
 #define READ24(p) *(p)*65536 + *(p+1)*256 + *(p+2)
 
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define APPLE_CONFIG_FILE "apple.conf"
 
 #define MM_PER_INCH	25.4

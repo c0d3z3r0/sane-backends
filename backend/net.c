@@ -41,11 +41,11 @@
    This file implements a SANE network-based meta backend.  */
 
 #ifdef _AIX
-# include <lalloca.h>   /* MUST come first for AIX! */
+# include "lalloca.h"   /* MUST come first for AIX! */
 #endif
 
-#include <sane/config.h>
-#include <lalloca.h>
+#include "sane/config.h"
+#include "lalloca.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -63,20 +63,20 @@
 #include <netinet/in.h>
 #include <netdb.h>      /* OS/2 needs this _after_ <netinet/in.h>, grrr... */
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_net.h>
-#include <sane/sanei_codec_bin.h>
-#include <net.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_net.h"
+#include "sane/sanei_codec_bin.h"
+#include "net.h"
 
 #define BACKEND_NAME    net
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX       1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define NET_CONFIG_FILE "net.conf"
 
 static SANE_Auth_Callback auth_callback;

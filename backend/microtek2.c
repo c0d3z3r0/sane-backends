@@ -54,11 +54,11 @@
 
 
 #ifdef _AIX
-# include <lalloca.h>   /* MUST come first for AIX! */
+# include "lalloca.h"   /* MUST come first for AIX! */
 #endif
 
 #include "sane/config.h"
-#include <lalloca.h>
+#include "lalloca.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,14 +77,14 @@
 #include <sys/stat.h>
 #endif
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/sanei_config.h>
-#include <sane/sanei_scsi.h>
-#include <sane/saneopts.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/sanei_config.h"
+#include "sane/sanei_scsi.h"
+#include "sane/saneopts.h"
 
 #define BACKEND_NAME microtek2
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #include "microtek2.h"
 
@@ -4954,7 +4954,7 @@ parse_config_file(FILE *fp, Config_Temp **ct)
 
     global_opts = md_options;
 
-    while ( fgets(s, sizeof(s), fp) )
+    while ( sanei_config_read(s, sizeof(s), fp) )
       {
         if ( *s == '#' || *s == '\n' )  /* ignore empty lines and comments */
             continue;
@@ -4981,7 +4981,7 @@ parse_config_file(FILE *fp, Config_Temp **ct)
       {
         if ( *s == '#' || *s == '\n' )  /* ignore empty lines and comments */
           {
-            fgets(s, sizeof(s), fp);
+            sanei_config_read(s, sizeof(s), fp);
             continue;
           }
 
@@ -5016,7 +5016,7 @@ parse_config_file(FILE *fp, Config_Temp **ct)
             hct1->opts = global_opts;
             hct1->next = NULL;
           }
-        fgets(s, sizeof(s), fp);
+        sanei_config_read(s, sizeof(s), fp);
       }
     /* set filepointer to the beginning of the file */
     fseek(fp, 0L, SEEK_SET);

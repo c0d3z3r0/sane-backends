@@ -73,7 +73,7 @@
    - bi-level color scans now give useful (8 bit) output
    - separate thresholds for red, green, blue (bi-level color scan) added
 */
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <limits.h>
 #include <stdlib.h>
@@ -83,9 +83,9 @@
 #include <errno.h>
 #include <math.h>
 
-#include <sane/sane.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
+#include "sane/sane.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
 
 /* QUEUEDEBUG should be undefined unless you want to play
    with the sanei_scsi.c under Linux and/or with the Linux's SG driver,
@@ -135,10 +135,10 @@
 */
 /* #define USE_SEPARATE_Y_RESOLUTION */
 
-#include <sharp.h>
+#include "sharp.h"
 
 #define BACKEND_NAME sharp
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX	1024
@@ -151,7 +151,7 @@
 #define PIX_TO_MM(x, mud) ((x) * 25.4 / mud)
 #define MM_TO_PIX(x, mud) ((x) * mud / 25.4)
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define SHARP_CONFIG_FILE "sharp.conf"
 
 static int num_devices = 0;

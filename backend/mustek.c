@@ -46,10 +46,10 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 93
+#define BUILD 94
 /**************************************************************************/
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -65,21 +65,21 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
-#include <sane/sanei_ab306.h>
-#include <mustek.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
+#include "sane/sanei_ab306.h"
+#include "mustek.h"
 
 #define BACKEND_NAME	mustek
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define MUSTEK_CONFIG_FILE "mustek.conf"
 
 #define MM_PER_INCH	25.4

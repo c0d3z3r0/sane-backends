@@ -730,7 +730,7 @@ scan_area_and_windows (Avision_Scanner *s)
 	break;
 
     default:
-	fprintf (stderr,"Invalid mode. %d\n", s->mode);
+	DBG (0,"Invalid mode. %d\n", s->mode);
 	exit (1);
     }
 
@@ -1245,12 +1245,10 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
     return SANE_STATUS_GOOD;
   }
 
-  while (fgets (dev_name, sizeof (dev_name), fp)) {
+  while (sanei_config_read (dev_name, sizeof (dev_name), fp)) {
     if (dev_name[0] == '#')		/* ignore line comments */
       continue;
     len = strlen (dev_name);
-    if (dev_name[len - 1] == '\n')
-      dev_name[--len] = '\0';
     
     if (!len)
       continue;			/* ignore empty lines */

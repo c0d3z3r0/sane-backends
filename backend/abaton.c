@@ -45,7 +45,7 @@
 
    This file implements a SANE backend for Abaton flatbed scanners.  */
 
-#include <sane/config.h>
+#include "sane/config.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -61,21 +61,21 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-#include <sane/sane.h>
-#include <sane/sanei.h>
-#include <sane/saneopts.h>
-#include <sane/sanei_scsi.h>
+#include "sane/sane.h"
+#include "sane/sanei.h"
+#include "sane/saneopts.h"
+#include "sane/sanei_scsi.h"
 #include "abaton.h"
 
 
 #define BACKEND_NAME	abaton
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #ifndef PATH_MAX
 # define PATH_MAX	1024
 #endif
 
-#include <sane/sanei_config.h>
+#include "sane/sanei_config.h"
 #define ABATON_CONFIG_FILE "abaton.conf"
 
 #define MM_PER_INCH	25.4
