@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "29 March 2000"
+.TH sane-mustek 5 "07 April 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -117,8 +117,7 @@ is positional and works around a problem that occurs with some SCSI
 controllers (notably the ncr810 controller under Linux).  If color
 scans have horizontal stripes and/or the colors are off, then it's
 likely that your controller suffers from this problem.  Turning on
-this option usually fixes the problem. The parallel port scanner 600
-II N is a special case, see section PARALLEL PORT SCANNERS below.
+this option usually fixes the problem.
 
 Option
 .B lineart-fix
