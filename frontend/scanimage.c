@@ -39,6 +39,8 @@
 #include <sane/sanei.h>
 #include <sane/saneopts.h>
 
+#include "stiff.h"
+
 #ifndef PATH_MAX
 #define PATH_MAX 1024
 #endif
@@ -58,6 +60,8 @@ typedef struct
   }
 Image;
 
+#define OPTION_FORMAT   1001
+
 static struct option basic_options[] =
 {
   {"device-name", required_argument, NULL, 'd'},
@@ -67,8 +71,12 @@ static struct option basic_options[] =
   {"test", no_argument, NULL, 'T'},
   {"version", no_argument, NULL, 'V'},
   {"batch", optional_argument, NULL, 'b'},
+  {"format", required_argument, NULL, OPTION_FORMAT},
   {0, 0, NULL, 0}
 };
+
+#define OUTPUT_PNM      0
+#define OUTPUT_TIFF     1
 
 #define BASE_OPTSTRING	"d:hLvVT"
 #define STRIP_HEIGHT	256	/* # lines we increment image height */
@@ -79,10 +87,12 @@ static int * option_number;
 static SANE_Handle device;
 static int verbose;
 static int test;
+static int output_format = OUTPUT_PNM;
 static int help;
 static const char * prog_name;
 static SANE_Option_Descriptor window_option[2];
 static int window[4];
+static int resolution_optind = -1, resolution_value = 0;
 static SANE_Word window_val[2];
 static int window_val_user[2];	/* is width/height user-specified? */
 
@@ -515,6 +525,13 @@ fetch_options (SANE_Device * device)
       else
 	all_options[option_count].has_arg = required_argument;
 
+      /* Look for scan resolution */
+      if ((opt->type == SANE_TYPE_FIXED || opt->type == SANE_TYPE_INT)
+	  && opt->size == sizeof (SANE_Int)
+	  && (opt->unit == SANE_UNIT_DPI)
+          && (strcmp (opt->name, SANE_NAME_SCAN_RESOLUTION) == 0))
+        resolution_optind = i;
+
       /* Keep track of top-left corner options (if they exist at
 	 all) and replace the bottom-right corner options by a
 	 width/height option (if they exist at all).  */
@@ -704,20 +721,25 @@ process_backend_option (SANE_Handle device, int optnum, const char * optarg)
 static void
 write_pnm_header (SANE_Frame format, int width, int height, int depth)
 {
+  /* The netpbm-package does not define raw image data with maxval > 255. */
+  /* But writing maxval 65535 for 16bit data gives at least a chance */
+  /* to read the image. */
   switch (format)
     {
     case SANE_FRAME_RED:
     case SANE_FRAME_GREEN:
     case SANE_FRAME_BLUE:
     case SANE_FRAME_RGB:
-      printf ("P6\n# SANE data follows\n%d %d\n255\n", width, height);
+      printf ("P6\n# SANE data follows\n%d %d\n%d\n", width, height,
+              (depth <= 8) ? 255 : 65535);
       break;
 
     default:
       if (depth == 1)
 	printf ("P4\n# SANE data follows\n%d %d\n", width, height);
       else
-	printf ("P5\n# SANE data follows\n%d %d\n255\n", width, height);
+	printf ("P5\n# SANE data follows\n%d %d\n%d\n", width, height,
+                (depth <= 8) ? 255 : 65535);
       break;
     }
 #ifdef __EMX__	/* OS2 - write in binary mode. */
@@ -762,7 +784,7 @@ scan_it (void)
   SANE_Byte buffer[32*1024], min = 0xff, max = 0;
   SANE_Parameters parm;
   SANE_Status status;
-  Image image = {0, };
+  Image image = {0,0,0,0,0,0};
   static const char *format_name[] =
     {
       "gray", "RGB", "red", "green", "blue"
@@ -812,23 +834,30 @@ scan_it (void)
 	    case SANE_FRAME_RED:
 	    case SANE_FRAME_GREEN:
 	    case SANE_FRAME_BLUE:
-	      assert (parm.depth == 8);
+	      assert ((parm.depth == 8) || (parm.depth == 16));
 	      must_buffer = 1;
 	      offset = parm.format - SANE_FRAME_RED;
 	      break;
 
 	    case SANE_FRAME_RGB:
-	      assert (parm.depth == 8);
+	      assert ((parm.depth == 8) || (parm.depth == 16));
 	    case SANE_FRAME_GRAY:
-	      assert (parm.depth == 1 || parm.depth == 8);
+	      assert ((parm.depth == 1)||(parm.depth == 8)||(parm.depth == 16));
 	      if (parm.lines < 0)
 		{
 		  must_buffer = 1;
 		  offset = 0;
 		}
 	      else
-		write_pnm_header (parm.format, parm.pixels_per_line,
-				  parm.lines, parm.depth);
+              {
+                if (output_format == OUTPUT_TIFF)
+		  sanei_write_tiff_header (parm.format, parm.pixels_per_line,
+				           parm.lines, parm.depth,
+                                           resolution_value);
+                else
+		  write_pnm_header (parm.format, parm.pixels_per_line,
+				    parm.lines, parm.depth);
+              }
 	      break;
 	    }
 
@@ -948,7 +977,11 @@ scan_it (void)
   if (must_buffer)
     {
       image.height = image.y;
-      write_pnm_header (parm.format, image.width, image.height, parm.depth);
+      if (output_format == OUTPUT_TIFF)
+	sanei_write_tiff_header (parm.format, parm.pixels_per_line,
+			         parm.lines, parm.depth, resolution_value);
+      else
+        write_pnm_header (parm.format, image.width, image.height, parm.depth);
       fwrite (image.data, image.Bpp, image.height * image.width, stdout);
     }
 
@@ -986,7 +1019,7 @@ test_it (void)
   int i, len;
   SANE_Parameters parm;
   SANE_Status status;
-  Image image = {0, };
+  Image image = {0,0,0,0,0,0};
   static const char *format_name[] =
     { "gray", "RGB", "red", "green", "blue" };
 
@@ -1062,6 +1095,30 @@ test_it (void)
   return status;
 }
 
+
+static int
+get_resolution (void)
+{const SANE_Option_Descriptor * resopt;
+ int resol = 0;
+ void * val;
+
+ if (resolution_optind < 0) return 0;
+ resopt = sane_get_option_descriptor (device, resolution_optind);
+ if (!resopt) return 0;
+
+ val = alloca (resopt->size);
+ if (!val) return 0;
+
+ sane_control_option (device, resolution_optind, SANE_ACTION_GET_VALUE, val, 0);
+ if (resopt->type == SANE_TYPE_INT)
+   resol = *(SANE_Int *)val;
+ else
+   resol = (int)(SANE_UNFIX(*(SANE_Fixed *)val) + 0.5);
+
+ return resol;
+}
+
+
 int
 main (int argc, char **argv)
 {
@@ -1103,6 +1160,10 @@ main (int argc, char **argv)
 	case 'h': help = 1; break;
 	case 'v': ++verbose; break;
 	case 'T': test= 1; break;
+	case OPTION_FORMAT:
+                  if (strcmp (optarg, "tiff") == 0) output_format = OUTPUT_TIFF;
+                  else output_format = OUTPUT_PNM;
+                  break;
 	case 'L':
 	  {
 	    int i;
@@ -1140,6 +1201,7 @@ Start image acquisition on a scanner device and write PNM image data to\n\
 standard output.\n\
 \n\
 -b, --batch=FORMAT         working in batch mode\n\
+    --format=pnm|tiff      file format of output file\n\
 -d, --device-name=DEVICE   use a given scanner device\n\
 -h, --help                 display this help message and exit\n\
 -L, --list-devices         show available scanner devices\n\
@@ -1355,6 +1417,9 @@ List of available devices:", prog_name);
       fputc ('\n', stdout);
       exit (0);
     }
+
+  if (output_format != OUTPUT_PNM)
+    resolution_value = get_resolution ();
 
   signal (SIGHUP,  sighandler);
   signal (SIGINT,  sighandler);
