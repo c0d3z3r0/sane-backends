@@ -14,6 +14,8 @@
 :model "ScanMaker E3plus"         ; name models for above-specified mfg.
 :model "ScanMaker X6"
 :model "ScanMaker X6EL"
+:model "ScanMaker X6USB"
+:interface "USB"
 :model "ScanMaker 330"
 :model "ScanMaker 630"
 :model "ScanMaker 636"
