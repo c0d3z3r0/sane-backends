@@ -1,3 +1,10 @@
+2000-06-28  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/pint.c: fixed sane_close bug
+
+	* backend/microtek.c: fixed compilation problem with NDEBUG
+ 	  defined
+
 2000-06-27  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* backend/lhii.desc: added :interface
