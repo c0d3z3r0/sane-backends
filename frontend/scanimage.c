@@ -1127,6 +1127,7 @@ main (int argc, char **argv)
   const SANE_Device ** device_list;
   SANE_Int num_dev_options = 0;
   const char * devname = 0;
+  const char * defdevname = 0;
   const char * format = 0;
   int batch = 0;
   SANE_Status status;
@@ -1139,6 +1140,8 @@ main (int argc, char **argv)
     ++prog_name;
   else
     prog_name = argv[0];
+
+  defdevname = getenv("SANE_DEFAULT_DEVICE");
 
   sane_init (0, 0);
 
@@ -1182,6 +1185,9 @@ main (int argc, char **argv)
 			 device_list[i]->name, device_list[i]->vendor,
 			 device_list[i]->model, device_list[i]->type);
 	      }
+             if (defdevname)
+                  printf ("default device is `%s'\n", defdevname);
+
 	    exit (0);
 	  }
 
@@ -1212,22 +1218,26 @@ standard output.\n\
 
   if (!devname)
     {
-      /* If no device name was specified explicitly, we open the first
-	 device we find (if any): */
-
-      status = sane_get_devices (&device_list, SANE_FALSE);
-      if (status != SANE_STATUS_GOOD)
-	{
-	  fprintf (stderr, "%s: sane_get_devices() failed: %s\n",
-		   prog_name, sane_strstatus (status));
-	  exit (1);
-	}
-      if (!device_list[0])
-	{
-	  fprintf (stderr, "%s: no SANE devices found\n", prog_name);
-	  exit (1);
-	}
-      devname = device_list[0]->name;
+      /* If no device name was specified explicitly, we look at the
+         environment variable SANE_DEFAULT_DEVICE.  If this variable
+         is not set, we open the first device we find (if any): */
+      devname = defdevname;
+      if (!devname )
+        {
+	  status = sane_get_devices (&device_list, SANE_FALSE);
+	  if (status != SANE_STATUS_GOOD)
+	    {
+	      fprintf (stderr, "%s: sane_get_devices() failed: %s\n",
+		       prog_name, sane_strstatus (status));
+	      exit (1);
+	    }
+	  if (!device_list[0])
+	    {
+	      fprintf (stderr, "%s: no SANE devices found\n", prog_name);
+	      exit (1);
+	    }
+	  devname = device_list[0]->name;
+    	}
     }
 
   status = sane_open (devname, &device);

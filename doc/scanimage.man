@@ -40,6 +40,10 @@ available devices can be obtained with the
 .B --list-devices
 option (see below).  If no device-name is specified explicitly,
 .B scanimage
+reads a device-name from the environment variable
+.BR SANE_DEFAULT_DEVICE .
+If this variable is not set, 
+.B scanimage
 will attempt to open the first available device.
 .PP
 The
@@ -244,6 +248,10 @@ filename
 .BR /tmp/input.ppm .
 .RE
 
+.SH ENVIRONMENT
+.TP
+.B SANE_DEFAULT_DEVICE
+The default device-name.
 .SH FILES
 .TP
 .I @CONFIGDIR@
