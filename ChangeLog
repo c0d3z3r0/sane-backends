@@ -1,3 +1,8 @@
+1999-09-07  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* sanei/sanei_scsi.c [sanei_scsi_cmd sanei_scsi_open]: Digital
+ 	UNIX 4.0D patches from Marian Szebenyi <dms35@cornell.edu>.
+
 1999-08-16  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in: Turn on more gcc warnings.
