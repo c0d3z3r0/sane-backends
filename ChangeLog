@@ -1,3 +1,9 @@
+2000-04-15  Andreas Rick  <andreas.rick@free.fr>
+
+        * backend/coolscan.* Update coolscan backend to version 0.4.3.
+	  This version includes support for the newer Nikon Coolscan
+	  models LS-30 and LS-2000. Dustremoval is not yet included.
+	
 2000-04-09  Henning Meier-Geinitz <hmg@gmx.de>
 
         * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend 
@@ -5,7 +11,7 @@
 	  the 600 II N is fixed. Added output of scanning time. Rewrite
 	  of the resolution encoding for the 3-pass scanners. Look at
 	  backend/mustek.CHANGES for details.
-
+	
 2000-04-05  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* Updated umax backend to version 1.0.2-build-20
           take a look at backend/umax.CHANGES for details
