@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 14
+#define BUILD 15
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -713,11 +713,11 @@ static int umax_cbhs_correct(int minimum, int cbhs, int maximum)
 /* ------------------------------------------------------------ SENSE_HANDLER ------------------------------ */
 
 
-static SANE_Status sense_handler(int scsi_fd, u_char *result, void *arg)	  /* is called by sanei_scsi */
+static SANE_Status sense_handler(int scsi_fd, unsigned char *result, void *arg)	  /* is called by sanei_scsi */
 {
- u_char      asc, ascq, sensekey;
- int         asc_ascq, len;
- Umax_Device *dev = arg;
+ unsigned char asc, ascq, sensekey;
+ int           asc_ascq, len;
+ Umax_Device   *dev = arg;
 
   DBG(DBG_proc, "check condition sense handler\n");
 
@@ -2145,7 +2145,7 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
     }
     else if (!strncmp(product, "Astra 1200S ", 12))
     {
-//      dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
+      dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
     }
     else if (!strncmp(product, "Astra 2400S ", 12))
     {
@@ -3655,17 +3655,19 @@ int sfd;
 #if 0
   dev->x_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
   dev->x_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
-#endif
+#else
   dev->x_dpi_range.min           = SANE_FIX(1);
   dev->x_dpi_range.quant         = SANE_FIX(1);
+#endif
   dev->x_dpi_range.max           = SANE_FIX(dev->inquiry_x_res);
 
 #if 0
   dev->y_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
   dev->y_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
-#endif
+#else
   dev->y_dpi_range.min           = SANE_FIX(1);
   dev->y_dpi_range.quant         = SANE_FIX(1);
+#endif
   dev->y_dpi_range.max           = SANE_FIX(dev->inquiry_y_res);
 
   dev->analog_gamma_range.min    = SANE_FIX(1.0);
@@ -4738,12 +4740,21 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 
   if (info) { *info = 0; }
 
-  if (scanner->scanning) { return SANE_STATUS_DEVICE_BUSY; }
+  if (scanner->scanning)
+  {
+    return SANE_STATUS_DEVICE_BUSY;
+  }
 
-  if (option >= NUM_OPTIONS) { return SANE_STATUS_INVAL; }
+  if ((unsigned) option >= NUM_OPTIONS)
+  {
+    return SANE_STATUS_INVAL;
+  }
 
   cap = scanner->opt[option].cap;
-  if (!SANE_OPTION_IS_ACTIVE (cap)) { return SANE_STATUS_INVAL; }
+  if (!SANE_OPTION_IS_ACTIVE (cap))
+  {
+    return SANE_STATUS_INVAL;
+  }
 
   name = scanner->opt[option].name;
   if (!name)

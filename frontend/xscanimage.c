@@ -950,7 +950,7 @@ scan_start (void)
   scan_win.input_tag = -1;
   if (sane_set_io_mode (dev, SANE_TRUE) == SANE_STATUS_GOOD
       && sane_get_select_fd (dev, &fd) == SANE_STATUS_GOOD)
-    scan_win.input_tag = gdk_input_add (fd, GDK_INPUT_READ,
+    scan_win.input_tag = gdk_input_add (fd, GDK_INPUT_READ | GDK_INPUT_EXCEPTION,
 					input_available, 0);
   else
     input_available (0, -1, GDK_INPUT_READ);
