@@ -1,0 +1,151 @@
+CHANGES for the SANE Mustek backend
+
+2000-04-23
+  * fixed lineart and color scanning >600 dpi for the SE 12000SP
+  * added variable debug_level to be faster without debugging in attach ()
+  * fixed bug in mustek.conf handling; positional options were applied
+    to the first device only
+  * added an option to mustek.conf: "buffersize". This overwrites the
+    default scan buffer sizes. The unit is kilobytes.
+  * adjusted mustek.conf to more reasonable defaults
+  * update manpage and mustek.desc to reflect the changes
+  
+
+2000-04-22
+  * fixed greyscale scanning >600 dpi for the SE 12000SP
+
+2000-04-21
+  * added more debug output to sane_get_parameters
+
+2000-04-20
+  * Output of scanning time now works with scanimage, too.
+  * Adjusted scan area to the Windows driver defaults for Paragon 
+    MFS-6000CX
+  * Added transparency adapter support for the Paragon MFS-6000CX and
+    MFS-12000SP
+
+2000-04-19
+  * Adjusted scan area to the Windows driver defaults for Paragon 
+    MFS-12000SP
+
+2000-04-17
+  * added support for the sanei_scsi_open_extended method with variable
+    buffersizes
+  * removed support for SCSI queue. Couldn't find improvements
+    for any scanner
+
+2000-04-16
+  * removed "color lineart" and "color halftone" for single pass scanners.
+    These modes didn't work for any of my scanners.
+  * fixed problems in color mode for the MFS-8000SP (gamma table is now
+    uploaded even if not selected)
+  * Output "cover open" only for ScanExpress scanners (Paragon scanners 
+    don't have a cover sensor)
+  * Added transparency adapter support for the Paragon MFS-6000SP and
+    MFS-12000CX
+  * Added output of transfer speed (kb/s)
+  * maximum allocated memory for read request can be set by a #define
+  * buffer size can be set on a per scanner basis
+  * Adjusted scan area to the Windows driver defaults for Paragon 
+    800 II SP
+  * Added quotation marks to inquiry output
+
+2000-04-15
+  * Adjusted scan area to the Windows driver defaults for Paragon 8000SP,
+    ScanExpress 12000SP
+  * Fixed scan area settings (TL-X and TL-Y) for transparency adapter (TA)
+  * Added TA support for Paragon 8000SP
+  
+2000-04-13
+  * Added more debug output in sane_read and some other functions
+  * removed warnings
+
+2000-04-12
+  * Added more debug output concerning buffer handling
+
+2000-04-10
+  * Adjusted scan area to the Windows driver defaults for Paragon 12000CX,
+    6000SP, 600 II CD, 600 II N
+
+2000-04-09
+  * released backend version 1.0-79
+  
+2000-04-08
+  * added output of scanning time (debuglevel 2 and higher)
+  * removed old code from sane_cancel
+
+2000-04-07
+  * fixed line-distance correction for the 600 II N
+  * rewrite of the 600 II N code
+  * documentation update for the 600 II N
+
+2000-04-06
+  * Rewrite of resolution encoding for 3-pass scanners
+  * added more comments
+  * some spelling errors corrected
+
+2000-04-03
+  * output backend and version information
+  * fixed resolution encoding for MFS12000cx
+  * Changed version system to be compatible to the SANE standard 
+    (major, minor, build); 0.78 --> 1.0-78
+  
+2000-04-02
+  * released backend version 0.78
+  * added MUSTEK_FLAG_DOUBLE_RES for the MFS-12000CX 3-pass scanner,
+    resolutions > 600 dpi should work now
+    
+2000-04-01
+  * reduced scan area for Paragon 800 S / II SP 
+
+2000-03-29
+  * released backend version 0.77
+  * inquiry is printed in full text at debug level 4
+  * more debug level tweaking
+  * man page update
+  * model name update
+  
+2000-03-25
+  * corrected some spelling errors
+  
+2000-03-24
+  * reduced scanarea for the MSF-6000SP
+  * restructured scanner recognition
+
+2000-03-18
+  * released backend version 0.76
+  
+2000-03-17
+  * removed some compiler warnings
+  * changed the sane.model names (e.g. ScanExpress 12000SP instead of
+    C06IDW...)
+  * added SCSI information output to inquiry
+  * adjusted debug levels and debug output
+
+2000-03-15
+  * fixed typo in man page
+
+2000-03-12
+  * released backend version 0.75
+  * man page update
+  * mustek.desc update
+  * test for option < 0 in sane_get_option_descriptor (thanks to Oliver Rauch)
+  * added do_stop in sane_cancel (don't wait for next read that will
+    possibly never happen)
+  * fixed firmware version identification for newer ScanExpress models
+    (patch from Marco G. Salvagno)
+  * probably fixed linedistance correction at high resolutions for 
+    MFS-1200SP firmware 1.00 and possibly others (patch from Andreas Beck)
+  * added check for ADF ready in sane_start (patch from Joerg Anders)
+  * Bug fix in the STORE makros (patch from Norbert Mueller)
+ 
+  
+2000-03-06
+  * created mustek.CHANGES file
+  * released backend version 0.74
+  * added linedistance correction for the 600 II N + documentation updates
+  * added detection of newer ScanExpress models ("XC06" instead og " C06")
+  * bugfix for 600 II N waiting 60 s before cancelling
+
+
+Henning Meier-Geinitz <hmg@gmx.de>
