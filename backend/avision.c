@@ -727,7 +727,7 @@ scan_area_and_windows (Avision_Scanner *s)
 	dwp.wdb.bpp = 8;
 	dwp.wdb.image_comp = 2;
 	dwp.wdb.bitset1        &= 0xC7;
-	//dwp.wdb.bitset1        |= 0x30; /* thanks Gunter */
+	/*dwp.wdb.bitset1        |= 0x30; *//* thanks Gunter */
 	break;
 
     case TRUECOLOR:
