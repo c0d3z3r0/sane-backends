@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.11 Date 02-Feb-2000
+   Version 0.1.12 Date 03-Feb-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,10 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-02-03   Gamma curves now coupled with gamma correction menu.
+		Only when "User defined" is selected are the curves
+		selected. (Dave Hill)
+		Renamed "Contrast" to "Gamma Correction" (KHK)
    2000-02-02   "Brown Paper Bag Release" Put the USB fix finally
 		into the CVS repository.
    2000-02-01   Fixed problem with USB scanner not being recognized
@@ -72,7 +76,7 @@
    2000-01-24	Removed C++ style comments '//' (KHK)
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.11 - 2000-02-02"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.12 - 2000-02-03"
 
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
@@ -1975,19 +1979,19 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 
 
 		/* gamma */
-		s->opt[ OPT_CONTRAST].name     = SANE_NAME_CONTRAST;
-		s->opt[ OPT_CONTRAST].title    = SANE_TITLE_CONTRAST;
-		s->opt[ OPT_CONTRAST].desc     = SANE_DESC_CONTRAST;
+		s->opt[ OPT_GAMMA_CORRECTION].name     = SANE_NAME_GAMMA_CORRECTION;
+		s->opt[ OPT_GAMMA_CORRECTION].title    = SANE_TITLE_GAMMA_CORRECTION;
+		s->opt[ OPT_GAMMA_CORRECTION].desc     = SANE_DESC_GAMMA_CORRECTION;
 
-		s->opt[ OPT_CONTRAST].type = SANE_TYPE_STRING;
-		s->opt[ OPT_CONTRAST].size = max_string_size(gamma_list);
-		s->opt[ OPT_CONTRAST].cap |= SANE_CAP_ADVANCED;
-		s->opt[ OPT_CONTRAST].constraint_type = SANE_CONSTRAINT_STRING_LIST;
-		s->opt[ OPT_CONTRAST].constraint.string_list = gamma_list;
-		s->val[ OPT_CONTRAST].w = 0;		/* Default */
+		s->opt[ OPT_GAMMA_CORRECTION].type = SANE_TYPE_STRING;
+		s->opt[ OPT_GAMMA_CORRECTION].size = max_string_size(gamma_list);
+/*		s->opt[ OPT_GAMMA_CORRECTION].cap |= SANE_CAP_ADVANCED; */
+		s->opt[ OPT_GAMMA_CORRECTION].constraint_type = SANE_CONSTRAINT_STRING_LIST;
+		s->opt[ OPT_GAMMA_CORRECTION].constraint.string_list = gamma_list;
+		s->val[ OPT_GAMMA_CORRECTION].w = 0;		/* Default */
 
 		if( ! s->hw->cmd->set_gamma) {
-			s->opt[ OPT_CONTRAST].cap |= SANE_CAP_INACTIVE;
+			s->opt[ OPT_GAMMA_CORRECTION].cap |= SANE_CAP_INACTIVE;
 		}
 
 
@@ -1997,7 +2001,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR].desc  = SANE_DESC_GAMMA_VECTOR;
 
 		s->opt[ OPT_GAMMA_VECTOR].type = SANE_TYPE_INT;
-		/* s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_ADVANCED; */
+/*		s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -2011,7 +2015,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_R].desc  = SANE_DESC_GAMMA_VECTOR_R;
 
 		s->opt[ OPT_GAMMA_VECTOR_R].type = SANE_TYPE_INT;
-		/* s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_ADVANCED; */
+/*		s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_R].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_R].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_R].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -2025,7 +2029,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_G].desc  = SANE_DESC_GAMMA_VECTOR_G;
 
 		s->opt[ OPT_GAMMA_VECTOR_G].type = SANE_TYPE_INT;
-		/* s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_ADVANCED; */
+/*		s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_G].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_G].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_G].constraint_type = SANE_CONSTRAINT_RANGE;
@@ -2039,19 +2043,23 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_GAMMA_VECTOR_B].desc  = SANE_DESC_GAMMA_VECTOR_B;
 
 		s->opt[ OPT_GAMMA_VECTOR_B].type = SANE_TYPE_INT;
-		/* s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_ADVANCED; */
+/*		s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_ADVANCED; */
 		s->opt[ OPT_GAMMA_VECTOR_B].unit = SANE_UNIT_NONE;
 		s->opt[ OPT_GAMMA_VECTOR_B].size = 256 * sizeof (SANE_Word);
 		s->opt[ OPT_GAMMA_VECTOR_B].constraint_type = SANE_CONSTRAINT_RANGE;
 		s->opt[ OPT_GAMMA_VECTOR_B].constraint.range = &u8_range;
 		s->val[ OPT_GAMMA_VECTOR_B].wa = &s->gamma_table [ 3] [ 0];
 
+#if 0
 		if( ! s->hw->cmd->set_gamma_table) {
+#endif
 			s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
+#if 0
 		}
+#endif
 
 
 		/* color correction */
@@ -2579,7 +2587,7 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 		case OPT_QUICK_FORMAT:
 		case OPT_SOURCE:
 		case OPT_FILM_TYPE:
-		case OPT_CONTRAST:
+		case OPT_GAMMA_CORRECTION:
 		case OPT_COLOR_CORRECTION:
 		case OPT_BAY:
 			strcpy( ( char *) value, s->opt[ option].constraint.string_list[ s->val[ option].w]);
@@ -2800,10 +2808,32 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 
 		case OPT_DROPOUT:
 		case OPT_FILM_TYPE:
-		case OPT_CONTRAST:
 		case OPT_COLOR_CORRECTION:
 		case OPT_BAY:
 			s->val[ option].w = optval - s->opt[ option].constraint.string_list;
+			break;
+
+		case OPT_GAMMA_CORRECTION:
+			s->val[ option].w = optval - s->opt[ option].constraint.string_list;
+
+/*
+ * If "User defined", then enable custom gamma tables.
+*/
+
+			if (s->val[ option].w != 1) {
+				s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
+			}
+			else {
+				s->opt[ OPT_GAMMA_VECTOR].cap &= ~SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
+				s->opt[ OPT_GAMMA_VECTOR_B].cap &= ~SANE_CAP_INACTIVE;
+			}
+			if( NULL != info)
+				*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
 			break;
 
 		case OPT_MIRROR:
@@ -3160,11 +3190,16 @@ SANE_Status sane_start ( SANE_Handle handle) {
 		}
 	}
 
-#if 1
-	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_CONTRAST].cap) ) {
-		int val = gamma_params[ s->val[ OPT_CONTRAST].w];
+	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_GAMMA_CORRECTION].cap) ) {
+		int val = gamma_params[ s->val[ OPT_GAMMA_CORRECTION].w];
 
-		if( s->val[ OPT_CONTRAST].w <= 1) {
+		/*
+		 * If "Default" is selected then determine the actual value
+		 * to send to the scanner: If bilevel mode, just send the 
+		 * value from the table (0x01), for grayscale or color mode 
+		 * add one and send 0x02.
+		 */
+		if( s->val[ OPT_GAMMA_CORRECTION].w <= 1) {
 			val += mparam->depth == 1 ? 0 : 1;
 		}
 
@@ -3175,17 +3210,8 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			return status;
 		}
 	}
-#else
-/*		status = set_gamma( s, s->params.depth == 1 ? 1 : 2); */
-		status = set_gamma( s, mparam->depth == 1 ? 1 : 2);
 
-		if( SANE_STATUS_GOOD != status) {
-			DBG( 1, "sane_start: set_gamma failed: %s\n", sane_strstatus( status));
-			return status;
-		}
-#endif
-
-	if( 1 == s->val[ OPT_CONTRAST].w) {	/* user defined. */
+	if( 2 == s->val[ OPT_GAMMA_CORRECTION].w) {	/* user defined. */
 		status = set_gamma_table( s);
 
 		if( SANE_STATUS_GOOD != status) {

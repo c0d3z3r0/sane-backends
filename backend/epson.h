@@ -58,6 +58,10 @@
 #define SANE_EPSON_CONFIG_USB "usb"
 #define SANE_EPSON_CONFIG_PIO "pio"
 
+#define SANE_NAME_GAMMA_CORRECTION "gamma-correction"
+#define SANE_TITLE_GAMMA_CORRECTION "Gamma Correction"
+#define SANE_DESC_GAMMA_CORRECTION "Selectes the gamma correction value from a list of pre-defined devices or the user defined table, which can be downloaded to the scanner"
+
 typedef struct {
 	unsigned char * level;
 
@@ -101,7 +105,7 @@ enum
 		, OPT_DROPOUT
 		, OPT_BRIGHTNESS
 		, OPT_SHARPNESS
-		, OPT_CONTRAST
+		, OPT_GAMMA_CORRECTION
 		, OPT_COLOR_CORRECTION
 		, OPT_RESOLUTION
 	, OPT_ADVANCED_GROUP
