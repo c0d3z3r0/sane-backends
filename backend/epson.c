@@ -16,7 +16,7 @@
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.30 - 2000-06-28"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.31 - 2000-07-15"
 
 /*
    This file is part of the SANE package.
@@ -1105,14 +1105,14 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 	if (DBG_LEVEL > 0) {
 		int	c, i, j;
 
-		fprintf(stderr, "set_gamma_table()\n");
+		DBG (1, "set_gamma_table()\n");
 		for (c=0; c<4; c++) {
 			for (i=0; i<256; i+= 16) {
-				fprintf(stderr, "Gamma Table[%d][%d] ", c, i);
+				DBG (1, "Gamma Table[%d][%d] ", c, i);
 				for (j=0; j<16; j++) {
-					fprintf(stderr, " %02x", s->gamma_table[c][i+j]);
+					DBG (1, " %02x", s->gamma_table[c][i+j]);
 				}
-				fprintf(stderr, "\n");
+				DBG (1, "\n");
 			}
 		}
 	}
@@ -4144,8 +4144,9 @@ static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
 				return SANE_STATUS_INVAL;
 			}
 
+			sleep(1);	/* wait one second for the next attempt */
+
 			DBG(1, "retrying ESC G - %d\n", ++(s->retry_count)); 
-			sleep(1);
 
 			param[0] = ESC;
 			param[1] = s->hw->cmd->start_scanning;
