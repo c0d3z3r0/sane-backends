@@ -1,3 +1,7 @@
+2000-02-11  Karl Heinz Kremer <khk@khk.net>
+	* backend/epson.c - Fixed default scan source when option equipment 
+	  is installed.  The default is now always "Flatbed". 
+
 2000-02-08  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
 	* Added (again) missing file: doc/sane-logo2.jpg
