@@ -1,4 +1,12 @@
 2000-07-15  Henning Meier-Geinitz <hmg@gmx.de>
+	
+        * doc/Makefile.in doc/sane-dc210.man doc/sane-v4l.man 
+	  doc/.cvsignore: Added manpages for dc210 and v4l. These
+	  are just standard manpages. Please check and update them.
+
+	* README: Added dc210, v4l and mustek_pp entries.
+
+2000-07-15  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
  	  1.0-90. Fixed linedistance-handling for Paragon 8000SP. Fixed
