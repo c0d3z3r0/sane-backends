@@ -121,7 +121,7 @@ hp_handle_startReader (HpHandle this, HpScsi scsi, HpProcessData *procdata)
 	}
 
       this->pipefd = fds[0];
-      DBG(1, "start_reader: reader proces %d started\n", this->reader_pid);
+      DBG(1, "start_reader: reader process %d started\n", this->reader_pid);
       return SANE_STATUS_GOOD;
     }
 
@@ -406,7 +406,19 @@ sanei_hp_handle_startScan (HpHandle this)
   procdata.bytes_per_line = (int)this->scan_params.bytes_per_line;
   procdata.lines = this->scan_params.lines;
 
-  status = sanei_hp_scl_startScan(scsi, scl);
+  /* Wait for front-panel button push ? */
+  status = sanei_hp_optset_start_wait(this->dev->options, this->data, scsi);
+
+  if (status)   /* Wait for front button push ? Start scan in reader process */
+  {
+    procdata.startscan = scl;
+    status = SANE_STATUS_GOOD;
+  }
+  else
+  {
+    procdata.startscan = 0;
+    status = sanei_hp_scl_startScan(scsi, scl);
+  }
 
   if (!FAILED( status ))
   {
