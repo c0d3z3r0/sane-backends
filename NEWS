@@ -1,13 +1,12 @@
 -*-Mode: outline-*-
-New after 1.01:
+New after 1.01 (unstable development release 2000-01-10):
+* New script 'sane-config' to help frontend developers.
 * Added Ricoh IS50 support.
-* Updated HP backend to v0.83
-* Updated UMAX backend to v1.0-build-12
-* Updated CANON backend to v991108
-* Updated Microtek backend to 0.11.0
-* Updated Microtek2 backend to v0.8
-* Updated Artec backend to v0.5
+* Updated backends: Artec (v0.5), CANON (v991108), DC-25 (1.2), HP
+  (v0.83), Microtek (0.11.0), Microtek2 (v0.8), UMAX (v1.0-build-14),
+* New Linux SCSI Generic driver.
 * Upgraded to libtool 1.3.3
+* GIMP compatibility patch.
 
 New with 1.01:
 
