@@ -1,5 +1,10 @@
 1999-09-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* tools/find-scanner.c: Checks (Linux only so far) for SCSI
+ 	Generic support in the OS kernel. If NOT present it tells the user
+ 	they may need SG drivers.  Patch from Nick Lamb
+ 	<njl98r@ecs.soton.ac.uk>.
+	
 	* sanei/sanei_scsi.c [sanei_scsi_cmd sanei_scsi_open]: Digital
  	UNIX 4.0D patches from Marian Szebenyi <dms35@cornell.edu>.
 
