@@ -323,6 +323,9 @@
 /* Define if you have the POSIX routine tcsendbreak().  */
 #undef HAVE_TCSENDBREAK
 
+/* Define if you have cfmakeraw() */
+#undef HAVE_CFMAKERAW
+
 #ifndef HAVE_STRNCASECMP
   /* OS/2 needs this */
 # define strncasecmp(a, b, c) strnicmp(a, b, c)
