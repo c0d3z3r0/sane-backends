@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 15
+#define BUILD 16
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -3652,7 +3652,7 @@ int sfd;
   dev->y_range.quant             = SANE_FIX(0);
   dev->y_range.max               = SANE_FIX(dev->inquiry_fb_length * MM_PER_INCH);
 
-#if 0
+#if UMAX_RESOLUTION_PERCENT_STEP
   dev->x_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
   dev->x_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
 #else
@@ -3661,7 +3661,7 @@ int sfd;
 #endif
   dev->x_dpi_range.max           = SANE_FIX(dev->inquiry_x_res);
 
-#if 0
+#if UMAX_RESOLUTION_PERCENT_STEP
   dev->y_dpi_range.min           = SANE_FIX(dev->inquiry_optical_res/100);
   dev->y_dpi_range.quant         = SANE_FIX(dev->inquiry_optical_res/100);
 #else
@@ -4738,7 +4738,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
  SANE_Word w, cap;
  SANE_String_Const name;
 
-  if (info) { *info = 0; }
+  if (info)
+  {
+    *info = 0;
+  }
 
   if (scanner->scanning)
   {
@@ -4831,25 +4834,16 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 
       /* string options: */
       case OPT_SOURCE:
-        if ( (strcmp(val, FLB_STR) == 0) ||
-             (strcmp(val, ADF_STR) == 0) )
-        {
-          scanner->device->x_range.max = SANE_FIX(scanner->device->inquiry_fb_width  * MM_PER_INCH);
-          scanner->device->y_range.max = SANE_FIX(scanner->device->inquiry_fb_length * MM_PER_INCH);
-        }
-        else if (strcmp(val, UTA_STR) == 0)
-        {
-          scanner->device->x_range.max = SANE_FIX(scanner->device->inquiry_uta_width  * MM_PER_INCH);
-          scanner->device->y_range.max = SANE_FIX(scanner->device->inquiry_uta_length * MM_PER_INCH);
-        }
-        if (info) { *info |= SANE_INFO_RELOAD_PARAMS; }
       /* fall through */
       case OPT_MODE:
+      /* fall through */
 #ifdef UMAX_CALIBRATION_MODE_SELECTABLE
       case OPT_CALIB_MODE:
+      /* fall through */
 #endif
 #ifdef UMAX_SHADING_TYPE_SELECTABLE
       case OPT_SHADING_TYPE:
+      /* fall through */
 #endif
         strcpy (val, scanner->val[option].s);
        return SANE_STATUS_GOOD;
@@ -4879,10 +4873,16 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         DBG(DBG_sane_option,"set %s [#%d]\n", name, option);
     }
 
-    if (!SANE_OPTION_IS_SETTABLE (cap)) { return SANE_STATUS_INVAL; }
+    if (!SANE_OPTION_IS_SETTABLE(cap))
+    {
+      return SANE_STATUS_INVAL;
+    }
 
     status = sanei_constrain_value(scanner->opt+option, val, info);
-    if (status != SANE_STATUS_GOOD) { return status; }
+    if (status != SANE_STATUS_GOOD)
+    {
+      return status;
+    }
 
     switch (option)
     {
@@ -4893,7 +4893,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
       case OPT_TL_Y:
       case OPT_BR_X:
       case OPT_BR_Y:
-        if (info) { *info |= SANE_INFO_RELOAD_PARAMS; }
+        if (info)
+        {
+          *info |= SANE_INFO_RELOAD_PARAMS;
+        }
         /* fall through */
       case OPT_NUM_OPTS:
       case OPT_NEGATIVE:
@@ -4945,43 +4948,21 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 
           if (scanner->val[option].w)
           {
-            scanner->device->x_range.min   = SANE_FIX(0);
-            scanner->device->x_range.quant = SANE_FIX(0);
             scanner->device->x_range.max   = SANE_FIX(scanner->device->inquiry_dor_width  * MM_PER_INCH);
-
-            scanner->device->y_range.min   = SANE_FIX(0);
-            scanner->device->y_range.quant = SANE_FIX(0);
             scanner->device->y_range.max   = SANE_FIX(scanner->device->inquiry_dor_length * MM_PER_INCH);
 
-            scanner->device->x_dpi_range.min   = SANE_FIX(1);
-            scanner->device->x_dpi_range.quant = SANE_FIX(1);
             scanner->device->x_dpi_range.max   = SANE_FIX(scanner->device->inquiry_dor_x_res);
-
-            scanner->device->y_dpi_range.min   = SANE_FIX(1);
-            scanner->device->y_dpi_range.quant = SANE_FIX(1);
             scanner->device->y_dpi_range.max   = SANE_FIX(scanner->device->inquiry_dor_y_res);      
           }
           else
           {
-            scanner->device->x_range.min   = SANE_FIX(0);
-            scanner->device->x_range.quant = SANE_FIX(0);
             scanner->device->x_range.max   = SANE_FIX(scanner->device->inquiry_fb_width  * MM_PER_INCH);
-
-            scanner->device->y_range.min   = SANE_FIX(0);
-            scanner->device->y_range.quant = SANE_FIX(0);
             scanner->device->y_range.max   = SANE_FIX(scanner->device->inquiry_fb_length * MM_PER_INCH);
 
-            scanner->device->x_dpi_range.min   = SANE_FIX(1);
-            scanner->device->x_dpi_range.quant = SANE_FIX(1);
             scanner->device->x_dpi_range.max   = SANE_FIX(scanner->device->inquiry_x_res);
-
-            scanner->device->y_dpi_range.min   = SANE_FIX(1);
-            scanner->device->y_dpi_range.quant = SANE_FIX(1);
             scanner->device->y_dpi_range.max   = SANE_FIX(scanner->device->inquiry_y_res);      
           }
                                                                                           
-          scanner->val[OPT_TL_X].w = scanner->device->x_range.min;
-          scanner->val[OPT_TL_Y].w = scanner->device->y_range.min;       
           scanner->val[OPT_BR_X].w = scanner->device->x_range.max;       
           scanner->val[OPT_BR_Y].w = scanner->device->y_range.max;           
         }
@@ -4992,7 +4973,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         {
           scanner->val[option].w = *(SANE_Word *) val;
 
-          if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_OPTIONS;
+          }
 
           scanner->output_range.min   = 0;
           scanner->output_range.max   = (int) pow(2, scanner->val[option].w) - 1;
@@ -5007,7 +4991,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
             scanner->output_bytes  = 2;							    /* 2 bytes output */
           }
 
-          if (info) { *info |= SANE_INFO_RELOAD_PARAMS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          }
         }
        return SANE_STATUS_GOOD;
 
@@ -5015,7 +5002,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         if (scanner->val[option].w != *(SANE_Word *) val)
         {
           scanner->val[option].w = *(SANE_Word *) val;
-          if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_OPTIONS;
+          }
           if (scanner->val[option].w == SANE_FALSE)
           {
             if (scanner->device->inquiry_analog_gamma)
@@ -5098,7 +5088,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 	{
           scanner->val[option].w = *(SANE_Word *) val;
 
-          if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_OPTIONS;
+          }
           if (scanner->val[option].w == SANE_FALSE)
           { /* don't bind */
             scanner->opt[OPT_Y_RESOLUTION].cap &= ~SANE_CAP_INACTIVE;
@@ -5121,7 +5114,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 	{
           scanner->val[option].w = *(SANE_Word *) val;
 
-          if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_OPTIONS;
+          }
           if (scanner->val[option].w == SANE_FALSE)
 	  {
             scanner->opt[OPT_CAL_EXPOS_TIME].cap    |= SANE_CAP_INACTIVE;
@@ -5161,7 +5157,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 	{
           scanner->val[option].w = *(SANE_Word *) val;
 
-          if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+          if (info)
+          {
+            *info |= SANE_INFO_RELOAD_OPTIONS;
+          }
           if (scanner->val[option].w == SANE_FALSE)
 	  {
             scanner->opt[OPT_CAL_LAMP_DEN].cap  |= SANE_CAP_INACTIVE;
@@ -5184,15 +5183,39 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         memcpy (scanner->val[option].wa, val, scanner->opt[option].size);
        return SANE_STATUS_GOOD;
 
-      /* side-effect-free single-string options: */
+      /* single string-option with side-effect: */
       case OPT_SOURCE:
+        if ( (strcmp(val, FLB_STR) == 0) || (strcmp(val, ADF_STR) == 0) )
+        {
+          scanner->device->x_range.max = SANE_FIX(scanner->device->inquiry_fb_width  * MM_PER_INCH);
+          scanner->device->y_range.max = SANE_FIX(scanner->device->inquiry_fb_length * MM_PER_INCH);
+        }
+        else if (strcmp(val, UTA_STR) == 0)
+        {
+          scanner->device->x_range.max = SANE_FIX(scanner->device->inquiry_uta_width  * MM_PER_INCH);
+          scanner->device->y_range.max = SANE_FIX(scanner->device->inquiry_uta_length * MM_PER_INCH);
+        }
+        scanner->val[OPT_BR_X].w = scanner->device->x_range.max;       
+        scanner->val[OPT_BR_Y].w = scanner->device->y_range.max;           
+
+        if (info)
+        {
+          *info |= SANE_INFO_RELOAD_PARAMS;
+          *info |= SANE_INFO_RELOAD_OPTIONS;
+        }
+      /* fall through */
+      /* side-effect-free single-string options: */
 #ifdef UMAX_CALIBRATION_MODE_SELECTABLE
       case OPT_CALIB_MODE:
+      /* fall through */
 #endif
 #ifdef UMAX_SHADING_TYPE_SELECTABLE
       case OPT_SHADING_TYPE:
 #endif
-        if (scanner->val[option].s) { free (scanner->val[option].s); }
+        if (scanner->val[option].s)
+        {
+          free (scanner->val[option].s);
+        }
         scanner->val[option].s = (SANE_Char*)strdup(val);
       return SANE_STATUS_GOOD;
 
@@ -5226,7 +5249,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
           scanner->opt[OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
           scanner->opt[OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
         }
-        if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+        if (info)
+        {
+          *info |= SANE_INFO_RELOAD_OPTIONS;
+        }
        return SANE_STATUS_GOOD;
 
       case OPT_MODE:
@@ -5431,7 +5457,10 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 
          scanner->val[option].w = dim;
 
-         if (info) { *info |= SANE_INFO_RELOAD_OPTIONS; }
+         if (info)
+         {
+           *info |= SANE_INFO_RELOAD_OPTIONS;
+         }
 
          scanner->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
 

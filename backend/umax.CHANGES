@@ -676,3 +676,11 @@ build-14 -> build-15
     * for Astra 1200 the driver does not wait any more until scanner is repositioned
       this is experimental, it may work with other scanners too!
 
+
+build-15 -> build-16
+--------------------
+
+    * OPT_SOURCE: removed change of width/height and "*info |= SANE_INFO_RELOAD_PARAMS;"
+      from get_value to set_value and added "*info |= SANE_INFO_RELOAD_OPTIONS;"
+
+      
