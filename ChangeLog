@@ -1,4 +1,7 @@
 2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* preview (xscanimage): added GDK_INPUT_EXCEPTION to gdk_input_add
+
+2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* updated umax-backend to build 15 (for more see umax.CHANGES
 	* xscanimage: added GDK_INPUT_EXCEPTION to gdk_input_add
 
