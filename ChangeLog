@@ -1,5 +1,8 @@
 2000-07-09  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/sanei_thread.c: Add required include files to get this to
+	compile almost without warnings on Unix.
+
 	* frontend/Makefile.in frontend/scanimage.c frontend/stiff.h
 	frontend/stiff.c doc/scanimage.man: Add 16 bit support and new
 	option --format to change file format.  Makes it possible to save
