@@ -128,6 +128,7 @@ if test "${HAVE_GTK}" = "yes"; then
   saved_CPPFLAGS="${CPPFLAGS}"
   saved_LIBS="${LIBS}"
   CPPFLAGS="${CPPFLAGS} ${GTK_CFLAGS}"
+  SANE_EXTRACT_LDFLAGS(LDFLAGS, GTK_LIBS)
   LIBS="${LIBS} ${GTK_LIBS}"
 
   AC_CHECK_FUNCS(gtk_tooltips_set_tips gtk_events_pending)
