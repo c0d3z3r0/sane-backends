@@ -260,8 +260,8 @@ get_tpu_stat(int fd, CANON_Device *dev)
 static void
 get_adf_stat(int fd, CANON_Device *dev)
 {
-  size_t buf_size = 0x0C;
-  unsigned char abuf[buf_size];
+  unsigned char abuf[0x0C];
+  size_t buf_size = sizeof(abuf);
   SANE_Status status;
   int i;
 
