@@ -1,3 +1,8 @@
+2000-07-09  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/microtek2.c: Add ScanMaker X6USB identifier.  Patch from
+	Oliver Neukum.
+
 2000-07-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* AUTHORS: Added myself as CVS repository maintainer.
