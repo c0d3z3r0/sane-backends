@@ -3673,6 +3673,11 @@ sanei_scsi_req_flush_all (void)
 {
 }
 
+void
+sanei_scsi_req_flush_all_extended (void)
+{
+}
+
 #endif /* WE_HAVE_ASYNC_SCSI */
 
 SANE_Status sanei_scsi_req_enter (int fd,

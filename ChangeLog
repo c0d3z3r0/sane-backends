@@ -1,3 +1,9 @@
+2000-07-20  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* backend/sharp.c: removed fgets-call + minor bugfix
+	* backend/sharp.desc: added entry ":manpage"
+	* sanei/sanei_scsi.c: added missing dummy function 
+	  sanei_scsi_req_flush_all_extended
+
 2000-07-18  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* configure.in configure: Fixed --enable-warnings to work as 

@@ -91,8 +91,8 @@
    with the sanei_scsi.c under Linux and/or with the Linux's SG driver,
    or your suspect problems with command queueing
 */
-#define QUEUEDEBUG
-#define DEBUG
+/* #define QUEUEDEBUG */
+/* #define DEBUG */
 #ifdef DEBUG
 #include <unistd.h>
 #include <sys/time.h>
@@ -2277,7 +2277,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       */
       attach (devnam, &dp);
       /* make sure that there are at least two buffers */
-      if (DEFAULT_BUFFERS < 2)
+      if (DEFAULT_BUFFERS > 2)
         dp->info.buffers = DEFAULT_BUFFERS;
       else
         dp->info.buffers = 2;
@@ -2286,7 +2286,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       return SANE_STATUS_GOOD;
     }
 
-  while (fgets(line, PATH_MAX, fp))
+  while (sanei_config_read(line, PATH_MAX, fp))
     {
       linecount++;
       word = 0;
