@@ -1,3 +1,9 @@
+2000-01-16  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.desc updated with URL
+        * backend/epson.c added support for Expression family
+	  of scanners
+	* doc/sane-epson.man updated
 2000-01-09  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc fixed/updated. Now shows a link to
