@@ -1,3 +1,15 @@
+2000-05-07  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+	  1.0-81. Added transparency adapter (TA) support for all Mustek
+ 	  scanners. Fixed shrinked image bug for the ScanExpress 6000SP.
+ 	  Removed unused options (3-pass scanners and 600 II N). Scan
+	  source selection now shows only the options currently available.
+	  Fixed a bug concerning the ADF handling. sane_init () now uses
+	  sanei_config_read () and sanei_config_get_string () instead of
+	  its own functions. Man page and .desc update. Look at 
+	  backend/mustek.CHANGES for more details.
+
 2000-04-27  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.* Some code cleanup, added support for GRB

@@ -1,5 +1,38 @@
 CHANGES for the SANE Mustek backend
 
+2000-05-07
+  * released backend version 1.0-81
+
+2000-05-06
+  * added transparency adapter support for the Paragon 600 II CD, 600S, 
+    800 II SP, 600 II N, ScannExpress 6000SP and 12000SP
+  * removed "color lineart" and "color halftone" for all scanners.
+    These modes didn't work for any of my scanners.
+  * added more debug output for ADF and TA
+  * fixed bug when ADF is out of documents
+  * Scan source option is only available if TA or ADF is present. For
+    SE and N models TA is always available because it can't be detected 
+    by hardware
+  * removed "backtrack", "speed" and "grain" from 600 II N options,
+    the scanner doesn't support them
+  * updated mustek.desc and mustek.man
+
+2000-05-02
+  * Reduced scan area for the Paragon MFC-600S because of ugly noises at
+    the end of the scan area
+
+2000-04-29
+  * Adjusted scan area to the Windows driver defaults for ScanExpress
+    6000SP; added MUSTEK_FLAG_ENLARGE_X for this scanner
+  * Added Warning for scanners that are not (fully) tested
+
+2000-04-26
+  * changed sane_init to use sanei_config_read () and 
+    sanei_config_get_string ()
+
+2000-04-24
+  * released backend version 1.0-80
+  
 2000-04-23
   * fixed lineart and color scanning >600 dpi for the SE 12000SP
   * added variable debug_level to be faster without debugging in attach ()
@@ -9,7 +42,6 @@ CHANGES for the SANE Mustek backend
     default scan buffer sizes. The unit is kilobytes.
   * adjusted mustek.conf to more reasonable defaults
   * update manpage and mustek.desc to reflect the changes
-  
 
 2000-04-22
   * fixed greyscale scanning >600 dpi for the SE 12000SP

@@ -46,7 +46,7 @@
 
 /* ----------------------------------------------------------------------- */
 /* Mustek backend version                                                  */
-#define BUILD 80
+#define BUILD 81
 /* ----------------------------------------------------------------------- */
 
 #include <sane/config.h>
@@ -114,15 +114,18 @@ static const int color_seq[] =
   {
     1, 2, 0			/* green, blue, red */
   };
-        
+
+/* This List seem to be obsolete, I couldn't find a single scanner
+   which supports Color Lineart or Color Halftone        
 static const SANE_String_Const three_pass_mode_list[] =
   {
     "Lineart", "Halftone", "Gray",
     "Color Lineart", "Color Halftone", "Color",
     0
   };
+*/
 
-static const SANE_String_Const single_pass_mode_list[] =
+static const SANE_String_Const paragon_mode_list[] =
   {
     "Lineart", "Halftone", "Gray", "Color",
     0
@@ -140,14 +143,21 @@ static const SANE_String_Const speed_list[] =
     0
   };
 
-enum Scan_Source
-  {
-    FLATBED, ADF, TA
-  };
-
 static const SANE_String_Const source_list[] =
   {
-    "Flatbed", "Automatic Document Feeder", "Transparency Adapter",
+    "Flatbed", 
+    0
+  };
+
+static const SANE_String_Const adf_source_list[] =
+  {
+    "Flatbed", "Automatic Document Feeder",
+    0
+  };
+
+static const SANE_String_Const ta_source_list[] =
+  {
+    "Flatbed", "Transparency Adapter",
     0
   };
 
@@ -540,17 +550,26 @@ sense_handler (int scsi_fd, u_char *result, void *arg)
 
     case 0x82:
       if (result[1] & 0x80)
-	return SANE_STATUS_JAMMED;	/* ADF is jammed */
+	{
+	  DBG(4, "sense_handler: ADF is jammed\n");
+	  return SANE_STATUS_JAMMED;	/* ADF is jammed */
+	}
       break;
 
     case 0x83:
       if (result[2] & 0x02)
-	return SANE_STATUS_NO_DOCS;	/* ADF out of documents */
+	{
+	  DBG(4, "sense_handler: ADF is out of documents\n");
+	  return SANE_STATUS_NO_DOCS;	/* ADF out of documents */
+	}
       break;
 
     case 0x84:
       if (result[1] & 0x10)
-	return SANE_STATUS_COVER_OPEN;	/* open transparency adapter cover */
+	{
+	  DBG(4, "sense_handler: transparency adapter cover open\n");
+	  return SANE_STATUS_COVER_OPEN;	/* open transparency adapter cover */
+	}
       break;
 
     default:
@@ -566,10 +585,28 @@ do_inquiry (Mustek_Scanner *s)
 {
   char result[INQ_LEN];
   size_t size;
+  SANE_Status status;
 
   DBG(4, "do_inquiry: sending INQUIRY\n");
   size = sizeof (result);
-  return dev_cmd (s, inquiry, sizeof (inquiry), result, &size);
+
+  status = dev_cmd (s, inquiry, sizeof (inquiry), result, &size);
+
+  /* checking ADF status */
+  if (s->hw->flags & MUSTEK_FLAG_ADF)
+    {
+      if (result[63] & (1 << 3))
+	{
+	  s->hw->flags |= MUSTEK_FLAG_ADF_READY;
+	}
+      else
+	{
+	  s->hw->flags &= ~MUSTEK_FLAG_ADF_READY;
+	}
+    }
+
+  return status;
+
 }
 
 static SANE_Status
@@ -594,6 +631,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   unsigned char scsi_product[17];
   unsigned char scsi_revision[5];
   unsigned char *pp;
+  SANE_Bool warning = SANE_FALSE;
 
   if (devp)
     *devp = 0;
@@ -631,13 +669,14 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 
   status = dev_wait_ready (&s);
   dev_close (&s);
+
   if (status != SANE_STATUS_GOOD)
     return status;
 
   if ((result[0] & 0x1f) != 0x06)
     {
-      DBG(1, "attach: device %s doesn't look like a scanner at all\n", 
-	  devname);
+      DBG(1, "attach: device %s doesn't look like a scanner at all (%d)\n", 
+	  devname, result[0] & 0x1f);
       return SANE_STATUS_INVAL;
     }
 
@@ -792,6 +831,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	 all firmware revisions  */
       dev->flags |= MUSTEK_FLAG_USE_EIGHTS;
       dev->sane.model = "MFS-6000CX";
+      warning = SANE_TRUE;      
     }
   else if (strncmp(model_name, "MSF-06000CZ", 11) == 0)
     {
@@ -835,6 +875,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	 MSF-12000SP and MSF-06000SP. */
       dev->flags |= MUSTEK_FLAG_LD_NONE;
       dev->sane.model = "MFS-12000SP";
+      warning = SANE_TRUE;      
     }
   /* This one does exist */
   else if (strncmp (model_name, "MSF-08000SP", 11) == 0)
@@ -917,6 +958,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->y_trans_range.max = SANE_FIX (255.0);
       dev->dpi_range.max = SANE_FIX (800);
       dev->sane.model = "MFS-8000SP";
+      warning = SANE_TRUE;      
     }
   /* I have never seen one of those */
   else if (strncmp (model_name, "MFS-06000SP", 11) == 0)
@@ -931,6 +973,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->y_trans_range.max = SANE_FIX (255.0);
       dev->dpi_range.max = SANE_FIX (600);
       dev->sane.model = "MFS-6000SP";
+      warning = SANE_TRUE;      
     }
 
   /* Paragon 1-pass A4 series */
@@ -942,17 +985,28 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->x_range.max = SANE_FIX (218.0);		
       dev->y_range.min = SANE_FIX (0.0);
       dev->y_range.max = SANE_FIX (290.0);   
+      dev->x_trans_range.min = SANE_FIX (0.0);
+      dev->y_trans_range.min = SANE_FIX (0.0);
+      dev->x_trans_range.max = SANE_FIX (205.0);
+      dev->y_trans_range.max = SANE_FIX (254.0);
+
       dev->dpi_range.max = SANE_FIX (800);
-      dev->sane.model = "800S/CD/SP";
+      dev->sane.model = "800S/800 II SP";
     }
   else if (strncmp (model_name, "MFC-06000CZ", 11) == 0)
     {
-      /* These values were measured and compared to those from the Windows
-	 driver. Tested with a Paragon 600 II CD and Paragon 600 II N. */
+      /* These values were measured and compared to those from the
+	 Windows driver. Tested with a Paragon 600 II CD, a Paragon
+	 MFC-600S and a Paragon 600 II N. */
       dev->x_range.min = SANE_FIX (0.0);
       dev->x_range.max = SANE_FIX (215.9);
       dev->y_range.min = SANE_FIX (2.0);
-      dev->y_range.max = SANE_FIX (292.1);
+      dev->y_range.max = SANE_FIX (288.0); 
+      dev->x_trans_range.min = SANE_FIX (0.0);
+      dev->y_trans_range.min = SANE_FIX (0.0);
+      dev->x_trans_range.max = SANE_FIX (201.0);
+      dev->y_trans_range.max = SANE_FIX (257.0);
+
       dev->dpi_range.max = SANE_FIX (600);
       /* This model comes in a non-scsi version, too. It is supplied
 	 with its own parallel-port like adapter, an AB306N. Two
@@ -964,22 +1018,36 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	    dev->flags |= MUSTEK_FLAG_LD_N1;
 	  else
 	    dev->flags |= MUSTEK_FLAG_LD_N2;
+	  dev->x_trans_range.min = SANE_FIX (33.0);
+	  dev->y_trans_range.min = SANE_FIX (62.0);
+	  dev->x_trans_range.max = SANE_FIX (183.0);
+	  dev->y_trans_range.max = SANE_FIX (238.0);
 	  dev->sane.model = "600 II N";
 	}
       else
-	dev->sane.model = "600S/CD/SP";
+	dev->sane.model = "600S/600 II CD";
     }
 
   /* ScanExpress and ScanMagic series */
   else if (strncmp(model_name, " C03", 4) == 0)
     {
-      /* These values are not tested. */
-      dev->x_range.max = SANE_FIX (216);
+      /* These values were measured and compared to those from the Windows
+	 driver. Tested with a ScannExpress 6000SP 1.00 */
+      dev->x_range.max = SANE_FIX (215);
       dev->y_range.min = SANE_FIX (2.5);
       dev->y_range.max = SANE_FIX (294.5);
+      dev->x_trans_range.min = SANE_FIX (33.0);
+      dev->y_trans_range.min = SANE_FIX (62.0);
+      dev->x_trans_range.max = SANE_FIX (183.0);
+      dev->y_trans_range.max = SANE_FIX (238.0);
+
       dev->dpi_range.max = SANE_FIX (600);
       dev->dpi_range.min = SANE_FIX (75);
       dev->flags |= MUSTEK_FLAG_SE;
+      /* At least the SE 6000SP with firmware 1.00 limits its
+	 x-resolution to 300 dpi and does *no* interpolation at higher
+	 resolutions. So this has to be done in software. */
+	dev->flags |= MUSTEK_FLAG_ENLARGE_X;
       dev->max_buffer_size = 1024 * 64;
       dev->sane.model = "ScanExpress 6000SP";
     }
@@ -990,11 +1058,17 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->x_range.max = SANE_FIX (216);
       dev->y_range.min = SANE_FIX (2.5);
       dev->y_range.max = SANE_FIX (294.5);
+      dev->x_trans_range.min = SANE_FIX (33.0);
+      dev->y_trans_range.min = SANE_FIX (62.0);
+      dev->x_trans_range.max = SANE_FIX (183.0);
+      dev->y_trans_range.max = SANE_FIX (238.0);
+
       dev->dpi_range.max = SANE_FIX (800);
       dev->dpi_range.min = SANE_FIX (75);
       dev->flags |= MUSTEK_FLAG_SE;
       dev->max_buffer_size = 1024 * 64;
-      dev->sane.model = "ScanExpress 8000SP? -- please report!";
+      dev->sane.model = "ScanExpress 8000SP?";
+      warning = SANE_TRUE;      
     }
   /* There are two different versions of the ScanExpress 12000SP, one has
      the model name " C06", the other one is "XC06". The latter seems to
@@ -1006,10 +1080,15 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->x_range.max = SANE_FIX (216);
       dev->y_range.min = SANE_FIX (2.5);
       dev->y_range.max = SANE_FIX (294.5);
+      dev->x_trans_range.min = SANE_FIX (33.0);
+      dev->y_trans_range.min = SANE_FIX (62.0);
+      dev->x_trans_range.max = SANE_FIX (183.0);
+      dev->y_trans_range.max = SANE_FIX (238.0);
+
       dev->dpi_range.max = SANE_FIX (1200);
       dev->dpi_range.min = SANE_FIX (75);
       dev->flags |= MUSTEK_FLAG_SE;
-      /* At least the SE 12000SP with firmware 2.02 and theScanExpress Plus models
+      /* At least the SE 12000SP with firmware 2.02 and the ScanExpress Plus models
 	 limit their x-resolution to 600 dpi and do *no* interpolation at higher
 	 resolutions. So this has to be done in software. */
       if (fw_revision >= 0x200)
@@ -1023,10 +1102,15 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->x_range.max = SANE_FIX (216);
       dev->y_range.min = SANE_FIX (2.5);
       dev->y_range.max = SANE_FIX (294.5);
+      dev->x_trans_range.min = SANE_FIX (33.0);
+      dev->y_trans_range.min = SANE_FIX (62.0);
+      dev->x_trans_range.max = SANE_FIX (183.0);
+      dev->y_trans_range.max = SANE_FIX (238.0);
+
       dev->dpi_range.max = SANE_FIX (1200);
       dev->dpi_range.min = SANE_FIX (75);
       dev->flags |= MUSTEK_FLAG_SE;
-      /* At least the SE 12000SP with firmware 2.02 and theScanExpress Plus models
+      /* At least the SE 12000SP with firmware 2.02 and the ScanExpress Plus models
 	 limit their x-resolution to 600 dpi and do *no* interpolation at higher
 	 resolutions. So this has to be done in software. */
       dev->flags |= MUSTEK_FLAG_ENLARGE_X;
@@ -1039,11 +1123,17 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (216);
       dev->y_range.max = SANE_FIX (294.5);
+      dev->x_trans_range.min = SANE_FIX (33.0);
+      dev->y_trans_range.min = SANE_FIX (62.0);
+      dev->x_trans_range.max = SANE_FIX (183.0);
+      dev->y_trans_range.max = SANE_FIX (238.0);
+
       dev->dpi_range.max = SANE_FIX (1200);
       dev->dpi_range.min = SANE_FIX (75); 
       dev->flags |= MUSTEK_FLAG_SE;
       dev->max_buffer_size = 1024 * 64;
-      dev->sane.model = "ScanExpress 24000SP? -- please report!";
+      dev->sane.model = "ScanExpress 24000SP?";
+      warning = SANE_TRUE;      
     }
   else
     {
@@ -1060,32 +1150,66 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   if ((dev->flags & MUSTEK_FLAG_LD_N1) || (dev->flags & MUSTEK_FLAG_LD_N2))
     DBG(4, "attach: scanner has N-type line-distance correction\n");
   if (dev->flags & MUSTEK_FLAG_SE)
-    dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
+    {      
+      dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
+      DBG(4, "attach: this is a ScanExpress-type scanner\n");
+    }
   else    
     {
       if (result[57] & (1 << 6))
-        dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
+	{
+	  dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
+	  DBG(4, "attach: this is a Paragon-type single-pass scanner\n");
+	}
       else
         {
           /* three-pass scanners quantize to 0.5% of the maximum resolution: */
           dev->dpi_range.quant = dev->dpi_range.max / 200;
           dev->dpi_range.min = dev->dpi_range.quant;
+	  DBG(4, "attach: this is a Paragon-type three-pass scanner\n");
         }
       if (result[63] & (1 << 2))
-        dev->flags |= MUSTEK_FLAG_ADF;
-      if (result[63] & (1 << 3))
-        dev->flags |= MUSTEK_FLAG_ADF_READY;
-      if (result[63] & (1 << 6))
-        dev->flags |= MUSTEK_FLAG_TA;
-    }
+	{
+	  dev->flags |= MUSTEK_FLAG_ADF;
+	  DBG(4, "attach: found automatic document feeder (ADF)\n");
+	  if (result[63] & (1 << 3))
+	    {
+	      dev->flags |= MUSTEK_FLAG_ADF_READY;
+	      DBG(4, "attach: automatic document feeder is ready\n");
+	    }
+	  else
+	    {
+	      DBG(2, "attach: automatic document feeder is out of documents\n");
+	    }
 
+	}
+
+      if (result[63] & (1 << 6))
+	{
+	  dev->flags |= MUSTEK_FLAG_TA;
+	  DBG(4, "attach: found transparency adapter (TA)\n");
+	}
+    }
 
   if (! (result[62] & (1 << 0)) && (dev->flags & MUSTEK_FLAG_SE) )
     {
-      DBG(2, "attach: cover open\n");
+      DBG(2, "attach: scanner cover is open\n");
     }
-          
-  DBG(2, "attach: found Mustek scanner model %s (%s), %s%s%s%s\n",
+
+
+  if (warning == SANE_TRUE)
+    {
+      DBG(0, "WARNING: Your scanner was detected by the SANE Mustek backend, but\n");
+      DBG(0, "         it is not fully tested. It may or may not work. Be carefull\n");
+      DBG(0, "         and read the PROBLEMS file in the sane directory. Please set\n");
+      DBG(0, "         the debug level of this backend to maximum\n");
+      DBG(0, "         (export SANE_DEBUG_MUSTEK=255) and send the output of\n");
+      DBG(0, "         scanimage -L to the SANE mailing list sane-devel@mostang.com.\n");
+      DBG(0, "         Please include the exact model name of your scanner and to\n");
+      DBG(0, "         which extend it works.\n");
+    }
+
+  DBG(2, "attach: found Mustek scanner %s (%s), %s%s%s%s\n",
       dev->sane.model, dev->sane.type,
       (dev->flags & MUSTEK_FLAG_SINGLE_PASS) ? "1-pass" : "3-pass",
       (dev->flags & MUSTEK_FLAG_ADF) ? ", ADF" : "",
@@ -2684,17 +2808,11 @@ init_options (Mustek_Scanner *s)
       s->opt[OPT_MODE].constraint.string_list = se_mode_list;
       s->val[OPT_MODE].s = strdup (se_mode_list[1]);
     }
-  else if (s->hw->flags & MUSTEK_FLAG_SINGLE_PASS)
+  else
     {
-      s->opt[OPT_MODE].size = max_string_size (single_pass_mode_list);
-      s->opt[OPT_MODE].constraint.string_list = single_pass_mode_list;
-      s->val[OPT_MODE].s = strdup (single_pass_mode_list[2]);
-    }
-  else /* three pass */
-    {
-      s->opt[OPT_MODE].size = max_string_size (three_pass_mode_list);
-      s->opt[OPT_MODE].constraint.string_list = three_pass_mode_list;
-      s->val[OPT_MODE].s = strdup (three_pass_mode_list[2]);
+      s->opt[OPT_MODE].size = max_string_size (paragon_mode_list);
+      s->opt[OPT_MODE].constraint.string_list = paragon_mode_list;
+      s->val[OPT_MODE].s = strdup (paragon_mode_list[2]);
     }
 
   /* resolution */
@@ -2722,10 +2840,31 @@ init_options (Mustek_Scanner *s)
   s->opt[OPT_SOURCE].title = SANE_TITLE_SCAN_SOURCE;
   s->opt[OPT_SOURCE].desc = SANE_DESC_SCAN_SOURCE;
   s->opt[OPT_SOURCE].type = SANE_TYPE_STRING;
-  s->opt[OPT_SOURCE].size = max_string_size (source_list);
-  s->opt[OPT_SOURCE].constraint_type = SANE_CONSTRAINT_STRING_LIST;
-  s->opt[OPT_SOURCE].constraint.string_list = source_list;
-  s->val[OPT_SOURCE].s = strdup (source_list[0]);
+
+  if ((s->hw->flags & MUSTEK_FLAG_SE) || (s->hw->flags & MUSTEK_FLAG_N) 
+      || (s->hw->flags & MUSTEK_FLAG_TA))
+    {
+      s->opt[OPT_SOURCE].size = max_string_size (ta_source_list);
+      s->opt[OPT_SOURCE].constraint_type = SANE_CONSTRAINT_STRING_LIST;
+      s->opt[OPT_SOURCE].constraint.string_list = ta_source_list;
+      s->val[OPT_SOURCE].s = strdup (ta_source_list[0]);
+    }
+  else if (s->hw->flags & MUSTEK_FLAG_ADF)
+    {
+      s->opt[OPT_SOURCE].size = max_string_size (adf_source_list);
+      s->opt[OPT_SOURCE].constraint_type = SANE_CONSTRAINT_STRING_LIST;
+      s->opt[OPT_SOURCE].constraint.string_list = adf_source_list;
+      s->val[OPT_SOURCE].s = strdup (adf_source_list[0]);
+    }
+  else
+    {
+      s->opt[OPT_SOURCE].size = max_string_size (source_list);
+      s->opt[OPT_SOURCE].constraint_type = SANE_CONSTRAINT_STRING_LIST;
+      s->opt[OPT_SOURCE].constraint.string_list = source_list;
+      s->val[OPT_SOURCE].s = strdup (source_list[0]);
+      s->opt[OPT_SOURCE].cap |= SANE_CAP_INACTIVE;
+    }
+
 
   /* backtrack */
   s->opt[OPT_BACKTRACK].name = SANE_NAME_BACKTRACK;
@@ -2929,11 +3068,10 @@ init_options (Mustek_Scanner *s)
   s->opt[OPT_HALFTONE_PATTERN].constraint.range = &u8_range;
   s->val[OPT_HALFTONE_PATTERN].wa = s->halftone_pattern;
 
-  if (s->hw->flags & MUSTEK_FLAG_SE)
+  if ((s->hw->flags & MUSTEK_FLAG_SE) || (s->hw->flags & MUSTEK_FLAG_N))
     {
-      /* SE models don't support speed, source, backtrack, grain size */
+      /* SE and N models don't support speed, backtrack, grain size */
       s->opt[OPT_SPEED].cap |= SANE_CAP_INACTIVE;
-      s->opt[OPT_SOURCE].cap |= SANE_CAP_INACTIVE;
       s->opt[OPT_BACKTRACK].cap |= SANE_CAP_INACTIVE;
       s->opt[OPT_GRAIN_SIZE].cap |= SANE_CAP_INACTIVE;
     }
@@ -3341,8 +3479,8 @@ attach_one_device (const char *devname)
 SANE_Status
 sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 {
-  char dev_name[PATH_MAX], *cp;
-  size_t len;
+  char line[PATH_MAX], *cp, *word, *end;
+  int linenumber;
   FILE *fp;
 
   DBG_INIT();
@@ -3371,10 +3509,166 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
   if (!fp)
     {
       /* default to /dev/scanner instead of insisting on config file */
+      DBG(3, "sane_init: couldn't find config file (%s), trying /dev/scanner directly\n",
+	  MUSTEK_CONFIG_FILE);
       attach ("/dev/scanner", 0, SANE_FALSE);
       return SANE_STATUS_GOOD;
     }
+  linenumber = 0;
+  DBG(3, "sane_init: reading config file `%s'\n",  MUSTEK_CONFIG_FILE);
+  while (sanei_config_read (line, sizeof (line), fp))
+    {
+      word = 0;
+      linenumber++;
 
+      cp = (char *) sanei_config_get_string (line, &word);
+      if (!word || cp == line)
+	{
+	  DBG(4, "sane_init: config file line %d: ignoring empty line\n", linenumber);
+	  continue;
+	}
+      if (word[0] == '#')
+	{
+	  DBG(4, "sane_init: config file line %d: ignoring comment line\n", linenumber);
+	  free (word);
+	  continue;
+	}
+                    
+      if (strcmp (word, "option") == 0)
+	{
+	  free (word);
+	  word = 0;
+	  cp = (char *) sanei_config_get_string (cp, &word);
+
+	  if (strcmp (word, "strip-height") == 0)
+	    {
+	      free (word);
+	      word = 0;
+	      cp = (char *) sanei_config_get_string (cp, &word);
+	      errno = 0;
+	      strip_height = strtod (word, &end);
+	      if (end == word)
+		{
+		  DBG(1, "sane-init: config file line %d: strip-height must have a parameter; "
+		      "using 1 inch\n", linenumber);
+		  strip_height = 1.0;
+		}
+	      if (errno)
+		{
+		  DBG(1, "sane-init: config file line %d: strip-height `%s' is invalid (%s); "
+		      "using 1 inch\n",  linenumber, word, strerror (errno));
+		  strip_height = 1.0;	
+		}
+	      else
+		{
+		  if (strip_height < 0.1)
+		    strip_height = 0.1;
+		  DBG(3, "sane_init: config file line %d: strip-height set to %g inches\n",
+		      linenumber, strip_height);
+		}
+	      if (word)
+		free (word);
+	      word = 0;
+	    }
+	  else if (strcmp (word, "linediÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿÿstance-fix") == 0)
+	    {
+	      if (new_dev_len > 0)
+		{
+		  new_dev[new_dev_len - 1]->flags |= MUSTEK_FLAG_LD_FIX;
+		  DBG(3, "sane_init: config file line %d: enabling linedistance-fix for %s\n",
+		      linenumber, new_dev[new_dev_len - 1]->sane.name);
+		}
+	      else
+		{
+		  DBG(3, "sane_init: config file line %d: option linedistance-fix "
+		      "ignored, was set before any device name\n", linenumber);
+		}
+	      if (word)
+		free (word);
+	      word = 0;
+	      }
+	  else if (strcmp (word, "lineart-fix") == 0)
+	    {
+	      if (new_dev_len > 0)
+		{
+		  new_dev[new_dev_len - 1]->flags |= MUSTEK_FLAG_LINEART_FIX;
+		  DBG(3, "sane_init: config file line %d: enabling lineart-fix for %s\n",
+		      linenumber, new_dev[new_dev_len - 1]->sane.name);
+		}
+	      else
+		{
+		  DBG(3, "sane_init: config file line %d: option lineart-fix ignored, "
+		      "was set before any device name\n", linenumber);
+		}
+	      if (word)
+		free (word);
+	      word = 0;
+	      }
+	  else if (strcmp (word, "buffersize") == 0)
+	    {
+	      long buffer_size;
+
+	      free (word);
+	      word = 0;
+	      cp = (char *) sanei_config_get_string (cp, &word);
+	      errno = 0;
+	      buffer_size = strtol (word, &end, 0);
+
+
+	      if (end == word)
+		{
+		  DBG(1, "sane-init: config file line %d:: buffersize must have a parameter; "
+		      "using default (%d kb)\n", linenumber, 
+		      new_dev[new_dev_len - 1]->max_buffer_size);
+		}
+	      if (errno)
+		{
+		  DBG(1, "sane-init: config file line %d: buffersize `%s' is invalid (%s); "
+		      "using default (%d kb)\n",  linenumber, word, strerror (errno),
+		      new_dev[new_dev_len - 1]->max_buffer_size);
+		}
+	      else
+		{
+		  if (new_dev_len > 0)
+		    {
+		      if (buffer_size < 32.0)
+			buffer_size = 32.0;
+		      new_dev[new_dev_len - 1]->max_buffer_size = buffer_size * 1024;
+		      DBG(3, "sane_init: config file line %d: buffersize set to %ld kb for %s\n",
+			  linenumber, buffer_size, new_dev[new_dev_len - 1]->sane.name);
+		    }
+		  else
+		    {
+		      DBG(3, "sane_init: config file line %d: option buffersize ignored, "
+			  "was set before any device name\n", linenumber);
+		    }
+		}
+	      if (word)
+		free (word);
+	      word = 0;
+	    }
+	  else
+	    {
+	      DBG(3, "sane_init: config file line %d: ignoring unknown option `%s'\n",
+		  linenumber, cp);
+	      if (word)
+		free (word);
+	      word = 0;
+	    }
+	}
+      else
+	{ 
+	  new_dev_len = 0;
+	  DBG(3, "sane_init: config file line %d: trying to attach `%s'\n", linenumber, line);
+	  sanei_config_attach_matching_devices (line, attach_one_device);
+	  if (word)
+	    free (word);
+	  word = 0;
+	}
+    }     
+
+
+#if 0
   while (fgets (dev_name, sizeof (dev_name), fp))
     {
       cp = (char *) sanei_config_skip_whitespace (dev_name);
@@ -3487,6 +3781,9 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	  sanei_config_attach_matching_devices (cp, attach_one_device);
 	}
     }     
+
+#endif
+
   if (new_dev_alloced > 0)
     {     
       new_dev_len = new_dev_alloced = 0;
@@ -3867,7 +4164,7 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	    free (s->val[option].s);
 	  s->val[option].s = strdup (val);
 
-	  if (strcmp (val, source_list[TA]) == 0)
+	  if (strcmp (val, "Transparency Adapter") == 0)
 	    {
 	      s->opt[OPT_TL_X].constraint.range = &s->hw->x_trans_range;
 	      s->opt[OPT_TL_Y].constraint.range = &s->hw->y_trans_range;
@@ -3979,10 +4276,6 @@ sane_start (SANE_Handle handle)
   /* First make sure we have a current parameter set.  Some of the
      parameters will be overwritten below, but that's OK.  */
   status = sane_get_parameters (s, 0);
-  /* Check for ADF ready */
-  if ((strcmp(s->val[OPT_SOURCE].s, "Automatic Document Feeder") == 0) &&
-      !(s->hw->flags & MUSTEK_FLAG_ADF_READY))
-    return SANE_STATUS_NO_DOCS;                                 
   if (status != SANE_STATUS_GOOD)
     return status;
 
@@ -4047,6 +4340,14 @@ sane_start (SANE_Handle handle)
   if (status != SANE_STATUS_GOOD)
     {
       DBG(1, "open: inquiry command failed: %s\n", sane_strstatus (status));
+      goto stop_scanner_and_return;
+    }
+
+  if ((strcmp(s->val[OPT_SOURCE].s, "Automatic Document Feeder") == 0) &&
+      !(s->hw->flags & MUSTEK_FLAG_ADF_READY))
+    {
+      DBG(2, "sane_start: automatic document feeder is out of documents\n");
+      status = SANE_STATUS_NO_DOCS;                                 
       goto stop_scanner_and_return;
     }
     

@@ -9,7 +9,7 @@
 ;
 
 :backend "mustek"		; name of backend
-:version "1.0-80"			; version of backend
+:version "1.0-81"			; version of backend
 :status :beta			; :alpha, :beta, :stable, :new
 :manpage "sane-mustek"		; name of manpage (if it exists)
 :url "http://hmg.home.pages.de/sane/"
@@ -24,9 +24,7 @@
 :model "Paragon MFS-12000CX"
 :comment "3-pass"
 :model "Paragon MFC-600S"
-:model "Paragon MFC-600CD"
 :model "Paragon 600 II CD"
-:model "Paragon 600 II SP"
 :model "ScanMagic 600 II SP"
 :model "Paragon MFC-800S"
 :model "Paragon 800 II SP"
@@ -39,14 +37,17 @@
 :model "ScanExpress 12000SP Plus"
 :model "Paragon 1200 III SP"
 :model "ScanMagic 9636S"
+:model "ScanMagic 9636S Plus"
 :model "Paragon 600 II N"
 :comment "non-scsi"
 :mfg "Trust"			; name a manufacturer
 :url "http://www.trust-site.com"
-:model "Imagery 1200 CP"
-:comment "Please test! (relabeled Mustek?)"
-:model "Imagery 4800 CP"
-:comment "Please test! (relabeled Mustek?)"
+:model "Imagery 1200 SP"
+:comment "Please test!"
+:model "Imagery 4800 SP"
+:comment "Please test!"
+:model "SCSI Connect 19200"
+:comment "Please test!"
 
 ; :comment and :url specifiers are optional after :mfg, :model, :desc,
 ;  and at the top-level.
