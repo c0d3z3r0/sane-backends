@@ -1,5 +1,7 @@
 1999-09-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* include/sane/config.h.in: Add missing HAVE_SYS_SOCKET_H.
+
 	* backend/hp-handle.c backend/hp-option.c backend/hp-option.h
  	backend/hp-scl.c backend/hp-scl.h backend/hp-scsi.h backend/hp.c
  	backend/hp.desc backend/hp.h doc/sane-hp.man: Updated backend to
