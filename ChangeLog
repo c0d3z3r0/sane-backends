@@ -1,3 +1,9 @@
+2000-04-27  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.* Some code cleanup, added support for GRB
+	  images and did some Gamma correction fixes for the Perfection
+	  610.
+
 2000-04-27  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* include/sane/sanei_debug.h: Bugfix.  Make sure the source
