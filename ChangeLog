@@ -1,5 +1,8 @@
 2000-07-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/microtek2.h backend/microtek2.c backend/microtek2.desc:
+	Add support for ScanMaker X6USB.  Patch from Oliver Neukum.
+
 	* README.os2 configure.os2 include/sane/sanei_backend.h
 	sanei/os2_srb.h sanei/sanei_init_debug.c backend/dll.c
 	backend/net.c frontend/saned.c : Some of the OS/2 patches from
