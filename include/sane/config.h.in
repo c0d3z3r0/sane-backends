@@ -248,7 +248,7 @@
 /* Define if you have the <sys/scsi.h> header file. */
 #undef HAVE_SYS_SCSI_H
 
-* Define if you have the <sys/sdi_comm.h> header file. */ 
+/* Define if you have the <sys/sdi_comm.h> header file. */ 
 #undef HAVE_SYS_SDI_COMM_H 
 
 /* Define if you have the <sys/passthrudef.h.h> header file. */ 
