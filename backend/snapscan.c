@@ -992,13 +992,11 @@ SANE_Status sane_init (SANE_Int *version_code,
     }
     else
     {
-        while (fgets (dev_name, sizeof (dev_name), fp))
+        while (sanei_config_read (dev_name, sizeof (dev_name), fp))
         {
             if (dev_name[0] == '#')	/* ignore line comments */
                 continue;
             len = strlen (dev_name);
-            if (dev_name[len - 1] == '\n')
-                dev_name[--len] = '\0';
 
             if (!len)
                 continue;		/* ignore empty lines */
@@ -1730,65 +1728,65 @@ SANE_Status sane_control_option (SANE_Handle h,
         case OPT_INQUIRY:
             status = inquiry (pss);
             CHECK_STATUS (status, me, "inquiry");
-            fprintf (stderr,
-         	     "\nInquiry results:\n"
-                     "\tScanner:                       %s\n"
-                     "\thardware config:               0x%x\n"
-                     "\tA/D converter:                 %s\n"
-                     "\tAuto-document feeder:          %s\n"
-                     "\tTransparency option:           %s\n"
-                     "\tRing buffer:                   %s\n"
-                     "\t16x16 halftone matrix support: %s\n"
-                     "\t8x8 halftone matrix support:   %s\n"
-                     "\toptical resolution:            %lu\n"
-                     "\tscan resolution:               %lu\n"
-                     "\tnumber of lines:               %lu\n"
-                     "\tbytes per line:                %lu\n"
-                     "\tpixels per line:               %lu\n"
-                     "\tms per line:                   %f\n"
-                     "\texposure time:                 %c.%c ms\n"
-                     "\tred offset:                    %ld\n"
-                     "\tgreen offset:                  %ld\n"
-                     "\tblue offset:                   %ld\n"
-                     "\tfirmware:                      %s\n\n",
-                     pss->buf + INQUIRY_VENDOR,
-                     pss->hconfig,
-                     (pss->hconfig & HCFG_ADC)  ?  "10-bit"  :  "8-bit",
-                     (pss->hconfig & HCFG_ADF)  ?  "Yes"  :  "No",
-                     (pss->hconfig & HCFG_TPO) ?   "Yes"  :  "No",
-                     (pss->hconfig & HCFG_RB)  ?  "Yes" : "No",
-                     (pss->hconfig & HCFG_HT16)  ?  "Yes"  :  "No",
-                     (pss->hconfig & HCFG_HT8)  ?  "Yes"  :  "No",
-                     (u_long) pss->actual_res,
-                     (u_long) pss->res,
-                     (u_long) pss->lines,
-                     (u_long) pss->bytes_per_line,
-                     (u_long) pss->pixels_per_line,
-                     (double) pss->ms_per_line,
-                     pss->buf[INQUIRY_EXPTIME1] + '0',
-                     pss->buf[INQUIRY_EXPTIME2] + '0',
-                     (long) pss->chroma_offset[R_CHAN],
-                     (long) pss->chroma_offset[G_CHAN],
-                     (long) pss->chroma_offset[B_CHAN],
-                     pss->buf + INQUIRY_FIRMWARE);
+            DBG (0,
+		 "\nInquiry results:\n"
+		 "\tScanner:                       %s\n"
+		 "\thardware config:               0x%x\n"
+		 "\tA/D converter:                 %s\n"
+		 "\tAuto-document feeder:          %s\n"
+		 "\tTransparency option:           %s\n"
+		 "\tRing buffer:                   %s\n"
+		 "\t16x16 halftone matrix support: %s\n"
+		 "\t8x8 halftone matrix support:   %s\n"
+		 "\toptical resolution:            %lu\n"
+		 "\tscan resolution:               %lu\n"
+		 "\tnumber of lines:               %lu\n"
+		 "\tbytes per line:                %lu\n"
+		 "\tpixels per line:               %lu\n"
+		 "\tms per line:                   %f\n"
+		 "\texposure time:                 %c.%c ms\n"
+		 "\tred offset:                    %ld\n"
+		 "\tgreen offset:                  %ld\n"
+		 "\tblue offset:                   %ld\n"
+		 "\tfirmware:                      %s\n\n",
+		 pss->buf + INQUIRY_VENDOR,
+		 pss->hconfig,
+		 (pss->hconfig & HCFG_ADC)  ?  "10-bit"  :  "8-bit",
+		 (pss->hconfig & HCFG_ADF)  ?  "Yes"  :  "No",
+		 (pss->hconfig & HCFG_TPO) ?   "Yes"  :  "No",
+		 (pss->hconfig & HCFG_RB)  ?  "Yes" : "No",
+		 (pss->hconfig & HCFG_HT16)  ?  "Yes"  :  "No",
+		 (pss->hconfig & HCFG_HT8)  ?  "Yes"  :  "No",
+		 (u_long) pss->actual_res,
+		 (u_long) pss->res,
+		 (u_long) pss->lines,
+		 (u_long) pss->bytes_per_line,
+		 (u_long) pss->pixels_per_line,
+		 (double) pss->ms_per_line,
+		 pss->buf[INQUIRY_EXPTIME1] + '0',
+		 pss->buf[INQUIRY_EXPTIME2] + '0',
+		 (long) pss->chroma_offset[R_CHAN],
+		 (long) pss->chroma_offset[G_CHAN],
+		 (long) pss->chroma_offset[B_CHAN],
+		 pss->buf + INQUIRY_FIRMWARE);
             break;
         case OPT_SELF_TEST:
             status = send_diagnostic (pss);
             if (status == SANE_STATUS_GOOD)
-                fprintf (stderr, "Passes self-test.\n");
+                DBG (0, "Passes self-test.\n");
             CHECK_STATUS (status, me, "self_test");
             break;
         case OPT_REQ_SENSE:
             status = request_sense (pss);
             CHECK_STATUS (status, me, "request_sense");
             if (pss->sense_str)
-                fprintf (stderr, "Scanner sense: %s\n", pss->sense_str);
+                DBG (0, "Scanner sense: %s\n", pss->sense_str);
             if (pss->as_str)
-                fprintf (stderr, "Scanner ASC/ASCQ: %s\n", pss->as_str);
+                DBG (0, "Scanner ASC/ASCQ: %s\n", pss->as_str);
             break;
         case OPT_REL_UNIT:
             release_unit (pss);
-            fprintf (stderr, "Release unit sent.\n");
+            DBG (0, "Release unit sent.\n");
             break;
         case OPT_RGB_LPR:
             pss->rgb_lpr = *(SANE_Int *) v;
@@ -2634,6 +2632,20 @@ SANE_Status sane_get_select_fd (SANE_Handle h, SANE_Int * fd)
 
 /*
  * $Log$
+ * Revision 1.1.1.1.2.4  2000/07/25 21:47:43  hmg
+ * 2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/snapscan.c: Use DBG(0, ...) instead of fprintf (stderr, ...).
+ * 	* backend/abaton.c backend/agfafocus.c backend/apple.c backend/dc210.c
+ *  	  backend/dll.c backend/dmc.c backend/microtek2.c backend/pint.c
+ * 	  backend/qcam.c backend/ricoh.c backend/s9036.c backend/snapscan.c
+ * 	  backend/tamarack.c: Use sanei_config_read instead of fgets.
+ * 	* backend/dc210.c backend/microtek.c backend/pnm.c: Added
+ * 	  #include <sane/config.h>.
+ * 	* backend/dc25.c backend/m3096.c  backend/sp15.c
+ *  	  backend/st400.c: Moved #include <sane/config.h> to the beginning.
+ * 	* AUTHORS: Changed agfa to agfafocus.
+ *
  * Revision 1.1.1.1.2.3  2000/07/17 21:37:28  hmg
  * 2000-07-17  Henning Meier-Geinitz <hmg@gmx.de>
  *

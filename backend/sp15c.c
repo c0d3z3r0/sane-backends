@@ -45,6 +45,20 @@ static const char RCSid[] = "$Header$";
 
 /*
  * $Log$
+ * Revision 1.1.2.4  2000/07/25 21:47:46  hmg
+ * 2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/snapscan.c: Use DBG(0, ...) instead of fprintf (stderr, ...).
+ * 	* backend/abaton.c backend/agfafocus.c backend/apple.c backend/dc210.c
+ *  	  backend/dll.c backend/dmc.c backend/microtek2.c backend/pint.c
+ * 	  backend/qcam.c backend/ricoh.c backend/s9036.c backend/snapscan.c
+ * 	  backend/tamarack.c: Use sanei_config_read instead of fgets.
+ * 	* backend/dc210.c backend/microtek.c backend/pnm.c: Added
+ * 	  #include <sane/config.h>.
+ * 	* backend/dc25.c backend/m3096.c  backend/sp15.c
+ *  	  backend/st400.c: Moved #include <sane/config.h> to the beginning.
+ * 	* AUTHORS: Changed agfa to agfafocus.
+ *
  * Revision 1.1.2.3  2000/03/14 17:47:12  abel
  * new version of the Sharp backend added.
  *
@@ -125,6 +139,8 @@ static const char RCSid[] = "$Header$";
 
 /* ------------------------------------------------------------------------- */
 
+#include "sane/config.h"
+
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -137,7 +153,6 @@ static const char RCSid[] = "$Header$";
 #include <sys/wait.h>
 #include <unistd.h>
 
-#include "sane/config.h"
 #include "sane/sanei_backend.h"
 #include "sane/sanei_scsi.h"
 #include "sane/saneopts.h"

@@ -57,6 +57,8 @@
 #define MICROTEK_MINOR 12
 #define MICROTEK_PATCH 1
 
+#include "sane/config.h"
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

@@ -519,13 +519,11 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   if (!fp)
     return SANE_STATUS_GOOD;    /* don't insist on aliases file */
 
-  while (fgets (backend_name, sizeof (backend_name), fp))
+  while (sanei_config_read (backend_name, sizeof (backend_name), fp))
     {
       if (backend_name[0] == '#')       /* ignore line comments */
         continue;
       len = strlen (backend_name);
-      if (backend_name[len - 1] == '\n')
-        backend_name[--len] = '\0';
 
       if (!len)
         continue;               /* ignore empty lines */

@@ -69,12 +69,13 @@ vim: ts=4 sw=4 noexpandtab
    1.6 (08 Apr 2000): Minor cleanups.
 */
 
+#include <sane/config.h>
+
 #include <sys/types.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <ctype.h>
-#include "sane/config.h"
 #include "sane/sane.h"
 #include "sane/sanei.h"
 #include "sane/sanei_config.h"

@@ -57,6 +57,8 @@
 
  ***************************************************************************/
 
+#include <sane/config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -631,20 +633,18 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   if (!fp)
     {
       /* default to /dev/whatever instead of insisting on config file */
-      DBG (1, "%s:  missing config file '%s'\n", DC210_CONFIG_FILE, f);
+      DBG (1, "%s:  missing config file '%s'\n", f, DC210_CONFIG_FILE);
     }
   else
     {
-      while (fgets (dev_name, sizeof (dev_name), fp))
+      while (sanei_config_read (dev_name, sizeof (dev_name), fp))
 	{
 	  dev_name[sizeof (dev_name) - 1] = '\0';
-	  DBG (20, "%s:  config- %s", dev_name, f);
+	  DBG (20, "%s:  config- %s\n", f, dev_name);
 
 	  if (dev_name[0] == '#')
-	    continue;		/* ignore line comments */
+	      continue;		/* ignore line comments */
 	  len = strlen (dev_name);
-	  if (dev_name[len - 1] == '\n')
-	    dev_name[--len] = '\0';
 	  if (!len)
 	    continue;		/* ignore empty lines */
 	  if (strncmp (dev_name, "port=", 5) == 0)

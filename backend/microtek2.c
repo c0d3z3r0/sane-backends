@@ -955,7 +955,6 @@ sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
     char dev_name[PATH_MAX];
     int match;
 
-
     DBG_INIT();
     DBG(1, "sane_init: Microtek2 (v%d.%d) says hello...\n",
            MICROTEK2_MAJOR, MICROTEK2_MINOR);
@@ -976,10 +975,10 @@ sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
         /* check config file for devices and associated options */
         parse_config_file(fp, &md_config_temp);
 
-        while ( fgets(dev_name, sizeof(dev_name), fp) )
+        while ( sanei_config_read(dev_name, sizeof(dev_name), fp) )
           {
             /* ignore empty lines and comments */
-            if ( dev_name[0] != '#' && dev_name[0] != '\n' )
+            if ( dev_name[0] != '#' && strlen(dev_name) != 0 )
               {
                 if ( md_config_temp )
                   {

@@ -89,6 +89,8 @@
 
  ***************************************************************************/
 
+#include <sane/config.h>
+
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -99,7 +101,6 @@
 #include <sane/sane.h>
 #include <sane/sanei.h>
 #include <sane/saneopts.h>
-#include <sane/config.h>
 
 #define BACKEND_NAME	dc25
 #include <sane/sanei_backend.h>

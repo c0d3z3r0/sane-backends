@@ -1,3 +1,16 @@
+2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* backend/snapscan.c: Use DBG(0, ...) instead of fprintf (stderr, ...) 
+	* backend/abaton.c backend/agfafocus.c backend/apple.c backend/dc210.c
+ 	  backend/dll.c backend/dmc.c backend/microtek2.c backend/pint.c
+	  backend/qcam.c backend/ricoh.c backend/s9036.c backend/snapscan.c
+	  backend/tamarack.c: Use sanei_config_read instead of fgets.
+	* backend/dc210.c backend/microtek.c backend/pnm.c: Added 
+	  #include <sane/config.h>.
+	* backend/dc25.c backend/m3096.c backend/m3096g.c backend/sp15.c
+ 	  backend/st400.c: Moved #include <sane/config.h> to the beginning.
+	* AUTHORS: Changed agfa to agfafocus.
+	
 2000-07-25  Peter Kirchgessner <peter@kirchgessner.net>
 
         * backend/hp.c hp-scl.c hp-option.c hp-handle.c hp-accessor.c
