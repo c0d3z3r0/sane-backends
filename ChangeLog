@@ -1,3 +1,7 @@
+2000-05-27  Karl Heinz Kremer <khk@khk.net>
+	* backend/epson.[ch] Support for multiple EPSON scanners added
+	  Fixed Perfection 610 color problem
+
 2000-05-26  Abel Deuring <a.deuringæsatzbau-gmbh.de>
 	* sanei/sanei_scsi.c: Fixed a bug in the Linux queue handling,
 	  as suggested by Simon Munton
