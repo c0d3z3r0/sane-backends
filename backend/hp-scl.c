@@ -1069,6 +1069,24 @@ sanei_hp_scsi_pipeout (HpScsi this, int outfd, HpProcessData *procdata)
   signal_caught = 0;
   sigprocmask(SIG_UNBLOCK, &sig_set, 0);
 
+  /* Wait for front button push ? */
+  if ( procdata->startscan )
+  {
+    for (;;)
+    {int val = 0;
+ 
+       if (signal_caught) goto quit;
+       sanei_hp_scl_inquire (this, SCL_FRONT_BUTTON, &val, 0, 0);
+       if (val) break;
+       usleep ((unsigned long)333*1000); /* Wait 1/3 second */
+    }
+    status = sanei_hp_scl_startScan (this, procdata->startscan);
+    if (status != SANE_STATUS_GOOD )
+    {
+      DBG(1, "do_read: Error starting scan in reader process\n");
+      goto quit;
+    }
+  } 
   ph = process_data_init (procdata, map, outfd, enable_image_buffering);
 
   if ( ph == NULL )

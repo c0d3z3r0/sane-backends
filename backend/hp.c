@@ -43,9 +43,12 @@
    HP Scanner Control Language (SCL).
 */
 
-static char *hp_backend_version = "0.87";
+static char *hp_backend_version = "0.88";
 /* Changes:
 
+   V 0.88, 09-Jul-2000, PK:
+      - Add front button support by Chris S. Cowles, Houston, Texas,
+        c_cowles@ieee.org
    V 0.87, 28-Jun-2000, PK:
       - ADF-support for ScanJet IIp
       - Return error SANE_STATUS_NO_DOCS if no paper in ADF
