@@ -1,5 +1,5 @@
 -*-Mode: outline-*-
-New after 1.01 (unstable development release 2000-01-10):
+New after 1.01 (unstable development release 2000-01-23):
 * New script 'sane-config' to help frontend developers.
 * Added Ricoh IS50 support.
 * Updated backends: Artec (v0.5), CANON (v991108), DC-25 (1.2), HP
