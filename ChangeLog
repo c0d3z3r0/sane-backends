@@ -3,6 +3,8 @@
 	* ltmain.sh:
         changed variable soname from "libsane-backendname.*"
         to "libsane.*" by sed command.
+        * ltmain.sh:
+        changed again the sed command, forgot to remove "0-9"
 
 1999-11-14  Petter Reinholdtsen <pere@td.org.uit.no>
 
