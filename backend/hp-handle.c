@@ -93,9 +93,7 @@ hp_handle_isScanning (HpHandle this)
 }
 
 static SANE_Status
-hp_handle_startReader (HpHandle this, HpScsi scsi, size_t count,
-                       int mirror, int bytes_per_line, int bpc,
-                       hp_bool_t invert)
+hp_handle_startReader (HpHandle this, HpScsi scsi, HpProcessData *procdata)
 {
   int	fds[2];
   sigset_t 		sig_set, old_set;
@@ -136,8 +134,7 @@ hp_handle_startReader (HpHandle this, HpScsi scsi, size_t count,
   sigprocmask(SIG_SETMASK, &sig_set, 0);
 
   /* not closing fds[1] gives an infinite loop on Digital UNIX */
-  status = sanei_hp_scsi_pipeout(scsi,fds[1],count,mirror,bytes_per_line,bpc,
-                                 invert);
+  status = sanei_hp_scsi_pipeout(scsi,fds[1],procdata);
   close (fds[1]);
   _exit(status);
 }
@@ -333,9 +330,7 @@ sanei_hp_handle_startScan (HpHandle this)
   SANE_Status	status;
   HpScsi	scsi;
   HpScl         scl;
-  hp_bool_t     mirror_vertical;
-  hp_bool_t     invert;
-  int           scan_depth;
+  HpProcessData procdata;
 
   /* FIXME: setup preview mode stuff? */
 
@@ -347,8 +342,9 @@ sanei_hp_handle_startScan (HpHandle this)
   status = sanei_hp_optset_download(this->dev->options, this->data, scsi);
 
   if (!FAILED(status))
-     status = hp_handle_uploadParameters(this, scsi, &scan_depth,
-                                         &invert);
+     status = hp_handle_uploadParameters(this, scsi,
+                                         &(procdata.bits_per_channel),
+                                         &(procdata.invert));
 
   if (FAILED(status))
     {
@@ -356,14 +352,14 @@ sanei_hp_handle_startScan (HpHandle this)
       return status;
     }
 
-  mirror_vertical = sanei_hp_optset_mirror_vert (this->dev->options, this->data,
-                                           scsi);
-  DBG(1, "start: %s to mirror image vertically\n", mirror_vertical ?
+  procdata.mirror_vertical =
+     sanei_hp_optset_mirror_vert (this->dev->options, this->data, scsi);
+  DBG(1, "start: %s to mirror image vertically\n", procdata.mirror_vertical ?
          "Request" : "No request" );
 
   scl = sanei_hp_optset_scan_type (this->dev->options, this->data);
 
-  DBG(1, "start: %s to mirror image vertically\n", mirror_vertical ?
+  DBG(1, "start: %s to mirror image vertically\n", procdata.mirror_vertical ?
          "Request" : "No request" );
 
   this->bytes_left = ( this->scan_params.bytes_per_line
@@ -372,13 +368,15 @@ sanei_hp_handle_startScan (HpHandle this)
   DBG(1, "start: %d pixels per line, %d bytes, %d lines high\n",
       this->scan_params.pixels_per_line, this->scan_params.bytes_per_line,
       this->scan_params.lines);
+  procdata.bytes_per_line = (int)this->scan_params.bytes_per_line;
+  procdata.lines = this->scan_params.lines;
 
   status = sanei_hp_scl_startScan(scsi, scl);
 
   if (!FAILED( status ))
-      status = hp_handle_startReader(this, scsi, this->bytes_left,
-                 (int)mirror_vertical, (int)this->scan_params.bytes_per_line,
-                 scan_depth, invert);
+  {
+      status = hp_handle_startReader(this, scsi, &procdata);
+  }
 
   sanei_hp_scsi_destroy(scsi);
 
