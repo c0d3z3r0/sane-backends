@@ -46,8 +46,11 @@ static const char RCSid[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
- * Revision 1.1.2.1  2000/01/25 15:43:46  pere
- * Added backends sp15c (v1.11) and m3096g (v1.10).
+ * Revision 1.1.2.2  2000/01/26 03:51:46  pere
+ * Updated backends sp15c (v1.12) and m3096g (v1.11).
+ *
+ * Revision 1.11  2000/01/25 16:24:15  bentson
+ * expand tabs; add debug message; clean-up compiler warnings
  *
  * Revision 1.10  2000/01/05 05:25:19  bentson
  * indent to barfin' GNU style
@@ -170,6 +173,7 @@ static const SANE_Range x_range =
 static const SANE_Range y_range =
 {0, SANE_FIX (438), 1};
 
+#if 0
 static void
 wabbit (void)
 {
@@ -180,11 +184,12 @@ wabbit (void)
       sleep (1);
       DBG (10, "\ttick\n");
     }
-}				/* wabbit */
+}                               /* wabbit */
+#endif
 
 /* ################# externally visible routines ################{ */
 
-SANE_Status			/* looks like frontend ignores results */
+SANE_Status                     /* looks like frontend ignores results */
 sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
 {
   char dev_name[PATH_MAX];
@@ -198,27 +203,27 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   fp = sanei_config_open (M3096G_CONFIG_FILE);
   if (!fp)
     {
-      attach_scanner ("/dev/scanner", 0);	/* no config-file: /dev/scanner */
+      attach_scanner ("/dev/scanner", 0);       /* no config-file: /dev/scanner */
       return SANE_STATUS_GOOD;
     }
 
   while (fgets (dev_name, sizeof (dev_name), fp))
     {
       if (dev_name[0] == '#')
-	continue;
+        continue;
       len = strlen (dev_name);
       if (dev_name[len - 1] == '\n')
-	{
-	  dev_name[--len] = '\0';
-	}
+        {
+          dev_name[--len] = '\0';
+        }
       if (!len)
-	continue;
+        continue;
       sanei_config_attach_matching_devices (dev_name, attach_one);
     }
 
   fclose (fp);
   return SANE_STATUS_GOOD;
-}				/* sane_init */
+}                               /* sane_init */
 
 
 SANE_Status
@@ -243,7 +248,7 @@ sane_get_devices (const SANE_Device *** device_list, SANE_Bool local_only)
   *device_list = devlist;
 
   return SANE_STATUS_GOOD;
-}				/* sane_get_devices */
+}                               /* sane_get_devices */
 
 
 SANE_Status
@@ -294,7 +299,7 @@ sane_open (SANE_String_Const name, SANE_Handle * handle)
 #endif
 
   return SANE_STATUS_GOOD;
-}				/* sane_open */
+}                               /* sane_open */
 
 
 SANE_Status
@@ -302,7 +307,7 @@ sane_set_io_mode (SANE_Handle h, SANE_Bool non_blocking)
 {
   DBG (10, "sane_set_io_mode\n");
   return SANE_STATUS_UNSUPPORTED;
-}				/* sane_set_io_mode */
+}                               /* sane_set_io_mode */
 
 
 SANE_Status
@@ -310,7 +315,7 @@ sane_get_select_fd (SANE_Handle h, SANE_Int * fdp)
 {
   DBG (10, "sane_get_select_fd\n");
   return SANE_STATUS_UNSUPPORTED;
-}				/* sane_get_select_fd */
+}                               /* sane_get_select_fd */
 
 
 const SANE_Option_Descriptor *
@@ -324,13 +329,13 @@ sane_get_option_descriptor (SANE_Handle handle, SANE_Int option)
   if ((unsigned) option >= NUM_OPTIONS)
     return 0;
   return &scanner->opt[option];
-}				/* sane_get_option_descriptor */
+}                               /* sane_get_option_descriptor */
 
 
 SANE_Status
 sane_control_option (SANE_Handle handle, SANE_Int option,
-		     SANE_Action action, void *val,
-		     SANE_Int * info)
+                     SANE_Action action, void *val,
+                     SANE_Int * info)
 {
   struct m3096g *scanner = handle;
   SANE_Status status;
@@ -353,307 +358,308 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
   if (action == SANE_ACTION_GET_VALUE)
     {
       DBG (10, "sane_control_option: get value \"%s\"\n",
-	   scanner->opt[option].name);
+           scanner->opt[option].name);
+      DBG (11, "\tcap = %d\n", cap);
 
       if (!SANE_OPTION_IS_ACTIVE (cap))
-	{
-	  DBG (10, "\tinactive\n");
-	  return SANE_STATUS_INVAL;
-	}
+        {
+          DBG (10, "\tinactive\n");
+          return SANE_STATUS_INVAL;
+        }
 
       switch (option)
-	{
+        {
 
-	case OPT_NUM_OPTS:
-	  *(SANE_Word *) val = NUM_OPTIONS;
-	  return SANE_STATUS_GOOD;
+        case OPT_NUM_OPTS:
+          *(SANE_Word *) val = NUM_OPTIONS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_SOURCE:
-	  if (scanner->use_adf == SANE_TRUE)
-	    {
-	      strcpy (val, "ADF");
-	    }
-	  else
-	    {
-	      strcpy (val, "FB");
-	    }
-	  return SANE_STATUS_GOOD;
+        case OPT_SOURCE:
+          if (scanner->use_adf == SANE_TRUE)
+            {
+              strcpy (val, "ADF");
+            }
+          else
+            {
+              strcpy (val, "FB");
+            }
+          return SANE_STATUS_GOOD;
 
-	case OPT_MODE:
-	  switch (scanner->composition)
-	    {
-	    case WD_comp_LA:
-	      strcpy (val, lineStr);
-	      break;
-	    case WD_comp_HT:
-	      strcpy (val, halfStr);
-	      break;
-	    case WD_comp_GS:
-	      strcpy (val, grayStr);
-	      break;
-	    default:
-	      return SANE_STATUS_INVAL;
-	    }
-	  if (info)
-	    {
-	      *info |= SANE_INFO_RELOAD_PARAMS;
-	    }
-	  return SANE_STATUS_GOOD;
+        case OPT_MODE:
+          switch (scanner->composition)
+            {
+            case WD_comp_LA:
+              strcpy (val, lineStr);
+              break;
+            case WD_comp_HT:
+              strcpy (val, halfStr);
+              break;
+            case WD_comp_GS:
+              strcpy (val, grayStr);
+              break;
+            default:
+              return SANE_STATUS_INVAL;
+            }
+          if (info)
+            {
+              *info |= SANE_INFO_RELOAD_PARAMS;
+            }
+          return SANE_STATUS_GOOD;
 
-	case OPT_TYPE:
-	  return SANE_STATUS_INVAL;
+        case OPT_TYPE:
+          return SANE_STATUS_INVAL;
 
-	case OPT_PRESCAN:
-	  return SANE_STATUS_INVAL;
+        case OPT_PRESCAN:
+          return SANE_STATUS_INVAL;
 
-	case OPT_X_RES:
-	  *(SANE_Word *) val = scanner->x_res;
-	  return SANE_STATUS_GOOD;
+        case OPT_X_RES:
+          *(SANE_Word *) val = scanner->x_res;
+          return SANE_STATUS_GOOD;
 
-	case OPT_Y_RES:
-	  *(SANE_Word *) val = scanner->y_res;
-	  return SANE_STATUS_GOOD;
+        case OPT_Y_RES:
+          *(SANE_Word *) val = scanner->y_res;
+          return SANE_STATUS_GOOD;
 
 #ifdef no_preview_res
-	case OPT_PREVIEW_RES:
-	  return SANE_STATUS_INVAL;
+        case OPT_PREVIEW_RES:
+          return SANE_STATUS_INVAL;
 #endif
 
-	case OPT_TL_X:
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_x));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_TL_X:
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_x));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_TL_Y:
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_y));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_TL_Y:
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_y));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_BR_X:
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_x));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_BR_X:
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_x));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_BR_Y:
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_y));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_BR_Y:
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_y));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_AVERAGING:
-	  return SANE_STATUS_INVAL;
+        case OPT_AVERAGING:
+          return SANE_STATUS_INVAL;
 
-	case OPT_BRIGHTNESS:
-	  *(SANE_Word *) val = scanner->brightness;
-	  return SANE_STATUS_GOOD;
+        case OPT_BRIGHTNESS:
+          *(SANE_Word *) val = scanner->brightness;
+          return SANE_STATUS_GOOD;
 
-	case OPT_THRESHOLD:
-	  *(SANE_Word *) val = scanner->threshold;
-	  return SANE_STATUS_GOOD;
+        case OPT_THRESHOLD:
+          *(SANE_Word *) val = scanner->threshold;
+          return SANE_STATUS_GOOD;
 
-	case OPT_PREVIEW:
-	  return SANE_STATUS_INVAL;
+        case OPT_PREVIEW:
+          return SANE_STATUS_INVAL;
 
-	}
+        }
 
     }
   else if (action == SANE_ACTION_SET_VALUE)
     {
       DBG (10, "sane_control_option: set value \"%s\"\n",
-	   scanner->opt[option].name);
+           scanner->opt[option].name);
 
       if (!SANE_OPTION_IS_ACTIVE (cap))
-	{
-	  DBG (10, "\tinactive\n");
-	  return SANE_STATUS_INVAL;
-	}
+        {
+          DBG (10, "\tinactive\n");
+          return SANE_STATUS_INVAL;
+        }
 
       if (!SANE_OPTION_IS_SETTABLE (cap))
-	{
-	  DBG (10, "\tnot settable\n");
-	  return SANE_STATUS_INVAL;
-	}
+        {
+          DBG (10, "\tnot settable\n");
+          return SANE_STATUS_INVAL;
+        }
 
       status = sanei_constrain_value (scanner->opt + option, val, info);
       if (status != SANE_STATUS_GOOD)
-	{
-	  DBG (10, "\tbad value\n");
-	  return status;
-	}
+        {
+          DBG (10, "\tbad value\n");
+          return status;
+        }
 
       switch (option)
-	{
+        {
 
-	case OPT_NUM_OPTS:
-	  return SANE_STATUS_GOOD;
+        case OPT_NUM_OPTS:
+          return SANE_STATUS_GOOD;
 
-	case OPT_SOURCE:
-	  if (strcmp (val, "ADF") == 0)
-	    {
-	      scanner->use_adf = SANE_TRUE;
-	      return SANE_STATUS_GOOD;
-	    }
-	  else if (strcmp (val, "FB") == 0)
-	    {
-	      scanner->use_adf = SANE_FALSE;
-	      return SANE_STATUS_GOOD;
-	    }
-	  else
-	    {
-	      return SANE_STATUS_INVAL;
-	    }
+        case OPT_SOURCE:
+          if (strcmp (val, "ADF") == 0)
+            {
+              scanner->use_adf = SANE_TRUE;
+              return SANE_STATUS_GOOD;
+            }
+          else if (strcmp (val, "FB") == 0)
+            {
+              scanner->use_adf = SANE_FALSE;
+              return SANE_STATUS_GOOD;
+            }
+          else
+            {
+              return SANE_STATUS_INVAL;
+            }
 
-	case OPT_MODE:
-	  if (strcmp (val, lineStr) == 0)
-	    {
-	      if (scanner->composition == WD_comp_LA)
-		return SANE_STATUS_GOOD;
-	      scanner->composition = WD_comp_LA;
-	      scanner->bitsperpixel = 1;
-	      scanner->threshold = 0;
-	      scanner->opt[OPT_X_RES].constraint.word_list = x_res_list;
-	      scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list;
-	      scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_INACTIVE;
-	      scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_SOFT_DETECT
-		| SANE_CAP_SOFT_SELECT;
-	      if (!m3096g_valid_number (scanner->x_res,
-			      scanner->opt[OPT_X_RES].constraint.word_list))
-		{
-		  scanner->x_res = 240;
-		}
-	      if (!m3096g_valid_number (scanner->y_res,
-			      scanner->opt[OPT_Y_RES].constraint.word_list))
-		{
-		  scanner->y_res = 240;
-		}
-	      scanner->rif = 0;
-	    }
-	  else if (strcmp (val, halfStr) == 0)
-	    {
-	      if (scanner->composition == WD_comp_HT)
-		return SANE_STATUS_GOOD;
-	      scanner->composition = WD_comp_HT;
-	      scanner->bitsperpixel = 1;
-	      scanner->opt[OPT_X_RES].constraint.word_list = x_res_list;
-	      scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list;
-	      scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_SOFT_DETECT
-		| SANE_CAP_SOFT_SELECT;
-	      scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_INACTIVE;
-	      if (!m3096g_valid_number (scanner->x_res,
-			      scanner->opt[OPT_X_RES].constraint.word_list))
-		{
-		  scanner->x_res = 200;
-		}
-	      if (!m3096g_valid_number (scanner->y_res,
-			      scanner->opt[OPT_Y_RES].constraint.word_list))
-		{
-		  scanner->y_res = 200;
-		}
-	      scanner->rif = 0;
-	    }
-	  else if (strcmp (val, grayStr) == 0)
-	    {
-	      if (scanner->composition == WD_comp_GS)
-		return SANE_STATUS_GOOD;
-	      scanner->composition = WD_comp_GS;
-	      scanner->bitsperpixel = 8;
-	      scanner->opt[OPT_X_RES].constraint.word_list = x_res_list2;
-	      scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list2;
-	      scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_INACTIVE;
-	      scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_INACTIVE;
-	      if (!m3096g_valid_number (scanner->x_res,
-			      scanner->opt[OPT_X_RES].constraint.word_list))
-		{
-		  scanner->x_res = 400;
-		}
-	      if (!m3096g_valid_number (scanner->y_res,
-			      scanner->opt[OPT_Y_RES].constraint.word_list))
-		{
-		  scanner->y_res = 400;
-		}
-	      scanner->rif = 1;
-	    }
-	  else
-	    {
-	      return SANE_STATUS_INVAL;
-	    }
-	  if (info)
-	    {
-	      *info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-	    }
-	  return SANE_STATUS_GOOD;
+        case OPT_MODE:
+          if (strcmp (val, lineStr) == 0)
+            {
+              if (scanner->composition == WD_comp_LA)
+                return SANE_STATUS_GOOD;
+              scanner->composition = WD_comp_LA;
+              scanner->bitsperpixel = 1;
+              scanner->threshold = 0;
+              scanner->opt[OPT_X_RES].constraint.word_list = x_res_list;
+              scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list;
+              scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_INACTIVE;
+              scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_SOFT_DETECT
+                | SANE_CAP_SOFT_SELECT;
+              if (!m3096g_valid_number (scanner->x_res,
+                              scanner->opt[OPT_X_RES].constraint.word_list))
+                {
+                  scanner->x_res = 240;
+                }
+              if (!m3096g_valid_number (scanner->y_res,
+                              scanner->opt[OPT_Y_RES].constraint.word_list))
+                {
+                  scanner->y_res = 240;
+                }
+              scanner->rif = 0;
+            }
+          else if (strcmp (val, halfStr) == 0)
+            {
+              if (scanner->composition == WD_comp_HT)
+                return SANE_STATUS_GOOD;
+              scanner->composition = WD_comp_HT;
+              scanner->bitsperpixel = 1;
+              scanner->opt[OPT_X_RES].constraint.word_list = x_res_list;
+              scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list;
+              scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_SOFT_DETECT
+                | SANE_CAP_SOFT_SELECT;
+              scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_INACTIVE;
+              if (!m3096g_valid_number (scanner->x_res,
+                              scanner->opt[OPT_X_RES].constraint.word_list))
+                {
+                  scanner->x_res = 200;
+                }
+              if (!m3096g_valid_number (scanner->y_res,
+                              scanner->opt[OPT_Y_RES].constraint.word_list))
+                {
+                  scanner->y_res = 200;
+                }
+              scanner->rif = 0;
+            }
+          else if (strcmp (val, grayStr) == 0)
+            {
+              if (scanner->composition == WD_comp_GS)
+                return SANE_STATUS_GOOD;
+              scanner->composition = WD_comp_GS;
+              scanner->bitsperpixel = 8;
+              scanner->opt[OPT_X_RES].constraint.word_list = x_res_list2;
+              scanner->opt[OPT_Y_RES].constraint.word_list = y_res_list2;
+              scanner->opt[OPT_BRIGHTNESS].cap = SANE_CAP_INACTIVE;
+              scanner->opt[OPT_THRESHOLD].cap = SANE_CAP_INACTIVE;
+              if (!m3096g_valid_number (scanner->x_res,
+                              scanner->opt[OPT_X_RES].constraint.word_list))
+                {
+                  scanner->x_res = 400;
+                }
+              if (!m3096g_valid_number (scanner->y_res,
+                              scanner->opt[OPT_Y_RES].constraint.word_list))
+                {
+                  scanner->y_res = 400;
+                }
+              scanner->rif = 1;
+            }
+          else
+            {
+              return SANE_STATUS_INVAL;
+            }
+          if (info)
+            {
+              *info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
+            }
+          return SANE_STATUS_GOOD;
 
-	case OPT_TYPE:
-	  return SANE_STATUS_INVAL;
+        case OPT_TYPE:
+          return SANE_STATUS_INVAL;
 
-	case OPT_PRESCAN:
-	  return SANE_STATUS_INVAL;
+        case OPT_PRESCAN:
+          return SANE_STATUS_INVAL;
 
-	case OPT_X_RES:
-	  scanner->x_res = (*(SANE_Word *) val);
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_X_RES:
+          scanner->x_res = (*(SANE_Word *) val);
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
-	case OPT_Y_RES:
-	  scanner->y_res = (*(SANE_Word *) val);
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS;
-	  return SANE_STATUS_GOOD;
+        case OPT_Y_RES:
+          scanner->y_res = (*(SANE_Word *) val);
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS;
+          return SANE_STATUS_GOOD;
 
 #ifdef no_preview_res
-	case OPT_PREVIEW_RES:
-	  return SANE_STATUS_INVAL;
+        case OPT_PREVIEW_RES:
+          return SANE_STATUS_INVAL;
 #endif
 
-	case OPT_TL_X:
-	  scanner->tl_x = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_x));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
-	  return SANE_STATUS_GOOD;
+        case OPT_TL_X:
+          scanner->tl_x = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_x));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
+          return SANE_STATUS_GOOD;
 
-	case OPT_TL_Y:
-	  scanner->tl_y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_y));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
-	  return SANE_STATUS_GOOD;
+        case OPT_TL_Y:
+          scanner->tl_y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->tl_y));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
+          return SANE_STATUS_GOOD;
 
-	case OPT_BR_X:
-	  scanner->br_x = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_x));
-	  scanner->paper_width_X = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
-	  return SANE_STATUS_GOOD;
+        case OPT_BR_X:
+          scanner->br_x = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_x));
+          scanner->paper_width_X = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
+          return SANE_STATUS_GOOD;
 
-	case OPT_BR_Y:
-	  scanner->br_y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_y));
-	  scanner->paper_length_Y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
-	  if (info)
-	    *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
-	  return SANE_STATUS_GOOD;
+        case OPT_BR_Y:
+          scanner->br_y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          *(SANE_Word *) val = SANE_FIX (iluToMm (scanner->br_y));
+          scanner->paper_length_Y = mmToIlu (SANE_UNFIX (*(SANE_Word *) val));
+          if (info)
+            *info |= SANE_INFO_RELOAD_PARAMS | SANE_INFO_INEXACT;
+          return SANE_STATUS_GOOD;
 
-	case OPT_AVERAGING:
-	  return SANE_STATUS_INVAL;
+        case OPT_AVERAGING:
+          return SANE_STATUS_INVAL;
 
-	case OPT_BRIGHTNESS:
-	  scanner->brightness = *(SANE_Word *) val;
-	  return SANE_STATUS_GOOD;
+        case OPT_BRIGHTNESS:
+          scanner->brightness = *(SANE_Word *) val;
+          return SANE_STATUS_GOOD;
 
-	case OPT_THRESHOLD:
-	  scanner->threshold = *(SANE_Word *) val;
-	  return SANE_STATUS_GOOD;
+        case OPT_THRESHOLD:
+          scanner->threshold = *(SANE_Word *) val;
+          return SANE_STATUS_GOOD;
 
-	}			/* switch */
-    }				/* else */
+        }                       /* switch */
+    }                           /* else */
   return SANE_STATUS_INVAL;
-}				/* sane_control_option */
+}                               /* sane_control_option */
 
 
 SANE_Status
@@ -671,20 +677,20 @@ sane_start (SANE_Handle handle)
     }
 
   if (scanner->sfd < 0)
-    {				/* first call */
+    {                           /* first call */
       if (sanei_scsi_open (scanner->sane.name, &(scanner->sfd),
-			   sense_handler, 0) != SANE_STATUS_GOOD)
-	{
-	  DBG (1, "sane_start: open of %s failed:\n",
-	       scanner->sane.name);
-	  return SANE_STATUS_INVAL;
-	}
+                           sense_handler, 0) != SANE_STATUS_GOOD)
+        {
+          DBG (1, "sane_start: open of %s failed:\n",
+               scanner->sane.name);
+          return SANE_STATUS_INVAL;
+        }
     }
   scanner->scanning = SANE_TRUE;
 
 
   if ((ret = m3096g_check_values (scanner)) != 0)
-    {				/* Verify values */
+    {                           /* Verify values */
       DBG (1, "sane_start: ERROR: invalid scan-values\n");
       sanei_scsi_close (scanner->sfd);
       scanner->scanning = SANE_FALSE;
@@ -769,7 +775,7 @@ sane_start (SANE_Handle handle)
 
   DBG (10, "sane_start: ok\n");
   return SANE_STATUS_GOOD;
-}				/* sane_start */
+}                               /* sane_start */
 
 
 SANE_Status
@@ -790,12 +796,12 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
   DBG (10, "\tpixels_per_line %d\n", params->pixels_per_line);
   DBG (10, "\tbytes_per_line %d\n", params->bytes_per_line);
   return SANE_STATUS_GOOD;
-}				/* sane_get_parameters */
+}                               /* sane_get_parameters */
 
 
 SANE_Status
 sane_read (SANE_Handle handle, SANE_Byte * buf,
-	   SANE_Int max_len, SANE_Int * len)
+           SANE_Int max_len, SANE_Int * len)
 {
   struct m3096g *scanner = handle;
   ssize_t nread;
@@ -816,23 +822,23 @@ sane_read (SANE_Handle handle, SANE_Byte * buf,
   if (nread < 0)
     {
       if (errno == EAGAIN)
-	{
-	  return SANE_STATUS_GOOD;
-	}
+        {
+          return SANE_STATUS_GOOD;
+        }
       else
-	{
-	  do_cancel (scanner);
-	  return SANE_STATUS_IO_ERROR;
-	}
+        {
+          do_cancel (scanner);
+          return SANE_STATUS_IO_ERROR;
+        }
     }
 
   *len = nread;
 
   if (nread == 0)
-    return do_eof (scanner);	/* close pipe */
+    return do_eof (scanner);    /* close pipe */
 
   return SANE_STATUS_GOOD;
-}				/* sane_read */
+}                               /* sane_read */
 
 
 void
@@ -840,7 +846,7 @@ sane_cancel (SANE_Handle h)
 {
   DBG (10, "sane_cancel\n");
   do_cancel ((struct m3096g *) h);
-}				/* sane_cancel */
+}                               /* sane_cancel */
 
 
 void
@@ -849,7 +855,7 @@ sane_close (SANE_Handle handle)
   DBG (10, "sane_close\n");
   if (((struct m3096g *) handle)->scanning == SANE_TRUE)
     do_cancel (handle);
-}				/* sane_close */
+}                               /* sane_close */
 
 
 void
@@ -866,7 +872,7 @@ sane_exit (void)
       free (dev->buffer);
       free (dev);
     }
-}				/* sane_exit */
+}                               /* sane_exit */
 
 /* }################ internal (support) routines ################{ */
 
@@ -881,14 +887,14 @@ attach_scanner (const char *devicename, struct m3096g **devp)
   for (dev = first_dev; dev; dev = dev->next)
     {
       if (strcmp (dev->sane.name, devicename) == 0)
-	{
-	  if (devp)
-	    {
-	      *devp = dev;
-	    }
-	  DBG (5, "attach_scanner: scanner already attached (is ok)!\n");
-	  return SANE_STATUS_GOOD;
-	}
+        {
+          if (devp)
+            {
+              *devp = dev;
+            }
+          DBG (5, "attach_scanner: scanner already attached (is ok)!\n");
+          return SANE_STATUS_GOOD;
+        }
     }
 
   DBG (15, "attach_scanner: opening %s\n", devicename);
@@ -964,19 +970,19 @@ attach_scanner (const char *devicename, struct m3096g **devp)
   DBG (15, "attach_scanner: done\n");
 
   return SANE_STATUS_GOOD;
-}				/* attach_scanner */
+}                               /* attach_scanner */
 
 static SANE_Status
 attach_one (const char *name)
 {
   return attach_scanner (name, 0);
-}				/* attach_one */
+}                               /* attach_one */
 
 static SANE_Status
 sense_handler (int scsi_fd, u_char * result, void *arg)
 {
   return request_sense_parse (result);
-}				/* sense_handler */
+}                               /* sense_handler */
 
 static int
 request_sense_parse (u_char * sensed_data)
@@ -990,141 +996,141 @@ request_sense_parse (u_char * sensed_data)
 
   switch (sense)
     {
-    case 0x0:			/* No Sense */
+    case 0x0:                   /* No Sense */
       DBG (5, "\t%d/%d/%d: Scanner ready\n", sense, asc, ascq);
       return SANE_STATUS_GOOD;
 
-    case 0x2:			/* Not Ready */
+    case 0x2:                   /* Not Ready */
       if ((0x00 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Not Ready \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Not Ready \n", sense, asc, ascq);
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
-    case 0x3:			/* Medium Error */
+    case 0x3:                   /* Medium Error */
       if ((0x80 == asc) && (0x01 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Jam \n", sense, asc, ascq);
-	  ret = SANE_STATUS_JAMMED;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Jam \n", sense, asc, ascq);
+          ret = SANE_STATUS_JAMMED;
+        }
       else if ((0x80 == asc) && (0x02 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: ADF cover open \n", sense, asc, ascq);
-	  ret = SANE_STATUS_COVER_OPEN;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: ADF cover open \n", sense, asc, ascq);
+          ret = SANE_STATUS_COVER_OPEN;
+        }
       else if ((0x80 == asc) && (0x03 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: ADF empty \n", sense, asc, ascq);
-	  ret = SANE_STATUS_NO_DOCS;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: ADF empty \n", sense, asc, ascq);
+          ret = SANE_STATUS_NO_DOCS;
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
-    case 0x4:			/* Hardware Error */
+    case 0x4:                   /* Hardware Error */
       if ((0x80 == asc) && (0x01 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: FB motor fuse \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: FB motor fuse \n", sense, asc, ascq);
+        }
       else if ((0x80 == asc) && (0x02 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: heater fuse \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: heater fuse \n", sense, asc, ascq);
+        }
       else if ((0x80 == asc) && (0x04 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: ADF motor fuse \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: ADF motor fuse \n", sense, asc, ascq);
+        }
       else if ((0x80 == asc) && (0x05 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: mechanical alarm \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: mechanical alarm \n", sense, asc, ascq);
+        }
       else if ((0x80 == asc) && (0x06 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: optical alarm \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: optical alarm \n", sense, asc, ascq);
+        }
       else if ((0x44 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: abnormal internal target \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: abnormal internal target \n", sense, asc, ascq);
+        }
       else if ((0x47 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: SCSI parity error \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: SCSI parity error \n", sense, asc, ascq);
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
-    case 0x5:			/* Illegal Request */
+    case 0x5:                   /* Illegal Request */
       if ((0x20 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Invalid command \n", sense, asc, ascq);
-	  ret = SANE_STATUS_INVAL;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Invalid command \n", sense, asc, ascq);
+          ret = SANE_STATUS_INVAL;
+        }
       else if ((0x24 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Invalid field in CDB \n", sense, asc, ascq);
-	  ret = SANE_STATUS_INVAL;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Invalid field in CDB \n", sense, asc, ascq);
+          ret = SANE_STATUS_INVAL;
+        }
       else if ((0x25 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Unsupported logical unit \n", sense, asc, ascq);
-	  ret = SANE_STATUS_UNSUPPORTED;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Unsupported logical unit \n", sense, asc, ascq);
+          ret = SANE_STATUS_UNSUPPORTED;
+        }
       else if ((0x26 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Invalid field in parm list \n", sense, asc, ascq);
-	  ret = SANE_STATUS_INVAL;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Invalid field in parm list \n", sense, asc, ascq);
+          ret = SANE_STATUS_INVAL;
+        }
       else if ((0x2C == asc) && (0x02 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: wrong window combination \n", sense, asc, ascq);
-	  ret = SANE_STATUS_INVAL;
-	}
+        {
+          DBG (1, "\t%d/%d/%d: wrong window combination \n", sense, asc, ascq);
+          ret = SANE_STATUS_INVAL;
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
-    case 0x6:			/* Unit Attention */
+    case 0x6:                   /* Unit Attention */
       if ((0x00 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: UNIT ATTENTION \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: UNIT ATTENTION \n", sense, asc, ascq);
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
-    case 0xb:			/* Aborted Command */
+    case 0xb:                   /* Aborted Command */
       if ((0x43 == asc) && (0x00 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Message error \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Message error \n", sense, asc, ascq);
+        }
       else if ((0x80 == asc) && (0x01 == ascq))
-	{
-	  DBG (1, "\t%d/%d/%d: Image transfer error \n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\t%d/%d/%d: Image transfer error \n", sense, asc, ascq);
+        }
       else
-	{
-	  DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
-	}
+        {
+          DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
+        }
       break;
 
     default:
       DBG (1, "\tUnknown - Sense=%d, ASC=%d, ASCQ=%d\n", sense, asc, ascq);
     }
   return ret;
-}				/* request_sense_parse */
+}                               /* request_sense_parse */
 
 static int
 m3096g_identify_scanner (struct m3096g *s)
@@ -1138,7 +1144,7 @@ m3096g_identify_scanner (struct m3096g *s)
 
   vendor[8] = product[0x10] = version[4] = 0;
 
-  m3096g_do_inquiry (s);	/* get inquiry */
+  m3096g_do_inquiry (s);        /* get inquiry */
   if (get_IN_periph_devtype (s->buffer) != IN_periph_devtype_scanner)
     {
       DBG (5, "identify_scanner: not a scanner\n");
@@ -1167,7 +1173,7 @@ m3096g_identify_scanner (struct m3096g *s)
   while (*(pp - 1) == ' ')
     {
       *pp-- = '\0';
-    }				/* leave one blank at the end! */
+    }                           /* leave one blank at the end! */
 
   pp = &version[4];
   version[4] = ' ';
@@ -1189,21 +1195,21 @@ m3096g_identify_scanner (struct m3096g *s)
 
   /* Here's where to add code to fetch the "vital product data"!!! */
 
-  s->autofeeder = 1;		/* inferred by product title M3096G */
+  s->autofeeder = 1;            /* inferred by product title M3096G */
 
   return 0;
-}				/* m3096g_identify_scanner */
+}                               /* m3096g_identify_scanner */
 
 static void
 m3096g_do_inquiry (struct m3096g *s)
 {
   DBG (10, "do_inquiry\n");
 
-  memset (s->buffer, '\0', 256);	/* clear buffer */
+  memset (s->buffer, '\0', 256);        /* clear buffer */
   set_IN_return_size (inquiryB.cmd, 96);
 
   do_scsi_cmd (s->sfd, inquiryB.cmd, inquiryB.size, s->buffer, 96);
-}				/* m3096g_do_inquiry */
+}                               /* m3096g_do_inquiry */
 
 static int
 do_scsi_cmd (int fd, char *cmd, int cmd_len, char *out, size_t out_len)
@@ -1217,7 +1223,7 @@ do_scsi_cmd (int fd, char *cmd, int cmd_len, char *out, size_t out_len)
   if ((out_len != 0) && (out_len != ol))
     {
       DBG (1, "sanei_scsi_cmd: asked %lu bytes, got %lu\n",
-	   (u_long) out_len, (u_long) ol);
+           (u_long) out_len, (u_long) ol);
     }
   if (ret)
     {
@@ -1228,7 +1234,7 @@ do_scsi_cmd (int fd, char *cmd, int cmd_len, char *out, size_t out_len)
     hexdump (15, ">rslt>", out, (out_len > 0x60) ? 0x60 : out_len);
 
   return ret;
-}				/* do_scsi_cmd */
+}                               /* do_scsi_cmd */
 
 static void
 hexdump (int level, char *comment, unsigned char *p, int l)
@@ -1242,22 +1248,22 @@ hexdump (int level, char *comment, unsigned char *p, int l)
   for (i = 0; i < l; i++, p++)
     {
       if ((i % 16) == 0)
-	{
-	  if (ptr != line)
-	    {
-	      *ptr = '\0';
-	      DBG (level, "%s\n", line);
-	      ptr = line;
-	    }
-	  sprintf (ptr, "%3.3d:", i);
-	  ptr += 4;
-	}
+        {
+          if (ptr != line)
+            {
+              *ptr = '\0';
+              DBG (level, "%s\n", line);
+              ptr = line;
+            }
+          sprintf (ptr, "%3.3d:", i);
+          ptr += 4;
+        }
       sprintf (ptr, " %2.2x", *p);
       ptr += 3;
     }
   *ptr = '\0';
   DBG (level, "%s\n", line);
-}				/* hexdump */
+}                               /* hexdump */
 
 static SANE_Status
 init_options (struct m3096g *scanner)
@@ -1270,6 +1276,7 @@ init_options (struct m3096g *scanner)
 
   for (i = 0; i < NUM_OPTIONS; ++i)
     {
+      scanner->opt[i].name = "filler";
       scanner->opt[i].size = sizeof (SANE_Word);
       scanner->opt[i].cap = SANE_CAP_INACTIVE;
     }
@@ -1295,7 +1302,7 @@ init_options (struct m3096g *scanner)
   if (scanner->autofeeder)
     {
       scanner->opt[OPT_SOURCE].cap = SANE_CAP_SOFT_SELECT
-	| SANE_CAP_SOFT_DETECT;
+        | SANE_CAP_SOFT_DETECT;
     }
 
   /* scan mode */
@@ -1447,7 +1454,7 @@ init_options (struct m3096g *scanner)
 
   DBG (10, "init_options:ok\n");
   return SANE_STATUS_GOOD;
-}				/* init_options */
+}                               /* init_options */
 
 static int
 m3096g_check_values (struct m3096g *s)
@@ -1455,11 +1462,11 @@ m3096g_check_values (struct m3096g *s)
   if (s->use_adf == SANE_TRUE && s->autofeeder == 0)
     {
       DBG (1, "m3096g_check_values: %s\n",
-	   "ERROR: ADF-MODE NOT SUPPORTED BY SCANNER, ABORTING");
+           "ERROR: ADF-MODE NOT SUPPORTED BY SCANNER, ABORTING");
       return (1);
     }
   return (0);
-}				/* m3096g_check_values */
+}                               /* m3096g_check_values */
 
 /* m3096g_free_scanner should go through the following sequence:
  * OBJECT POSITION DISCHARGE
@@ -1484,7 +1491,7 @@ m3096g_free_scanner (struct m3096g *s)
 
   DBG (10, "m3096g_free_scanner: ok\n");
   return ret;
-}				/* m3096g_free_scanner */
+}                               /* m3096g_free_scanner */
 
 /* m3096g_grab_scanner should go through the following command sequence:
  * TEST UNIT READY
@@ -1514,7 +1521,7 @@ m3096g_grab_scanner (struct m3096g *s)
 
   DBG (10, "m3096g_grab_scanner: ok\n");
   return 0;
-}				/* m3096g_grab_scanner */
+}                               /* m3096g_grab_scanner */
 
 /* 
  *  wait_scanner spins until TEST_UNIT_READY returns 0 (GOOD)
@@ -1532,31 +1539,31 @@ wait_scanner (struct m3096g *s)
   while (ret != 0)
     {
       ret = do_scsi_cmd (s->sfd, test_unit_readyB.cmd,
-			 test_unit_readyB.size, 0, 0);
+                         test_unit_readyB.size, 0, 0);
       if (ret == SANE_STATUS_DEVICE_BUSY)
-	{
-	  usleep (500000);	/* wait 0.5 seconds */
-	  /* 20 sec. max (prescan takes up to 15 sec. */
-	  if (cnt++ > 40)
-	    {
-	      DBG (1, "wait_scanner: scanner does NOT get ready\n");
-	      return -1;
-	    }
-	}
+        {
+          usleep (500000);      /* wait 0.5 seconds */
+          /* 20 sec. max (prescan takes up to 15 sec. */
+          if (cnt++ > 40)
+            {
+              DBG (1, "wait_scanner: scanner does NOT get ready\n");
+              return -1;
+            }
+        }
       else if (ret == SANE_STATUS_GOOD)
-	{
-	  DBG (10, "wait_scanner: ok\n");
-	  return ret;
-	}
+        {
+          DBG (10, "wait_scanner: ok\n");
+          return ret;
+        }
       else
-	{
-	  DBG (1, "wait_scanner: unit ready failed (%s)\n",
-	       sane_strstatus (ret));
-	}
+        {
+          DBG (1, "wait_scanner: unit ready failed (%s)\n",
+               sane_strstatus (ret));
+        }
     }
   DBG (10, "wait_scanner: ok\n");
   return 0;
-}				/* wait_scanner */
+}                               /* wait_scanner */
 
 static int
 m3096g_object_position (struct m3096g *s)
@@ -1575,7 +1582,7 @@ m3096g_object_position (struct m3096g *s)
   memcpy (s->buffer, object_positionB.cmd, object_positionB.size);
   set_OP_autofeed (s->buffer, OP_Feed);
   ret = do_scsi_cmd (s->sfd, s->buffer,
-		     object_positionB.size, NULL, 0);
+                     object_positionB.size, NULL, 0);
   if (ret != SANE_STATUS_GOOD)
     {
       return ret;
@@ -1583,7 +1590,7 @@ m3096g_object_position (struct m3096g *s)
   wait_scanner (s);
   DBG (10, "m3096g_object_position: ok\n");
   return ret;
-}				/* m3096g_object_position */
+}                               /* m3096g_object_position */
 
 static SANE_Status
 do_cancel (struct m3096g *scanner)
@@ -1592,7 +1599,7 @@ do_cancel (struct m3096g *scanner)
   swap_res (scanner);
   scanner->scanning = SANE_FALSE;
 
-  do_eof (scanner);		/* close pipe and reposition scanner */
+  do_eof (scanner);             /* close pipe and reposition scanner */
 
   if (scanner->reader_pid > 0)
     {
@@ -1601,7 +1608,7 @@ do_cancel (struct m3096g *scanner)
       /* ensure child knows it's time to stop: */
       kill (scanner->reader_pid, SIGTERM);
       while (wait (&exit_status) != scanner->reader_pid)
-	DBG (50, "wait for scanner to stop\n");
+        DBG (50, "wait for scanner to stop\n");
       ;
       scanner->reader_pid = 0;
     }
@@ -1615,12 +1622,12 @@ do_cancel (struct m3096g *scanner)
     }
 
   return SANE_STATUS_CANCELLED;
-}				/* do_cancel */
+}                               /* do_cancel */
 
 static void
 swap_res (struct m3096g *s)
-{				/* for the time being, do nothing */
-}				/* swap_res */
+{                               /* for the time being, do nothing */
+}                               /* swap_res */
 
 static int
 m3096g_object_discharge (struct m3096g *s)
@@ -1636,11 +1643,11 @@ m3096g_object_discharge (struct m3096g *s)
   memcpy (s->buffer, object_positionB.cmd, object_positionB.size);
   set_OP_autofeed (s->buffer, OP_Discharge);
   ret = do_scsi_cmd (s->sfd, s->buffer,
-		     object_positionB.size, NULL, 0);
+                     object_positionB.size, NULL, 0);
   wait_scanner (s);
   DBG (10, "m3096g_object_discharge: ok\n");
   return ret;
-}				/* m3096g_object_discharge */
+}                               /* m3096g_object_discharge */
 
 static int
 m3096g_set_window_param (struct m3096g *s, int prescan)
@@ -1651,35 +1658,35 @@ m3096g_set_window_param (struct m3096g *s, int prescan)
 
   wait_scanner (s);
   DBG (10, "set_window_param\n");
-  memset (buffer_r, '\0', max_WDB_size);	/* clear buffer */
+  memset (buffer_r, '\0', max_WDB_size);        /* clear buffer */
   memcpy (buffer_r, window_descriptor_blockB.cmd,
-	  window_descriptor_blockB.size);	/* copy preset data */
+          window_descriptor_blockB.size);       /* copy preset data */
 
-  set_WD_wid (buffer_r, WD_wid_all);	/* window identifier */
+  set_WD_wid (buffer_r, WD_wid_all);    /* window identifier */
 
-  set_WD_Xres (buffer_r, s->x_res);	/* x resolution in dpi */
-  set_WD_Yres (buffer_r, s->y_res);	/* y resolution in dpi */
+  set_WD_Xres (buffer_r, s->x_res);     /* x resolution in dpi */
+  set_WD_Yres (buffer_r, s->y_res);     /* y resolution in dpi */
 
-  set_WD_ULX (buffer_r, s->tl_x);	/* top left x */
-  set_WD_ULY (buffer_r, s->tl_y);	/* top left y */
+  set_WD_ULX (buffer_r, s->tl_x);       /* top left x */
+  set_WD_ULY (buffer_r, s->tl_y);       /* top left y */
 
   width = s->br_x - s->tl_x;
   /* increase initial width until we've an full number of bytes in line */
   if (s->x_res == 0)
     {
       while (pixels = 400 * width / 1200,
-	     (s->bitsperpixel * pixels) % 8)
-	{
-	  width++;
-	}
+             (s->bitsperpixel * pixels) % 8)
+        {
+          width++;
+        }
     }
   else
     {
       while (pixels = s->x_res * width / 1200,
-	     (s->bitsperpixel * pixels) % 8)
-	{
-	  width++;
-	}
+             (s->bitsperpixel * pixels) % 8)
+        {
+          width++;
+        }
     }
   length = s->br_y - s->tl_y;
 
@@ -1687,10 +1694,10 @@ m3096g_set_window_param (struct m3096g *s, int prescan)
       && width <= 14592)
     {
       if (length > 19842
-	  && length < (19842 + 600))
-	{
-	  length = 19840;
-	}
+          && length < (19842 + 600))
+        {
+          length = 19840;
+        }
     }
 
   set_WD_width (buffer_r, width);
@@ -1731,16 +1738,16 @@ m3096g_set_window_param (struct m3096g *s, int prescan)
        width, s->br_y - s->tl_y);
 
   /* prepare SCSI-BUFFER */
-  memcpy (s->buffer, set_windowB.cmd, set_windowB.size);	/* SET-WINDOW cmd */
-  memcpy ((s->buffer + set_windowB.size),	/* add WPDB */
-	  window_parameter_data_blockB.cmd,
-	  window_parameter_data_blockB.size);
-  set_WPDB_wdblen ((s->buffer + set_windowB.size), used_WDB_size);	/* set WD_len */
+  memcpy (s->buffer, set_windowB.cmd, set_windowB.size);        /* SET-WINDOW cmd */
+  memcpy ((s->buffer + set_windowB.size),       /* add WPDB */
+          window_parameter_data_blockB.cmd,
+          window_parameter_data_blockB.size);
+  set_WPDB_wdblen ((s->buffer + set_windowB.size), used_WDB_size);      /* set WD_len */
   memcpy (s->buffer + set_windowB.size + window_parameter_data_blockB.size,
-	  buffer_r, window_descriptor_blockB.size);
+          buffer_r, window_descriptor_blockB.size);
 
   set_SW_xferlen (s->buffer, (window_parameter_data_blockB.size +
-			      window_descriptor_blockB.size));
+                              window_descriptor_blockB.size));
 
 #if 0
   hexdump (15, "Window set", buffer_r, s->wdb_len);
@@ -1749,14 +1756,14 @@ m3096g_set_window_param (struct m3096g *s, int prescan)
 #endif
 
   ret = do_scsi_cmd (s->sfd, s->buffer, set_windowB.size +
-		     window_parameter_data_blockB.size +
-		     window_descriptor_blockB.size,
-		     NULL, 0);
+                     window_parameter_data_blockB.size +
+                     window_descriptor_blockB.size,
+                     NULL, 0);
   if (ret)
     return ret;
   DBG (10, "set_window_param: ok\n");
   return ret;
-}				/* m3096g_set_window_param */
+}                               /* m3096g_set_window_param */
 
 static size_t
 max_string_size (const SANE_String_Const strings[])
@@ -1768,10 +1775,10 @@ max_string_size (const SANE_String_Const strings[])
     {
       size = strlen (strings[i]) + 1;
       if (size > max_size)
-	max_size = size;
+        max_size = size;
     }
   return max_size;
-}				/* max_string_size */
+}                               /* max_string_size */
 
 static int
 m3096g_start_scan (struct m3096g *s)
@@ -1783,14 +1790,14 @@ m3096g_start_scan (struct m3096g *s)
     return ret;
   DBG (10, "m3096g_start_scan:ok\n");
   return ret;
-}				/* m3096g_start_scan */
+}                               /* m3096g_start_scan */
 
 static void
 sigterm_handler (int signal)
 {
-  sanei_scsi_req_flush_all ();	/* flush SCSI queue */
+  sanei_scsi_req_flush_all ();  /* flush SCSI queue */
   _exit (SANE_STATUS_GOOD);
-}				/* sigterm_handler */
+}                               /* sigterm_handler */
 
 /* This function is executed as a child process. */
 static int
@@ -1802,9 +1809,6 @@ reader_process (struct m3096g *scanner, int pipe_fd)
   FILE *fp;
   sigset_t sigterm_set;
   struct SIGACTION act;
-  unsigned int bpl, linesPerBuf, lineOffset;
-  unsigned char r_data, g_data, b_data;
-  unsigned int j, line;
 
   DBG (10, "reader_process started\n");
 
@@ -1823,7 +1827,7 @@ reader_process (struct m3096g *scanner, int pipe_fd)
   data_left = bytes_per_line (scanner) *
     lines_per_scan (scanner);
 
-  m3096g_trim_rowbufsize (scanner);	/* trim bufsize */
+  m3096g_trim_rowbufsize (scanner);     /* trim bufsize */
 
   DBG (10, "reader_process: reading %u bytes in blocks of %u bytes\n",
        data_left, scanner->row_bufsize);
@@ -1836,27 +1840,27 @@ reader_process (struct m3096g *scanner, int pipe_fd)
   do
     {
       data_to_read = (data_left < scanner->row_bufsize)
-	? data_left
-	: scanner->row_bufsize;
+        ? data_left
+        : scanner->row_bufsize;
 
       status = m3096g_read_data_block (scanner, data_to_read);
       if (status == 0)
-	{
-	  continue;
-	}
+        {
+          continue;
+        }
       if (status == -1)
-	{
-	  DBG (1, "reader_process: unable to get image data from scanner!\n");
-	  fclose (fp);
-	  return (-1);
-	}
+        {
+          DBG (1, "reader_process: unable to get image data from scanner!\n");
+          fclose (fp);
+          return (-1);
+        }
 
       fwrite (scanner->buffer, 1, data_to_read, fp);
       fflush (fp);
 
       data_left -= data_to_read;
       DBG (10, "reader_process: buffer of %d bytes read; %d bytes to go\n",
-	   data_to_read, data_left);
+           data_to_read, data_left);
     }
   while (data_left);
 
@@ -1865,7 +1869,7 @@ reader_process (struct m3096g *scanner, int pipe_fd)
   DBG (10, "reader_process: finished\n");
 
   return 0;
-}				/* reader_process */
+}                               /* reader_process */
 
 static SANE_Status
 do_eof (struct m3096g *scanner)
@@ -1878,7 +1882,7 @@ do_eof (struct m3096g *scanner)
       scanner->pipe = -1;
     }
   return SANE_STATUS_EOF;
-}				/* do_eof */
+}                               /* do_eof */
 
 static int
 pixels_per_line (struct m3096g *s)
@@ -1893,7 +1897,7 @@ pixels_per_line (struct m3096g *s)
       dots = s->x_res * (s->br_x - s->tl_x) / 1200;
     }
   return dots;
-}				/* pixels_per_line */
+}                               /* pixels_per_line */
 
 static int
 lines_per_scan (struct m3096g *s)
@@ -1901,13 +1905,13 @@ lines_per_scan (struct m3096g *s)
   int lines;
   lines = s->y_res * (s->br_y - s->tl_y) / 1200;
   return lines;
-}				/* lines_per_scan */
+}                               /* lines_per_scan */
 
 static int
 bytes_per_line (struct m3096g *s)
 {
   return (pixels_per_line (s) * s->bitsperpixel + 7) / 8;
-}				/* bytes_per_line */
+}                               /* bytes_per_line */
 
 static void
 m3096g_trim_rowbufsize (struct m3096g *s)
@@ -1918,9 +1922,9 @@ m3096g_trim_rowbufsize (struct m3096g *s)
     {
       s->row_bufsize = s->row_bufsize - (s->row_bufsize % row_len);
       DBG (10, "trim_rowbufsize to %d (%d lines)\n",
-	   s->row_bufsize, s->row_bufsize / row_len);
+           s->row_bufsize, s->row_bufsize / row_len);
     }
-}				/* m3096g_trim_rowbufsize */
+}                               /* m3096g_trim_rowbufsize */
 
 static int
 m3096g_read_data_block (struct m3096g *s, unsigned int length)
@@ -1946,20 +1950,20 @@ m3096g_read_data_block (struct m3096g *s, unsigned int length)
       return length;
     }
 #endif
-}				/* m3096g_read_data_block */
+}                               /* m3096g_read_data_block */
 
 static int
-m3096g_valid_number (int value, int *acceptable)
+m3096g_valid_number (int value, const int *acceptable)
 {
   int index, max = acceptable[0];
 
   for (index = 1; index < max + 1; index++)
     {
       if (value == acceptable[index])
-	return 1;
+        return 1;
     }
   return 0;
-}				/* m3096g_valid_number */
+}                               /* m3096g_valid_number */
 
 /******************************************************************************
 }#############################################################################

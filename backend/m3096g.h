@@ -49,8 +49,11 @@ static const char RCSid_h[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
- * Revision 1.1.2.1  2000/01/25 15:43:45  pere
- * Added backends sp15c (v1.11) and m3096g (v1.10).
+ * Revision 1.1.2.2  2000/01/26 03:51:47  pere
+ * Updated backends sp15c (v1.12) and m3096g (v1.11).
+ *
+ * Revision 1.8  2000/01/25 16:25:34  bentson
+ * clean-up compiler warnings
  *
  * Revision 1.7  2000/01/05 05:26:00  bentson
  * indent to barfin' GNU style
@@ -307,6 +310,6 @@ static SANE_Status
   attach_one (const char *name);
 
 static int
-  m3096g_valid_number (int value, int *acceptable);
+  m3096g_valid_number (int value, const int *acceptable);
 
 #endif /* M3096G_H */

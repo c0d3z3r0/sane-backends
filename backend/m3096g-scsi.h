@@ -49,8 +49,8 @@ static const char RCSid_sh[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
- * Revision 1.1.2.1  2000/01/25 15:43:48  pere
- * Added backends sp15c (v1.11) and m3096g (v1.10).
+ * Revision 1.1.2.2  2000/01/26 03:51:45  pere
+ * Updated backends sp15c (v1.12) and m3096g (v1.11).
  *
  * Revision 1.6  2000/01/05 05:27:19  bentson
  * indent to barfin' GNU style

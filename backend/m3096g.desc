@@ -10,7 +10,7 @@
 ;
 
 :backend "m3096g"               ; name of backend
-:version "1.10"                    ; version of backend
+:version "1.11"                    ; version of backend
 :status :beta                    ; :alpha, :beta, :stable, :new
 :manpage "sane-fujitsu"          ; name of manpage (if it exists)
 :url "http://www.aa.net/~bentson/sane.html" ; backend's web page
