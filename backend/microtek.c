@@ -55,7 +55,7 @@
 
 #define MICROTEK_MAJOR 0
 #define MICROTEK_MINOR 12
-#define MICROTEK_PATCH 0
+#define MICROTEK_PATCH 1
 
 #include <stdlib.h>
 #include <string.h>
@@ -1651,6 +1651,13 @@ parse_inquiry(Microtek_Info *mi, unsigned char *result)
   
   mi->bit_formats                = (SANE_Byte)(result[74] & 0x0F);
   mi->extra_cap                  = (SANE_Byte)(result[75] & 0x07);
+
+  /* XXXXXX a quick hack to disable any [pre/real]cal stuff for
+     anything but an E6... */
+  if (!((mi->model_code == 0x66) || (mi->model_code == 0x63))) {
+    mi->extra_cap &= ~MI_EXCAP_DIS_RECAL;
+    DBG(4, "parse_inquiry:  Not an E6 -- pretend recal cannot be disabled.\n");
+  }
 
   /* The E2 lies... */
   if (mi->model_code == 0x64) {
