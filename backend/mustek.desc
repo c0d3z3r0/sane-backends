@@ -9,7 +9,7 @@
 ;
 
 :backend "mustek"		; name of backend
-:version "1.0-85"		; version of backend
+:version "1.0-86"		; version of backend
 :status :beta			; :alpha, :beta, :stable, :new
 :manpage "sane-mustek"		; name of manpage (if it exists)
 :url "http://hmg.home.pages.de/sane/"
@@ -38,8 +38,9 @@
 :model "Paragon 1200 III SP"
 :model "ScanMagic 9636S"
 :model "ScanMagic 9636S Plus"
+:model "Paragon 1200 A3 Pro"
 :model "Paragon 600 II N"
-:comment "non-scsi"
+:comment "proprietary interface"
 :mfg "Trust"			; name a manufacturer
 :url "http://www.trust-site.com"
 :model "Imagery 1200 SP"

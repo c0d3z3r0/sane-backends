@@ -1,3 +1,13 @@
+2000-06-18  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+          1.0-86. Added support for Mustek Paragon 1200 A3 pro (1, 8, and 24
+          bit/pixel; calibration doesn't work yet). Removed some remainings
+          of color lineart and halftone support. More debugging
+          output. Fixed bug in sane_control_option (option was not checked
+          for negative values).  Fixed bug in sane_close. General code
+          cleanup. Details in backend/mustek.CHANGES.
+
 2000-06-13  Karl Heinz Kremer <khk@khk.net>
 	* backend/epson.*: Invert image when scanning negative off the TPU.
 	  Initialize optial_res to 0. Fix sane_close() bug. Make threshold

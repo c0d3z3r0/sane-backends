@@ -1,8 +1,50 @@
 CHANGES for the SANE Mustek backend
 
+2000-06-18
+  * added enlarging x resolution for Paragon 1200 A3 Pro
+
+2000-06-17
+  * added calibration for Paragon 1200 A3 Pro (only dummy, doesn't work yet)
+  * adjusted options for Paragon 1200 A3 Pro
+  * added lineart support for Paragon 1200 A4 Pro
+  * removed support for color lineart and color halftone modes
+  * added color support for Paragon 1200 A3 Pro
+  * added scsi_wait_sense, this fixed 1200 A3 Pro hangs
+  * fixed gamma correction for 1200 A3 Pro. At the moment only 8 bit and
+    24 bit per pixel are supported (12/36 are possible in hardware)
+
+2000-06-16
+  * addded debugging output in sane_control_option
+  * added gamma correction for Paragon 1200 A3 Pro (doesn't work correctly yet)
+
+2000-06-15
+  * removed old config file reading system.
+
+2000-06-14
+  * Preliminary support for the Mustek Paragon 1200 A3 Pro. Only grayscale
+    mode works so far. Missing: Gamma correction and calibration. The scanner
+    is locked after each scan.
+
+2000-06-12
+  * Fixed bug in sane_control_option. option was not checked for negative
+    values. Thanks to Jochen Eisinger.
+  * Code cleanup and reorganization for inclusion of the Paragon 1200 A3 Pro.
+
+2000-06-07
+  * Fixed bug in sane_close where the chain of handles got destroyed by 
+    closing the first device. This bug is in the backend since 3 1/2 years.
+    Thanks to Jochen Eisinger for spotting this.
+
+2000-06-05
+  * Fixed some debug messages in fix_linedistance_se
+
+2000-06-04
+  * released backend version 1.0-85
+
 2000-06-04
   * changed (again) Paragon 12000 SP linedistance handling, now 1.02 uses
     normal LD corrections, all other use none. We'll see, if this works. 
+    Thanks to Reinhard Günzel who helped to debug this.
   * fixed some long lines (>80 chars)
 
 2000-06-03
