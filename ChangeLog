@@ -1,3 +1,7 @@
+2000-02-14     Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* new version of ths Sharp backend (0.31): added support for the JX350
+	(Thanks to Shuhei Tomita for providing the patch)
+
 2000-03-07  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* Makefile.in (lsm) sane.lsm sane-1.0.1.lsm: New target to
