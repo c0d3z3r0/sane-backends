@@ -1,3 +1,31 @@
+2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/GUIDE: Added some comments about portability and
+	  documentation.
+	* backend/abaton.c backend/agfafocus.c backend/apple.c 
+	  backend/canon.c backend/coolscan.c backend/dc210.c backend/dc25.c
+	  backend/dll.c backend/dmc.c backend/microtek.c backend/microtek2.c
+ 	  backend/microtek2.c backend/mustek_pp.c backend/net.c backend/pint.c
+	  backend/pnm.c backend/qcam.c backend/ricoh.c backend/s9036.c
+	  backend/sane_strstatus.c backend/sharp.c backend/snapscan.c 
+	  backend/st400.c backend/stubs.c backend/tamarack.c backend/v4l.c:
+	  Changed include statements from #include <sane/...> to 
+	  #include "sane...".
+	* backend/avision.c backend/dc25.c: Use DBG(0, ...) instead of
+ 	  fprintf (stderr, ...)
+	* backend/avision.c backend/canon-sane.c backend/coolscan.c
+	  backend/dc25.c backend/microtek.c backend/microtek2.c
+ 	  backend/st400.c: Use sanei_config_read() instead of fgets().
+	* backend/coolscan.desc backend/microtek.desc backend/microtek2.desc
+	  backend/st400.desc: Added :interface and :manpage entries.
+	* backend/nec.desc: Status is beta now (was: new). Fixed typo.
+	* doc/canon.README: Removed, because the information is included in
+ 	  the manpage now.
+	* doc/Makefile.in: Added sane-coolscan to list of mapages to install.
+	* README: Added Link to coolscan manpage.
+	* backend/mustek.*: Update to Mustek backend 1.0-94. Fixed the
+	  #include <sane/...> bug.
+	
 2000-07-29  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.c: Changed the include statements for SANE includes
