@@ -49,6 +49,9 @@ static const char RCSid_h[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
+ * Revision 1.1.2.3  2000/03/14 17:47:09  abel
+ * new version of the Sharp backend added.
+ *
  * Revision 1.1.2.2  2000/01/26 03:51:47  pere
  * Updated backends sp15c (v1.12) and m3096g (v1.11).
  *
