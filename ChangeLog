@@ -1,3 +1,17 @@
+2000-04-23  Henning Meier-Geinitz <hmg@gmx.de>
+
+        * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+ 	  1.0-80. Adjusted scan areas for most scanners. Added transparency
+ 	  adapter support for all Paragon legal size scanners. Fixed color
+ 	  mode for the Paragon MFS-8000SP (gamma problems). New system to
+ 	  set buffersize using sanei_scsi_open_extended. Removed (maybe
+ 	  temporarily) support for SCSI queue. Fixed shrinked image bug with
+ 	  the ScanExpress 12000SP. Fixed positional options detection
+	  (from mustek.conf). Added option "buffersize". Adjusted
+ 	  mustek.conf template to more reasonable defaults. Lots of
+	  small fixes and more complete debugging output. Look at
+          backend/mustek.CHANGES for more details.
+	
 2000-04-15  Andreas Rick  <andreas.rick@free.fr>
 
         * backend/coolscan.* Update coolscan backend to version 0.4.3.
