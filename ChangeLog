@@ -1,3 +1,13 @@
+2000-03-22  Karl Heinz Kremer <khk@khk.net>
+      * backend/epson.*: Several fixes for minor problems.
+        Fixed function level A4 scanners (line mode instead
+        of byte mode). Removed unnecessary free() calls.
+        Use extended status for recognize warm up. This fixes
+        problems with TPU and occasional crashes during startup.
+        Added D1 level for Perfection 610.
+        Added first version of support for set threshold and set
+        zoom.                            
+
 2000-03-19  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* backend/mustek.c: Updated backend to new version 0.76. Fixes for
