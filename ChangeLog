@@ -1,3 +1,6 @@
+2000-02-18  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* corrected spelling error in umax,c (devive -> device)
+
 2000-02-18  Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* sharp.c / sharp.h: Options for resolution now conform to
 	the Sane API; fixed and initialisation bug. Updated backend 
