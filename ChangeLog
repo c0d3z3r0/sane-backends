@@ -1,3 +1,10 @@
+2003-02-09  Henning Meier-Geinitz <henning@meier-geinitz.de>
+
+	* frontend/saned.c sanei/sanei_codec_bin.c sanei/sanei_wire.c: Check
+	  the IP address of the remote host before any communication occurs.
+	  Check for a errors before trsuting values that came from remote.
+	  Make sure that strings are 0-terminated.
+
 ******  Release of sane-backends 1.0.10. End of code freeze ******
 
 2003-02-01  Henning Meier-Geinitz <henning@meier-geinitz.de>
