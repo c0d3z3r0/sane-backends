@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "07 April 2000"
+.TH sane-mustek 5 "23 April 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -15,7 +15,7 @@ Paragon MFS-6000CX
 .br
 Paragon MFS-12000CX
 .br
-Paragon MFC-600S, MFC-600CD, 600SP, 600 II CD, 600 II SP, ScanMagic 600 II SP 
+Paragon MFC-600S, MFC-600CD, 600 II CD, 600 II SP, ScanMagic 600 II SP 
 .br
 Paragon MFC-800S, 800 II SP
 .br
@@ -27,9 +27,7 @@ Paragon MFS-1200SP, MFS-12000SP
 .br
 ScanExpress 6000SP
 .br
-ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, 12000 III SP
-.br
-ScanMagic 9636S
+ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, ScanMagic 9636S
 .br
 Paragon 600 II N
 .br
@@ -102,9 +100,10 @@ scanners.  Empty lines and lines starting with a hash mark (#) are
 ignored.  See sane-scsi(5) on details of what constitutes a valid
 device name.
 .PP
-The three options supported are
+The four options supported are
 .BR linedistance-fix ,
 .BR lineart-fix ,
+.BR buffersize ,
 and
 .BR strip-height .
 Options come in two flavors: global and positional ones.  Global
@@ -126,6 +125,15 @@ with certain MFS-12000SP scanners.  The problem manifests itself in
 dropped lines when scanning in lineart mode.  Turning on this option
 should fix the problem but may slow down scanning a bit.
 
+Option
+.B buffersize
+is a positional option that overrides the default values set for scan 
+buffers. The buffer size is specified in kilobytes. The default value
+depends on the scanner type. Note that some ScanExpress scanners don't
+like buffer sizes above 64 kb. If your sg driver can't set SCSI buffer
+sizes at runtime you may have to change that value, too. See sane-scsi(5)
+for details.
+
 Finally,
 .B strip-height
 is a global option limits the maximum height of the strip scanned with
@@ -144,14 +152,17 @@ SCSI timeouts.
 A sample configuration file is shown below:
 .PP
 .RS
-# limit strip height of /dev/scanner to 1.5 inches:
+# limit strip height of all scanners to 1.5 inches:
 .br
 option strip-height 1.5
 .br
 
 .br
 /dev/scanner    # first Mustek scanner
-
+.br
+  # 1 MB buffer for /dev/scanner:
+.br
+  option buffersize 1024
 .br
 /dev/sge        # second Mustek scanner
 .br
@@ -166,8 +177,8 @@ option strip-height 1.5
 Mustek SCSI scanners are typically delivered with an ISA SCSI adapter.
 Unfortunately, that adapter is not worth much since it is not
 interrupt driven.  It is (sometimes) possible to get the supplied card
-to work, but without interrupt line, scanning will put so much load on
-the system, that it becomes almost unusable for other tasks.
+to work, but without interrupt line, scanning will be very slow and put
+so much load on the system, that it becomes almost unusable for other tasks.
 .PP
 If you already have a working SCSI controller in your system, you
 should consider that Mustek scanners do not support the SCSI-2
@@ -208,7 +219,9 @@ for saftey reasons) or, alternatively, access this backend through the
 network daemon saned(1). On systems which support this feature, the
 scanner can be accessed through 
 .IR /dev/port.
-Don't forget to adjust the permissions for /dev/port.
+Don't forget to adjust the permissions for /dev/port. At least with
+recent Linux kernels root privileges are necessary for /dev/port access,
+too.
 .PP
 If your images have horizontal stripes in color mode, check option
 linedistance-fix (see above). Apply this option for a scanner with
@@ -276,16 +289,11 @@ sane\-scsi(5)
 David Mosberger and Andreas Czechanowski, SE extensions Andreas
 Bolsch, various bug fixes Henning Meier-Geinitz
 .SH BUGS
-Transparency adapter and automatic document feeder support is severly
-lacking (due to absence of equipment to test this with).
+Automatic document feeder support is severly lacking (due to absence
+of equipment to test this with).
 
-There seems to be a performance bug that makes scanning on (some)
-three-pass scanner slower than necessary. High resolution with
-ScanExpress is rather slow, they suffer from a very small internal
-buffer.
-
-The linedistance correction for the 600 II N isn't perfect, some
-garbage at the beginning and the end of the image remains.
+Scanning with the SCSI adapters supplied by Mustek is very slow at
+high resolutions and wide scanareas. 
 
 More detailed bug information is available at the Mustek backend
 homepage

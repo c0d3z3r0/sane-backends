@@ -59,6 +59,8 @@
 #define MUSTEK_FLAG_N		(1 << 11)	/* N-type scanner (non SCSI) */
 #define MUSTEK_FLAG_SE		(1 << 12)	/* ScanExpress model */
 #define MUSTEK_FLAG_DOUBLE_RES  (1 << 13)       /* MSF-06000CZ res. encoding */
+#define MUSTEK_FLAG_FORCE_GAMMA (1 << 14)       /* force gamma table upload */
+#define MUSTEK_FLAG_ENLARGE_X   (1 << 15)       /* need to enlarge x-res for SE ? */
 
 /* source values: */
 #define MUSTEK_SOURCE_FLATBED	0
@@ -137,6 +139,9 @@ typedef struct Mustek_Device
         int lines;
       }
     cal;    
+    /* current and maximum buffer size of the scanner */
+    int buffer_size;
+    int max_buffer_size;
   }
 Mustek_Device;
 
