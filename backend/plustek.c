@@ -611,7 +611,7 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 	/* we currently support only one device !!! */
 	s->hw = &dummy_dev;
 
-	DBG(_DBG_SANE_INIT, "attach (%s, %ld)\n", dev_name, (void *)devp);
+	DBG(_DBG_SANE_INIT, "attach (%s, %p)\n", dev_name, (void *)devp);
 
 	/*
 	 * go ahead and open the scanner device
@@ -1106,7 +1106,9 @@ SANE_Status sane_control_option( SANE_Handle handle, SANE_Int option,
     			}
 
 				s->opt[OPT_HALFTONE].cap |= SANE_CAP_INACTIVE;
-//				s->opt[OPT_DROPOUT].cap  |= SANE_CAP_INACTIVE;
+#if 0
+				s->opt[OPT_DROPOUT].cap  |= SANE_CAP_INACTIVE;
+#endif
 				s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
 
 				if (info != NULL)
@@ -1267,7 +1269,9 @@ SANE_Status sane_start( SANE_Handle handle )
 	cb.ucmd.cInf.ImgDef.crArea.cy = height;
 	cb.ucmd.cInf.ImgDef.wDataType = scanmode;
 
-// CHECK: what about the 10 bit mode
+/*
+ * CHECK: what about the 10 bit mode ?
+ */
 	if( COLOR_TRUE48 == scanmode )
 		cb.ucmd.cInf.ImgDef.wBits = OUTPUT_12Bits;
 	else

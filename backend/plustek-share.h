@@ -255,14 +255,14 @@ typedef struct {
 #define SCANDEF_ColorBGROrder	    0x00000010
 #define SCANDEF_BmpStyle	    	0x00000020
 #define SCANDEF_BoundaryWORD		0x00000040
-#define SCANDEF_NoMap		    	0x00000080	// specified this flag will
-												// cause system ignores the
-												// siBrightness & siContrast
-#define SCANDEF_Transparency	    0x00000100	// Scanning from transparency
-#define SCANDEF_Negative	    	0x00000200	// Scanning from negative
-#define SCANDEF_QualityScan	    	0x00000400	// Scanning in quality mode
-#define SCANDEF_BuildBwMap	    	0x00000800	// Set default map (see BuildMapAndDither())
-#define SCANDEF_RightAlign	    	0x00008000	// 12-bit
+#define SCANDEF_NoMap		    	0x00000080	/* specified this flag will	 */
+												/* cause system ignores the	 */
+												/* siBrightness & siContrast */
+#define SCANDEF_Transparency	    0x00000100	/* Scanning from transparency*/
+#define SCANDEF_Negative	    	0x00000200	/* Scanning from negative    */
+#define SCANDEF_QualityScan	    	0x00000400	/* Scanning in quality mode  */
+#define SCANDEF_BuildBwMap	    	0x00000800	/* Set default map			 */
+#define SCANDEF_RightAlign	    	0x00008000	/* 12-bit					 */
 
 #define SCANDEF_WindowStyle	    	0x00000038
 
