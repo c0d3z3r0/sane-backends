@@ -1,3 +1,13 @@
+2000-07-25  Chris Pinkham <cpinkham@infi.net>
+
+	* backend/artec.c: Updated to v0.5.14. Added "Negative" mode as option
+	  even when in color/greyscale modes.  Fix sane_close() bug.  Fixed bug
+	  in sane_get_option_descriptor that allowed invalid option number.
+	  Changed numerous int variables to size_t to eliminate warnings.
+	  Changed various elements in ARTEC_Scanner structure to SANE_Int
+	  instead of int.  Replaced all fprintf() statements with DBG().
+	* backend/artec.desc Added interface entries.
+
 2000-07-26  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.c: Fixed problem with Perfection610 scanner.
