@@ -1,5 +1,10 @@
 2000-07-09  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* frontend/Makefile.in frontend/scanimage.c frontend/stiff.h
+	frontend/stiff.c doc/scanimage.man: Add 16 bit support and new
+	option --format to change file format.  Makes it possible to save
+	uncompressed TIFF images.  Patch from Peter Kirchgessner.
+
 	* backend/microtek2.c: Add ScanMaker X6USB identifier.  Patch from
 	Oliver Neukum.
 
