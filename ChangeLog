@@ -1,3 +1,9 @@
+2000-06-26  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* sanei/sanei_scsi.c and include/sanei/sanei_scsi.h: 
+	  new functions sanei_scsi_cmd2 and sanei_scsi_req_enter2 
+	  for proper handling of "unusual" SCSI commands lengths
+	* backend/canon-scsi.c: call sanei_scsi_cmd2, where necessary
+
 2000-06-25  René Rebe <rene.rebe@myokay.net>
 	* backend/avision.c: fixed sane_close () bug
 	* backend/avision.desc: added some more scanners
