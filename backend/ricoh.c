@@ -142,8 +142,8 @@ attach (const char *devnam, Ricoh_Device ** devp)
 
   if (ibuf.devtype != 6
       || strncmp (ibuf.vendor, "RICOH", 5) != 0
-      || strncmp (ibuf.product, "IS50", 4) != 0
-      || strncmp (ibuf.product, "IS60", 4) != 0)
+      || (strncmp (ibuf.product, "IS50", 4) != 0
+	  && strncmp (ibuf.product, "IS60", 4) != 0))
     {
       DBG (1, "attach: device doesn't look like the Ricoh scanner I know\n");
       sanei_scsi_close (fd);
