@@ -235,7 +235,6 @@ static const SANE_String_Const paper_list_jx330[] =
   0
 };
 
-
 #define GAMMA10    "1.0"
 #define GAMMA22    "2.2"
 
@@ -245,6 +244,7 @@ static const SANE_String_Const gamma_list[] =
   0
 };
 
+#if 0
 #define SPEED_NORMAL    "Normal"
 #define SPEED_FAST      "Fast"
 static const SANE_String_Const speed_list[] =
@@ -252,6 +252,7 @@ static const SANE_String_Const speed_list[] =
   SPEED_NORMAL, SPEED_FAST,
   0
 };
+#endif
 
 #define RESOLUTION_MAX_JX610 8
 static const SANE_String_Const resolution_list_jx610[] =
@@ -1250,7 +1251,7 @@ attach (const char *devnam, SHARP_Device ** devp)
       }
   }
 #else
-  status = sanei_scsi_open (devnam, &fd, NULL, NULL);
+  status = sanei_scsi_open (devnam, &fd, &sense_handler, &sense_dat);
   if (status != SANE_STATUS_GOOD)
     {
       DBG (1, "attach: open failed: %s\n", sane_strstatus (status));
@@ -2196,8 +2197,8 @@ do_cancel (SHARP_Scanner * s)
   return (SANE_STATUS_CANCELLED);
 }
 
-SHARP_New_Device *new_devs = 0;
-SHARP_New_Device *new_dev_pool = 0;
+static SHARP_New_Device *new_devs = 0;
+static SHARP_New_Device *new_dev_pool = 0;
 
 static SANE_Status 
 attach_and_list(const char *devnam)
@@ -2241,7 +2242,12 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   int bufsize[2] = {DEFAULT_BUFSIZE, DEFAULT_BUFSIZE};
   int queued_reads[2] = {DEFAULT_QUEUED_READS, DEFAULT_QUEUED_READS};
   int linecount = 0;
+#if 1
+  SHARP_Device sd; 
+  SHARP_Device *dp = &sd;
+#else
   SHARP_Device *dp;
+#endif
   SHARP_New_Device *np;
   int i;
 
@@ -3014,7 +3020,7 @@ send_ascii_gamma_tables (SHARP_Scanner *s)
   s->buffer[8] = i & 0xff;
   
   wait_ready(s->fd);
-  status = sanei_scsi_cmd (s->fd, s->buffer, i, 0, 0);
+  status = sanei_scsi_cmd (s->fd, s->buffer, i+10, 0, 0);
 
   DBG(11, ">>\n");
   
@@ -3562,7 +3568,12 @@ s->dev->sensedat.complain_on_adf_error = 1;
   else
     wp.wdb.bpp = 1;
   wp.wdb.ht_pattern[0] = 0;
-  wp.wdb.ht_pattern[1] = s->halftone;
+  if (s->dev->sensedat.model == JX610)
+    {
+      wp.wdb.ht_pattern[1] = 0;
+    }else{
+      wp.wdb.ht_pattern[1] = s->halftone;
+    }
   wp.wdb.rif_padding = (s->reverse * 128) + 0;
   wp.wdb.eletu = (!s->speed << 2) + (s->edge << 6) + (s->lightcolor << 4);
 
@@ -3765,7 +3776,7 @@ s->dev->sensedat.complain_on_adf_error = 1;
 
 }
 
-SANE_Status
+static SANE_Status
 sane_read_direct (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
 	   SANE_Int * len)
 {
@@ -3809,7 +3820,7 @@ sane_read_direct (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
   return (SANE_STATUS_GOOD);
 }
 
-SANE_Status
+static SANE_Status
 sane_read_shuffled (SANE_Handle handle, SANE_Byte *dst_buf, SANE_Int max_len,
 	   SANE_Int * len, int eight_bit_data)
 {
