@@ -1,5 +1,7 @@
 2000-06-23  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* AUTHORS: Added Juergen G. Schimmer as author of the v4l backend.
+
 	* configure.in backend/Makefile.in backend/dll.conf
 	backend/v4l-frequencies.h backend/v4l-grab.h backend/v4l.c
 	backend/v4l.conf backend/v4l.desc backend/v4l.h: Added Video4Linux
