@@ -1,3 +1,7 @@
+2000-07-16  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* include/sane/sanei_debug.h:  Fix typo.
+
 2000-07-15  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.c: Replaced fprintf() with DBG()
