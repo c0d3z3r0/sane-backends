@@ -1,0 +1,76 @@
+.TH sane-epson 5 "6 Jan 2000"
+.IX sane-epson
+.SH NAME
+sane-epson - SANE backend for EPSON scanners
+.SH DESCRIPTION
+The
+.B sane-epson
+library implements a SANE (Scanner Access Now Easy) backend that
+provides access to Epson flatbed scanners.  This backend should be
+considered
+.B alpha-quality
+software!  
+.PP
+At present, the following scanners are known to work with this backend:
+.PP
+.RS
+Model:           Connection Type
+.br
+---------------- -------------------
+.br
+GT-5000          parallel
+.br
+GT-6000          parallel
+.br
+ActionScanner II parallel
+.br
+GT-7000          SCSI
+.br
+Perfection 636   SCSI
+.br
+Perfection 1200S SCSI
+.br
+
+For other scanners the software  may or may not work.  Please send mail to 
+sane\-devel@mostang.com to report successes or failures.
+.RE
+.SH FILES
+.TP
+.I @LIBIDR@/libsane-epson.a
+The static library implementing this backend.
+.TP
+.I @LIBIDR@/libsane-epson.so
+The shared library implementing this backend (present on systems that
+support dynamic loading).
+.SH ENVIRONMENT
+.TP
+.B SANE_DEBUG_EPSON
+If the library was compiled with debug support enabled, this
+environment variable controls the debug level for this backend.  E.g.,
+a value of 128 requests all debug output to be printed.  Smaller
+levels reduce verbosity.
+
+.TP
+.B SANE_EPSON_CMD_LVL
+This allows to override the function or command level that the backend 
+uses to communicate with the scanner. The function level a scanner
+supports is determined during the initialization of the device. If
+the backend does not recognize the function level reported by the 
+scanner it will default to function level B5. Valid function levels
+are A1, A2, B1, B2, B3, B4, B5, B6, B7, B8 and F5. Use this feature
+only if you know what you are doing!
+
+.SH "SEE ALSO"
+
+sane\-scsi(5)
+
+.SH BUGS
+
+When used with "scanimage -T" the backend hangs after sucessfully 
+completing the tests. It is necessary to powercycle the scanner to
+get the communication between backend and scanner going again.
+
+.SH AUTHOR
+
+Christian Bucher based on work by Kazuhiro Sasayama with addons by
+Karl Heinz Kemer (khk@khk.net)

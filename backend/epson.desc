@@ -13,7 +13,7 @@
 :version "0.1.6"                  ; version of backend
 :status :alpha                    ; :alpha, :beta, :stable, :new
 :manpage "sane-epson"             ; name of manpage (if it exists)
-:url "http://www.vernetzt.at/~bucher/Epson/Epson.html" ; backend's web page
+:url "http://www.khk.net/         ; backend's web page
 
 :devicetype :scanner              ; start of a list of devices....
                                   ; other types:  :stillcam, :vidcam,

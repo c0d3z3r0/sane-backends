@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.6a Date 08-Jan-2000
+   Version 0.1.6b Date 10-Jan-2000
 
    This file is part of the SANE package.
 
@@ -1228,7 +1228,8 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 			|| strncmp( buf + 8, "EPSON", 5) != 0
 			|| (strncmp( buf + 16, "SCANNER ", 8) != 0
 				&& strncmp( buf + 14, "SCANNER ", 8) != 0
-				&& strncmp( buf + 16, "Perfection", 10) != 0))
+				&& strncmp( buf + 16, "Perfection", 10) != 0
+				&& strncmp( buf + 16, "Expression", 10) != 0))
 		{
 			DBG( 1, "attach: device doesn't look like an Epson scanner\n");
 			close_scanner( s);
