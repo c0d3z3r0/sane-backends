@@ -95,9 +95,12 @@ typedef enum
 	OPT_SOFTWARE_CAL,
     OPT_CONTRAST,
     OPT_THRESHOLD,
-    OPT_BRIGHTNESS,
     OPT_HALFTONE_PATTERN,
     OPT_FILTER_TYPE,
+	OPT_TRANSPARENCY,
+	OPT_ADF,
+	OPT_PIXEL_AVG,
+	OPT_EDGE_ENH,
 
 	OPT_CUSTOM_GAMMA, /* use custom gamma table */
 	OPT_GAMMA_VECTOR,
@@ -111,19 +114,29 @@ typedef enum
 ARTEC_Option;
 
 /* Some FLAGS */
-#define ARTEC_FLAG_CALIBRATE			0x00000001
+#define ARTEC_FLAG_CALIBRATE			0x00000001 /* supports hardware calib */
 #define ARTEC_FLAG_CALIBRATE_RGB		0x00000003 /* yes 3, set CALIB. also */
 #define ARTEC_FLAG_CALIBRATE_DARK_WHITE	0x00000005 /* yes 5, set CALIB. also */
-#define ARTEC_FLAG_RGB_LINE_OFFSET		0x00000008
-#define ARTEC_FLAG_RGB_CHAR_SHIFT		0x00000010
-#define ARTEC_FLAG_OPT_BRIGHTNESS		0x00000020
-#define ARTEC_FLAG_ONE_PASS_SCANNER		0x00000040
-#define ARTEC_FLAG_GAMMA				0x00000080
+#define ARTEC_FLAG_RGB_LINE_OFFSET		0x00000008 /* need line offset buffer */
+#define ARTEC_FLAG_RGB_CHAR_SHIFT		0x00000010 /* RRRRGGGGBBBB line fmt */
+#define ARTEC_FLAG_OPT_CONTRAST         0x00000020 /* supports set contrast */
+#define ARTEC_FLAG_ONE_PASS_SCANNER		0x00000040 /* single pass scanner */
+#define ARTEC_FLAG_GAMMA				0x00000080 /* supports set gamma */
 #define ARTEC_FLAG_GAMMA_SINGLE			0x00000180 /* yes 180, implies GAMMA */
-#define ARTEC_FLAG_SEPARATE_RES			0x00000200
+#define ARTEC_FLAG_SEPARATE_RES			0x00000200 /* separate x & y scan res */
 #define ARTEC_FLAG_IMAGE_REV_LR         0x00000400 /* reversed left-right */
-#define ARTEC_FLAG_SENSE_HANDLER        0x00000800
+#define ARTEC_FLAG_ENHANCE_LINE_EDGE    0x00000800 /* line edge enhancement */
 #define ARTEC_FLAG_MONO_ADJUST          0x00001000
+#define ARTEC_FLAG_1BPP_BYTE_ALIGN		0x00002000 /* 1bpp byte align fixup */
+#define ARTEC_FLAG_SC_BUFFERS_LINES     0x00004000 /* scanner has line buffer */
+#define ARTEC_FLAG_SC_HANDLES_OFFSET    0x00008000 /* sc. handles line offset */
+#define ARTEC_FLAG_SENSE_HANDLER        0x00010000 /* supports sense handler */
+#define ARTEC_FLAG_SENSE_ENH_18         0x00020000 /* supports enh. byte 18 */
+#define ARTEC_FLAG_SENSE_BYTE_19        0x00040000 /* supports sense byte 19 */
+#define ARTEC_FLAG_SENSE_BYTE_22        0x00080000 /* supports sense byte 22 */
+#define ARTEC_FLAG_PIXEL_AVERAGING      0x00100000 /* supports pixel avg-ing */
+#define ARTEC_FLAG_ADF                  0x00200000 /* auto document feeder */
+#define ARTEC_FLAG_HALFTONE_PATTERN     0x00400000 /* > 1 halftone  patter */
 
 typedef enum
   {
@@ -200,7 +213,6 @@ typedef struct ARTEC_Device
     SANE_Word *vert_resolution_list;
     SANE_Range threshold_range;
     SANE_Range contrast_range;
-    SANE_Range brightness_range;
     SANE_Word setwindow_cmd_size;
     SANE_Word calibrate_method;
 	SANE_Word max_read_size;
@@ -210,7 +222,6 @@ typedef struct ARTEC_Device
     SANE_Bool req_shading_calibrate;
     SANE_Bool req_rgb_line_offset;
     SANE_Bool req_rgb_char_shift;
-    SANE_Bool opt_brightness;
 
     /* info for 1-pass vs. 3-pass */
     SANE_Bool onepass;

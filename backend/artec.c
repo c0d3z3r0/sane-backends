@@ -40,13 +40,13 @@
 
    This file implements a SANE backend for the Artec/Ultima scanners.
 
-   Copyright (C) 1998,1999 Chris Pinkham
+   Copyright (C) 1998-2000 Chris Pinkham
    Released under the terms of the GPL.
    *NO WARRANTY*
 
    Portions contributed by:
-     David Leadbetter - A6000C (3-pass)
-     Dick Bruijn - AT12
+   David Leadbetter - A6000C (3-pass)
+   Dick Bruijn - AT12
 
    *********************************************************************
    For feedback/information:
@@ -64,6 +64,9 @@
 #include <stdarg.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <sane/sane.h>
 #include <sane/saneopts.h>
@@ -77,7 +80,8 @@
 
 #define ARTEC_MAJOR     0
 #define ARTEC_MINOR     5
-#define ARTEC_LAST_MOD  "10/30/1999 01:11 EST"
+#define ARTEC_SUB       6
+#define ARTEC_LAST_MOD  "01/25/2000 15:10 EST"
 
 #define MM_PER_INCH	25.4
 
@@ -88,10 +92,10 @@
 #define ARTEC_CONFIG_FILE "artec.conf"
 #define ARTEC_MAX_READ_SIZE 32768
 
-
 static int num_devices;
 static ARTEC_Device *first_dev;
 static ARTEC_Scanner *first_handle;
+static ARTEC_Scanner *global_s = NULL;	/* sense handler must know model */
 
 static const SANE_String_Const mode_list[] =
 {
@@ -140,8 +144,6 @@ struct
     SANE_Word contrast_max;	/* maximum contrast */
     SANE_Word threshold_min;	/* minimum threshold */
     SANE_Word threshold_max;	/* maximum threshold */
-    SANE_Word brightness_min;	/* minimum brightness */
-    SANE_Word brightness_max;	/* maximum brightness */
     SANE_Word adc_bits;		/* Analog-to-Digital Converter Bits */
     SANE_Word setwindow_cmd_size;	/* Set-Window command size */
     SANE_Word max_read_size;	/* Max Read size in bytes */
@@ -153,72 +155,93 @@ cap_data[] =
 {
   {
     "AT3", "flatbed",
-      8.3, 11, 0, 255, 0, 255, 0, 0, 8, 55, 32768,
+      8.3, 11, 0, 255, 0, 255, 8, 55, 32768,
       ARTEC_FLAG_CALIBRATE_RGB |
       ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_RGB_CHAR_SHIFT |
+      ARTEC_FLAG_OPT_CONTRAST |
       ARTEC_FLAG_GAMMA_SINGLE |
       ARTEC_FLAG_SEPARATE_RES |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_SENSE_BYTE_19 |
+      ARTEC_FLAG_ADF |
+      ARTEC_FLAG_HALFTONE_PATTERN |
       ARTEC_FLAG_ONE_PASS_SCANNER,
       "50,100,200,300", "50,100,200,300,600"
   }
   ,
   {
     "A6000C", "flatbed",
-      8.3, 14, 0, 255, 0, 255, 0, 0, 8, 55, 8192,
+      8.3, 14, 0, 255, 0, 255, 8, 55, 8192,
 /* some have reported that Calibration does not work the same as AT3 & A6000C+
-   ARTEC_FLAG_CALIBRATE_RGB |
- */
+      ARTEC_FLAG_CALIBRATE_RGB |
+*/
+      ARTEC_FLAG_OPT_CONTRAST |
       ARTEC_FLAG_SEPARATE_RES |
-      ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_ADF |
+      ARTEC_FLAG_HALFTONE_PATTERN |
       ARTEC_FLAG_MONO_ADJUST,
       "50,100,200,300", "50,100,200,300,600"
   }
   ,
   {
     "A6000C PLUS", "flatbed",
-      8.3, 14, 0, 255, 0, 255, 0, 0, 8, 55, 8192,
+      8.3, 14, 0, 255, 0, 255, 8, 55, 8192,
       ARTEC_FLAG_CALIBRATE_RGB |
       ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_RGB_CHAR_SHIFT |
+      ARTEC_FLAG_OPT_CONTRAST |
       ARTEC_FLAG_GAMMA_SINGLE |
       ARTEC_FLAG_SEPARATE_RES |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_SENSE_BYTE_19 |
+      ARTEC_FLAG_ADF |
+      ARTEC_FLAG_HALFTONE_PATTERN |
       ARTEC_FLAG_ONE_PASS_SCANNER,
       "50,100,200,300", "50,100,200,300,600"
   }
   ,
   {
     "AT6", "flatbed",
-      8.3, 11, 0, 255, 0, 255, 0, 0, 10, 55, 32768,
+      8.3, 11, 0, 255, 0, 255, 10, 55, 32768,
       ARTEC_FLAG_CALIBRATE_RGB |
       ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_RGB_CHAR_SHIFT |
+      ARTEC_FLAG_OPT_CONTRAST |
 /* gamma not working totally correct yet.
-   ARTEC_FLAG_GAMMA_SINGLE |
- */
+      ARTEC_FLAG_GAMMA_SINGLE |
+*/
       ARTEC_FLAG_SEPARATE_RES |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_ADF |
+      ARTEC_FLAG_HALFTONE_PATTERN |
       ARTEC_FLAG_ONE_PASS_SCANNER,
       "50,100,200,300", "50,100,200,300,600"
   }
   ,
   {
     "AT12", "flatbed",
-      8.5, 11, 0, 255, 0, 255, 0, 255, 12, 67, 32768,
-/* no brightness working yet
-   ARTEC_CALIBRATE_DARK_WHITE |
- */
+      8.5, 11, 0, 255, 0, 255, 12, 67, 32768,
 /* calibration works slower so disabled
-   ARTEC_FLAG_OPT_BRIGHTNESS |
- */
+      ARTEC_CALIBRATE_DARK_WHITE |
+*/
 /* gamma not working totally correct yet.
-   ARTEC_FLAG_GAMMA |
- */
+      ARTEC_FLAG_GAMMA |
+*/
+      ARTEC_FLAG_OPT_CONTRAST |
+      ARTEC_FLAG_GAMMA_SINGLE |	/* quick fix to test single-gamma mode */
       ARTEC_FLAG_SEPARATE_RES |
+      ARTEC_FLAG_1BPP_BYTE_ALIGN |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_SENSE_ENH_18 |
+      ARTEC_FLAG_SENSE_BYTE_22 |
+      ARTEC_FLAG_SC_BUFFERS_LINES |
+      ARTEC_FLAG_SC_HANDLES_OFFSET |
+      ARTEC_FLAG_PIXEL_AVERAGING |
+      ARTEC_FLAG_ENHANCE_LINE_EDGE |
+      ARTEC_FLAG_ADF |
+      ARTEC_FLAG_HALFTONE_PATTERN |
       ARTEC_FLAG_ONE_PASS_SCANNER,
       "25,50,100,200,300,400,500,600",
       "25,50,100,200,300,400,500,600,700,800,900,1000,1100,1200"
@@ -226,28 +249,33 @@ cap_data[] =
   ,
   {
     "AM12S", "flatbed",
-      8.26, 11.7, 0, 255, 0, 255, 0, 255, 12, 67, 32768,
-/* no brightness working yet
-   ARTEC_CALIBRATE_DARK_WHITE |
- */
+      8.26, 11.7, 0, 255, 0, 255, 12, 67, ARTEC_MAX_READ_SIZE,
 /* calibration works slower so disabled
-   ARTEC_FLAG_OPT_BRIGHTNESS |
- */
+      ARTEC_CALIBRATE_DARK_WHITE |
+*/
 /* gamma not working totally correct yet.
-   ARTEC_FLAG_GAMMA |
- */
+      ARTEC_FLAG_GAMMA |
+*/
+      ARTEC_FLAG_GAMMA_SINGLE |	/* quick fix to test single-gamma mode */
+      ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_SEPARATE_RES |
+      ARTEC_FLAG_1BPP_BYTE_ALIGN |
       ARTEC_FLAG_IMAGE_REV_LR |
       ARTEC_FLAG_SENSE_HANDLER |
+      ARTEC_FLAG_SENSE_ENH_18 |
       ARTEC_FLAG_ONE_PASS_SCANNER,
-      "25,50,100,200,300,400,500,600",
-      "25,50,100,200,300,400,500,600,700,800,900,1000,1100,1200"
+      "50,100,300,600",
+      "50,100,300,600,1200"
   }
   ,
 };
 
-static char artec_vendor[9] = "";	/* store vendor if hardcoded in artec.conf */
-static char artec_model[17] = "";	/* store model if hardcoded in artec.conf */
+/* store vendor and model if hardcoded in artec.conf */
+static char artec_vendor[9] = "";
+static char artec_model[17] = "";
+
+/* file descriptor for debug data output */
+static int debug_fd = -1;
 
 
 static SANE_Status
@@ -354,194 +382,211 @@ sense_handler (int fd, u_char * sense, void *arg)
   int s;
 
   s = 0;
-  if (sense[18] & 0x01)
+
+  /* byte 18 info pertaining to ADF */
+  if ( global_s->hw->flags & ARTEC_FLAG_ADF )
     {
-      DBG (2, "sense:  ADF PAPER JAM\n");
-      s++;
+      if (sense[18] & 0x01)
+        {
+          DBG (2, "sense:  ADF PAPER JAM\n");
+          s++;
+        }
+      if (sense[18] & 0x02)
+        {
+          DBG (2, "sense:  ADF NO DOCUMENT IN BIN\n");
+          s++;
+        }
+      if (sense[18] & 0x04)
+        {
+          DBG (2, "sense:  ADF SWITCH COVER OPEN\n");
+          s++;
+        }
+      /* DB : next is, i think no failure, so no incrementing s */
+      if (sense[18] & 0x08)
+        {
+          DBG (2, "sense:  ADF SET CORRECTLY ON TARGET\n");
+        }
+      /* The following only for AT12, its reserved (zero?) on other models,  */
+      if (sense[18] & 0x10)
+        {
+          DBG (2, "sense:  ADF LENGTH TOO SHORT\n");
+          s++;
+        }
     }
-  if (sense[18] & 0x02)
+
+  /* enhanced byte 18 sense data */
+  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_ENH_18 )
     {
-      DBG (2, "sense:  ADF NO DOCUMENT IN BIN\n");
-      s++;
+      if (sense[18] & 0x20)
+        {
+          DBG (2, "sense:  LAMP FAIL : NOT WARM \n");
+          s++;
+        }
+      if (sense[18] & 0x40)
+        {
+          DBG (2, "sense:  NOT READY STATE\n");
+          s++;
+        }
     }
-  if (sense[18] & 0x04)
+
+  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_BYTE_19 )
     {
-      DBG (2, "sense:  ADF SWITCH COVER OPEN\n");
-      s++;
+      if (sense[19] & 0x01)
+        {
+          DBG (2, "sense:  8031 program ROM checksum Error\n");
+          s++;
+        }
+      if (sense[19] & 0x02)
+        {
+          DBG (2, "sense:  8031 data RAM R/W Error\n");
+          s++;
+        }
+      if (sense[19] & 0x04)
+        {
+          DBG (2, "sense:  Shadow Correction RAM R/W Error\n");
+          s++;
+        }
+      if (sense[19] & 0x08)
+        {
+          DBG (2, "sense:  Line RAM R/W Error\n");
+          s++;
+        }
+      if (sense[19] & 0x10)
+        {
+          /* docs say "reserved to '0'" */
+          DBG (2, "sense:  CCD control circuit Error\n");
+          s++;
+        }
+      if (sense[19] & 0x20)
+        {
+          DBG (2, "sense:  Motor End Switch Error\n");
+          s++;
+        }
+      if (sense[19] & 0x40)
+        {
+          /* docs say "reserved to '0'" */
+          DBG (2, "sense:  Lamp Error\n");
+          s++;
+        }
+      if (sense[19] & 0x80)
+        {
+          DBG (2, "sense:  Optical Calibration/Shading Error\n");
+          s++;
+        }
     }
-  /* DB : next is, i think no failure, so no incrementing s */
-  if (sense[18] & 0x08)
-    {
-      DBG (2, "sense:  ADF SET CORRECTLY ON TARGET\n");
-    }
-  /* The following only for AT12, its reserved (zero?) on other models,  */
-  if (sense[18] & 0x10)
-    {
-      DBG (2, "sense:  ADF LENGTH TOO SHORT\n");
-      s++;
-    }
-  if (sense[18] & 0x20)
-    {
-      DBG (2, "sense:  LAMP FAIL : NOT WARM \n");
-      s++;
-    }
-  if (sense[18] & 0x40)
-    {
-      DBG (2, "sense:  NOT READY STATE\n");
-      s++;
-    }
-  /* --- */
-  /* The following not for AT12, its reserved so should not give problems */
-  if (sense[19] & 0x01)
-    {
-      DBG (2, "sense:  ROM ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x02)
-    {
-      DBG (2, "sense:  CPU RAM ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x04)
-    {
-      DBG (2, "sense:  SHAD.CORR.RAM W/R ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x08)
-    {
-      DBG (2, "sense:  LINE RAM W/R ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x10)
-    {
-      DBG (2, "sense:  CCD CONTR.CIRCUIT ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x20)
-    {
-      DBG (2, "sense:  MOTOR END SWITCH ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x40)
-    {
-      DBG (2, "sense:  LAMP ERROR\n");
-      s++;
-    }
-  if (sense[19] & 0x80)
-    {
-      DBG (2, "sense:  OPTICAL SHADING ERROR\n");
-      s++;
-    }
-  /* --- */
-  /* The following only for AT12, its reserved so should not give problems */
+
   /* These are the self test results for tests 0-15 */
-  if (sense[22] & 0x01)
+  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_BYTE_22 )
     {
-      DBG (2, "sense:  8031 INT MEM R/W ERROR\n");
-      s++;
+      if (sense[22] & 0x01)
+        {
+          DBG (2, "sense:  8031 Internal Memory R/W Error\n");
+          s++;
+        }
+      if (sense[22] & 0x02)
+        {
+          DBG (2, "sense:  EEPROM test pattern R/W Error\n");
+          s++;
+        }
+      if (sense[22] & 0x04)
+        {
+          DBG (2, "sense:  ASIC Test Error\n");
+          s++;
+        }
+      if (sense[22] & 0x08)
+        {
+          DBG (2, "sense:  Line RAM R/W Error\n");
+          s++;
+        }
+      if (sense[22] & 0x10)
+        {
+          DBG (2, "sense:  PSRAM R/W Test Error\n");
+          s++;
+        }
+      if (sense[22] & 0x20)
+        {
+          DBG (2, "sense:  Positioning Error\n");
+          s++;
+        }
+      if (sense[22] & 0x40)
+        {
+          DBG (2, "sense:  Test 6 Error\n");
+          s++;
+        }
+      if (sense[22] & 0x80)
+        {
+          DBG (2, "sense:  Test 7 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x01)
+        {
+          DBG (2, "sense:  Test 8 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x02)
+        {
+          DBG (2, "sense:  Test 9 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x04)
+        {
+          DBG (2, "sense:  Test 10 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x08)
+        {
+          DBG (2, "sense:  Test 11 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x10)
+        {
+          DBG (2, "sense:  Test 12 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x20)
+        {
+          DBG (2, "sense:  Test 13 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x40)
+        {
+          DBG (2, "sense:  Test 14 Error\n");
+          s++;
+        }
+      if (sense[23] & 0x80)
+        {
+          DBG (2, "sense:  Test 15 Error\n");
+          s++;
+        }
     }
-  if (sense[22] & 0x02)
-    {
-      DBG (2, "sense:  EEPROM R/W ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x04)
-    {
-      DBG (2, "sense:  ASIC TEST ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x08)
-    {
-      DBG (2, "sense:  LINE RAM R/W ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x10)
-    {
-      DBG (2, "sense:  PSRAM R/W TEST ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x20)
-    {
-      DBG (2, "sense:  POSITIONING ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x40)
-    {
-      DBG (2, "sense:  TEST 6 ERROR\n");
-      s++;
-    }
-  if (sense[22] & 0x80)
-    {
-      DBG (2, "sense:  TEST 7 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x01)
-    {
-      DBG (2, "sense:  TEST 8 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x02)
-    {
-      DBG (2, "sense:  TEST 9 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x04)
-    {
-      DBG (2, "sense:  TEST 10 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x08)
-    {
-      DBG (2, "sense:  TEST 11 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x10)
-    {
-      DBG (2, "sense:  TEST 12 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x20)
-    {
-      DBG (2, "sense:  TEST 13 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x40)
-    {
-      DBG (2, "sense:  TEST 14 ERROR\n");
-      s++;
-    }
-  if (sense[23] & 0x80)
-    {
-      DBG (2, "sense:  TEST 15 ERROR\n");
-      s++;
-    }
-  /* --- */
+
   if (s)
     return SANE_STATUS_IO_ERROR;
 
   switch (sense[0])
     {
-    case 0x70:			/* ALWAYS */
+    case 0x70:	/* ALWAYS */
       switch (sense[2])
-	{
-	case 0x00:		/* SUCCES */
+  	{
+	case 0x01:
+	  DBG (2, "sense:  Successful command\n" );
 	  return SANE_STATUS_GOOD;
-	case 0x02:		/* NOT READY */
-	  DBG (2, "sense:  NOT READY\n");
+	case 0x02:
+	  DBG (2, "sense:  Not Ready, target can not be accessed\n");
 	  return SANE_STATUS_IO_ERROR;
-	case 0x03:		/* MEDIUM ERROR */
-	  DBG (2, "sense:  MEDIUM ERROR\n");
+	case 0x03:
+	  DBG (2, "sense:  Medium Error, paper jam or misfeed during ADF\n");
 	  return SANE_STATUS_IO_ERROR;
-	case 0x04:		/* HARDWARE ERROR */
-	  DBG (2, "sense:  HARDWARE ERROR\n");
+	case 0x04:
+	  DBG (2, "sense:  Hardware Error, non-recoverable\n");
 	  return SANE_STATUS_IO_ERROR;
-	case 0x05:		/* ILLEGAL REQUEST */
-	  DBG (2, "sense:  ILLEGAL REQUEST\n");
+	case 0x05:
+	  DBG (2, "sense:  Illegal Request, bad parameter in command block\n");
 	  return SANE_STATUS_IO_ERROR;
-	case 0x06:		/* UNIT ATTENTION */
-	  DBG (2, "sense:  UNIT ATTENTION\n");
+	case 0x06:
+	  DBG (2, "sense:  Unit Attention\n");
 	  return SANE_STATUS_GOOD;
-	default:		/* SENSE KEY UNKNOWN */
+	default:
 	  DBG (2, "sense:  SENSE KEY UNKNOWN (%02x)\n", sense[2]);
 	  return SANE_STATUS_IO_ERROR;
 	}
@@ -549,6 +594,7 @@ sense_handler (int fd, u_char * sense, void *arg)
       DBG (2, "sense: Unkown Error Code Qualifier (%02x)\n", sense[0]);
       return SANE_STATUS_IO_ERROR;
     }
+
   DBG (2, "sense: Should not come here!\n");
   return SANE_STATUS_IO_ERROR;
 }
@@ -561,23 +607,27 @@ wait_ready (int fd)
   SANE_Status status;
   int retry = 30;		/* make this tuneable? */
 
-  DBG (7, "wait_ready\n");
+  DBG (7, "wait_ready()\n");
   while (retry-- > 0)
     {
-      status = sanei_scsi_cmd (fd, test_unit_ready, sizeof (test_unit_ready), 0, 0);
+      status = sanei_scsi_cmd (fd, test_unit_ready,
+                 sizeof (test_unit_ready), 0, 0);
       if (status == SANE_STATUS_GOOD)
 	return status;
+
       if (status == SANE_STATUS_DEVICE_BUSY)
 	{
 	  sleep (1);
 	  continue;
 	}
+
       /* status != GOOD && != BUSY */
-      DBG (8, "wait_ready: '%s'\n", sane_strstatus (status));
+      DBG (9, "wait_ready: '%s'\n", sane_strstatus (status));
       return status;
     }
+
   /* BUSY after n retries */
-  DBG (8, "wait_ready: '%s'\n", sane_strstatus (status));
+  DBG (9, "wait_ready: '%s'\n", sane_strstatus (status));
   return status;
 }
 
@@ -588,7 +638,7 @@ abort_scan (SANE_Handle handle)
   ARTEC_Scanner *s = handle;
   u_int8_t *data, comm[22];
 
-  DBG (7, "mode_select_abort\n");
+  DBG (7, "abort_scan()\n");
   memset (comm, 0, sizeof (comm));
 
   comm[0] = 0x15;
@@ -607,22 +657,63 @@ abort_scan (SANE_Handle handle)
   data = comm + 10;
   data[0] = 0x00;		/* control page parameters */
   data[1] = 0x0a;		/* parameter length */
-  data[2] = 0x03;		/* abort+inhibitADF flag */
-  data[2] = 0x02;		/* abort flag */
+  data[2] = 0x02 | ((s->val[OPT_TRANSPARENCY].w == SANE_TRUE) ? 0x04 : 0x00) |
+    ((s->val[OPT_ADF].w == SANE_TRUE) ? 0x00 : 0x01);
   data[3] = 0x00;		/* reserved */
   data[4] = 0x00;		/* reserved */
 
-  DBG (8, "abort: sending abort command\n");
+  DBG (9, "abort: sending abort command\n");
   sanei_scsi_cmd (s->fd, comm, 6 + comm[4], 0, 0);
 
-  DBG (8, "abort: wait for scanner to come ready...\n");
+  DBG (9, "abort: wait for scanner to come ready...\n");
   wait_ready (s->fd);
 
-  DBG (8, "abort: resetting abort status\n");
-  data[6] = 0x01;		/* reset abort flags */
+  DBG (9, "abort: resetting abort status\n");
+  data[2] = ((s->val[OPT_TRANSPARENCY].w == SANE_TRUE) ? 0x04 : 0x00) |
+    ((s->val[OPT_ADF].w == SANE_TRUE) ? 0x00 : 0x01);
   sanei_scsi_cmd (s->fd, comm, 6 + comm[4], 0, 0);
 
-  DBG (8, "abort: wait for scanner to come ready...\n");
+  DBG (9, "abort: wait for scanner to come ready...\n");
+  return wait_ready (s->fd);
+}
+
+/* DAL - mode_select: used for transparency and ADF scanning */
+/* Based on abort_scan */
+static SANE_Status
+artec_mode_select (SANE_Handle handle)
+{
+  ARTEC_Scanner *s = handle;
+  u_int8_t *data, comm[22];
+
+  DBG (7, "artec_mode_select()\n");
+  memset (comm, 0, sizeof (comm));
+
+  comm[0] = 0x15;
+  comm[1] = 0x10;
+  comm[2] = 0x00;
+  comm[3] = 0x00;
+  comm[4] = 0x10;
+  comm[5] = 0x00;
+
+  data = comm + 6;
+  data[0] = 0x00;		/* mode data length */
+  data[1] = 0x00;		/* medium type */
+  data[2] = 0x00;		/* device specific parameter */
+  data[3] = 0x00;		/* block descriptor length */
+
+  data = comm + 10;
+  data[0] = 0x00;		/* control page parameters */
+  data[1] = 0x0a;		/* parameter length */
+  data[2] = ((s->val[OPT_TRANSPARENCY].w == SANE_TRUE) ? 0x04 : 0x00) |
+    ((s->val[OPT_ADF].w == SANE_TRUE) ? 0x00 : 0x01);
+  data[3] = 0x00;		/* reserved */
+  data[4] = 0x00;		/* reserved */
+
+  DBG (9, "artec_mode_select: mode %d\n", data[2]);
+  DBG (9, "artec_mode_select: sending mode command\n");
+  sanei_scsi_cmd (s->fd, comm, 6 + comm[4], 0, 0);
+
+  DBG (9, "artec_mode_select: wait for scanner to come ready...\n");
   return wait_ready (s->fd);
 }
 
@@ -632,7 +723,7 @@ read_data (int fd, int data_type_code, u_char * dest, size_t * len)
 {
   static u_char read_6[10];
 
-  DBG (7, "read_data\n");
+  DBG (7, "read_data()\n");
 
   memset (read_6, 0, sizeof (read_6));
   read_6[0] = 0x28;
@@ -651,7 +742,7 @@ artec_get_status (int fd)
   u_char read_12[12];
   size_t nread;
 
-  DBG (7, "artec_get_status\n");
+  DBG (7, "artec_get_status()\n");
 
   nread = 12;
 
@@ -662,7 +753,7 @@ artec_get_status (int fd)
   sanei_scsi_cmd (fd, write_10, 10, read_12, &nread);
 
   nread = (read_12[9] << 16) + (read_12[10] << 8) + read_12[11];
-  DBG (8, "artec_status: %lu\n", (u_long) nread);
+  DBG (9, "artec_status: %lu\n", (u_long) nread);
 
   return (nread);
 }
@@ -671,11 +762,11 @@ static SANE_Status
 artec_reverse_line (SANE_Handle handle, SANE_Byte * data)
 {
   ARTEC_Scanner *s = handle;
-  SANE_Byte tmp_buf[32768];	/* Artec max dpi 1200 * 8.5 inches * 3 = 30600 */
+  SANE_Byte tmp_buf[32768];	/* max dpi 1200 * 8.5 inches * 3 = 30600 */
   SANE_Byte *to, *from;
   int len;
 
-
+  DBG (8, "artec_reverse_line()\n");
 
   len = s->params.bytes_per_line;
   memcpy (tmp_buf, data, len);
@@ -704,13 +795,13 @@ artec_reverse_line (SANE_Handle handle, SANE_Byte * data)
 	{
 	  for (from = tmp_buf, to = data + len; to >= data; to--, from++)
 	    {
-	      *to = (((*from & 0x01) << 7) &
-		     ((*from & 0x02) << 5) &
-		     ((*from & 0x04) << 3) &
-		     ((*from & 0x08) << 1) &
-		     ((*from & 0x10) >> 1) &
-		     ((*from & 0x20) >> 3) &
-		     ((*from & 0x40) >> 5) &
+	      *to = (((*from & 0x01) << 7) |
+		     ((*from & 0x02) << 5) |
+		     ((*from & 0x04) << 3) |
+		     ((*from & 0x08) << 1) |
+		     ((*from & 0x10) >> 1) |
+		     ((*from & 0x20) >> 3) |
+		     ((*from & 0x40) >> 5) |
 		     ((*from & 0x80) >> 7));
 	    }
 	}
@@ -719,11 +810,35 @@ artec_reverse_line (SANE_Handle handle, SANE_Byte * data)
   return (SANE_STATUS_GOOD);
 }
 
-static SANE_Status
+SANE_Status
+artec_byte_rgb_to_line_rgb (SANE_Byte * data, SANE_Int len)
+{
+  SANE_Byte tmp_buf[32768];	/* max dpi 1200 * 8.5 inches * 3 = 30600 */
+  int count, from;
+
+  DBG (8, "artec_byte_rgb_to_line_rgb()\n");
+
+  /* copy the RGBRGBRGBRGBRGB... formated data to our temp buffer */
+  memcpy (tmp_buf, data, len * 3);
+
+  /* now copy back to *data in RRRRRRRGGGGGGGBBBBBBB format */
+  for (count = 0, from = 0; count < len; count++, from += 3)
+    {
+      data[count] = tmp_buf[from];	/* R byte */
+      data[count + len] = tmp_buf[from + 1];	/* G byte */
+      data[count + (len * 2)] = tmp_buf[from + 2];	/* B byte */
+    }
+
+  return (SANE_STATUS_GOOD);
+}
+
+SANE_Status
 artec_line_rgb_to_byte_rgb (SANE_Byte * data, SANE_Int len)
 {
-  SANE_Byte tmp_buf[32768];	/* Artec max dpi 1200 * 8.5 inches * 3 = 30600 */
+  SANE_Byte tmp_buf[32768];	/* max dpi 1200 * 8.5 inches * 3 = 30600 */
   int count, to;
+
+  DBG (8, "artec_line_rgb_to_byte_rgb()\n");
 
   /* copy the rgb data to our temp buffer */
   memcpy (tmp_buf, data, len * 3);
@@ -739,20 +854,25 @@ artec_line_rgb_to_byte_rgb (SANE_Byte * data, SANE_Int len)
   return (SANE_STATUS_GOOD);
 }
 
+static SANE_Byte **line_buffer = NULL;
 static SANE_Byte *tmp_line_buf = NULL;
-static SANE_Byte **r_line_buf = NULL;
-static SANE_Byte **g_line_buf = NULL;
 static SANE_Int r_buf_lines;
 static SANE_Int g_buf_lines;
 
 static SANE_Status
-artec_buffer_line_offset (SANE_Int line_offset, SANE_Byte * data, size_t * len)
+artec_buffer_line_offset (SANE_Handle handle, SANE_Int line_offset,
+			  SANE_Byte * data, size_t * len)
 {
+  ARTEC_Scanner *s = handle;
   static SANE_Int width;
   static SANE_Int cur_line;
-  SANE_Byte *tmp_r_buf_ptr;
-  SANE_Byte *tmp_g_buf_ptr;
+  SANE_Byte *tmp_buf_ptr;
+  SANE_Byte *grn_ptr;
+  SANE_Byte *blu_ptr;
+  SANE_Byte *out_ptr;
   int count;
+
+  DBG (8, "artec_buffer_line_offset()\n");
 
   if (*len == 0)
     return (SANE_STATUS_GOOD);
@@ -762,8 +882,8 @@ artec_buffer_line_offset (SANE_Int line_offset, SANE_Byte * data, size_t * len)
       width = *len / 3;
       cur_line = 0;
 
-      DBG (20, "buffer_line_offset: offset = %d, len = %lu, width = %d\n",
-	   line_offset, (u_long) * len, width);
+      DBG (9, "buffer_line_offset: offset = %d, len = %lu\n",
+	   line_offset, (u_long) * len);
 
       tmp_line_buf = malloc (*len);
       if (tmp_line_buf == NULL)
@@ -773,45 +893,27 @@ artec_buffer_line_offset (SANE_Int line_offset, SANE_Byte * data, size_t * len)
 	}
 
       r_buf_lines = line_offset * 2;
-      r_line_buf = malloc (r_buf_lines * sizeof (SANE_Byte *));
-      if (r_line_buf == NULL)
+      g_buf_lines = line_offset;
+
+      line_buffer = malloc (r_buf_lines * sizeof (SANE_Byte *));
+      if (line_buffer == NULL)
 	{
-	  DBG (1, "couldn't allocate memory for red line buffer pointers\n");
+	  DBG (1, "couldn't allocate memory for line buffer pointers\n");
 	  return (SANE_STATUS_NO_MEM);
 	}
 
       for (count = 0; count < r_buf_lines; count++)
 	{
-	  r_line_buf[count] = malloc (width * sizeof (SANE_Byte));
-	  if (r_line_buf[count] == NULL)
+	  line_buffer[count] = malloc ((*len) * sizeof (SANE_Byte));
+	  if (line_buffer[count] == NULL)
 	    {
-	      DBG (1, "couldn't allocate memory for red line buffer %d\n",
+	      DBG (1, "couldn't allocate memory for line buffer %d\n",
 		   count);
 	      return (SANE_STATUS_NO_MEM);
 	    }
 	}
 
-      g_buf_lines = line_offset;
-      g_line_buf = malloc (g_buf_lines * sizeof (SANE_Byte *));
-      if (g_line_buf == NULL)
-	{
-	  DBG (1,
-	       "couldn't allocate memory for green line buffer pointers\n");
-	  return (SANE_STATUS_NO_MEM);
-	}
-
-      for (count = 0; count < g_buf_lines; count++)
-	{
-	  g_line_buf[count] = malloc (width * sizeof (SANE_Byte));
-	  if (g_line_buf[count] == NULL)
-	    {
-	      DBG (1, "couldn't allocate memory for green line buffer %d\n",
-		   count);
-	      return (SANE_STATUS_NO_MEM);
-	    }
-	}
-
-      DBG (20, "buffer_line_offset: r lines = %d, g lines = %d\n",
+      DBG (9, "buffer_line_offset: r lines = %d, g lines = %d\n",
 	   r_buf_lines, g_buf_lines);
     }
 
@@ -821,43 +923,86 @@ artec_buffer_line_offset (SANE_Int line_offset, SANE_Byte * data, size_t * len)
     {
       if (cur_line > r_buf_lines)
 	{
-	  /* get the red line info from r_buf_lines ago */
-	  memcpy (tmp_line_buf, r_line_buf[0], width);
+	  /* copy the Red and Green portions out of the buffer */
+	  /* if scanner returns RRRRRRRRGGGGGGGGGBBBBBBBB format it's easier */
+	  if (s->hw->flags & ARTEC_FLAG_RGB_CHAR_SHIFT)
+	    {
+	      /* get the red line info from r_buf_lines ago */
+	      memcpy (tmp_line_buf, line_buffer[0], width);
 
-	  /* get the green line info from g_buf_lines ago */
-	  memcpy (tmp_line_buf + width, g_line_buf[0], width);
+	      /* get the green line info from g_buf_lines ago */
+	      memcpy (tmp_line_buf + width, &line_buffer[line_offset][width],
+		      width);
+	    }
+	  else
+	    {
+	      /* get the red line info from r_buf_lines ago as a whole line */
+	      memcpy (tmp_line_buf, line_buffer[0], *len);
+
+	      /* scanner returns RGBRGBRGB format so we do a loop for green */
+	      grn_ptr = &line_buffer[line_offset][1];
+	      out_ptr = tmp_line_buf + 1;
+	      for (count = 0; count < width; count++)
+		{
+		  *out_ptr = *grn_ptr;	/* copy green pixel */
+
+		  grn_ptr += 3;
+		  out_ptr += 3;
+		}
+	    }
 	}
 
-      /* move all the buffered red lines down (just move the ptrs for speed) */
-      tmp_r_buf_ptr = r_line_buf[0];
+      /* move all the buffered lines down (just move the ptrs for speed) */
+      tmp_buf_ptr = line_buffer[0];
       for (count = 0; count < (r_buf_lines - 1); count++)
 	{
-	  r_line_buf[count] = r_line_buf[count + 1];
+	  line_buffer[count] = line_buffer[count + 1];
 	}
-      r_line_buf[r_buf_lines - 1] = tmp_r_buf_ptr;
+      line_buffer[r_buf_lines - 1] = tmp_buf_ptr;
 
-      /* insert the supplied red line data at the end of our FIFO */
-      memcpy (r_line_buf[r_buf_lines - 1], data, width);
-
-      /* move all the buffered green lines down (just move the ptrs for speed) */
-      tmp_g_buf_ptr = g_line_buf[0];
-      for (count = 0; count < (g_buf_lines - 1); count++)
-	{
-	  g_line_buf[count] = g_line_buf[count + 1];
-	}
-      g_line_buf[g_buf_lines - 1] = tmp_g_buf_ptr;
-
-      /* insert the supplied green line data at the end of our FIFO */
-      memcpy (g_line_buf[g_buf_lines - 1], data + width, width);
+      /* insert the new line data at the end of our FIFO */
+      memcpy (line_buffer[r_buf_lines - 1], data, *len);
 
       if (cur_line > r_buf_lines)
 	{
-	  /* copy the red and green data in with the original blue */
-	  memcpy (data, tmp_line_buf, width * 2);
+	  /* copy the Red and Green portions out of the buffer */
+	  /* if scanner returns RRRRRRRRGGGGGGGGGBBBBBBBB format it's easier */
+	  if (s->hw->flags & ARTEC_FLAG_RGB_CHAR_SHIFT)
+	    {
+	      /* copy the red and green data in with the original blue */
+	      memcpy (data, tmp_line_buf, width * 2);
+	    }
+	  else
+	    {
+	      /* scanner returns RGBRGBRGB format so we have to do a loop */
+	      /* copy the blue data into our temp buffer then copy full */
+	      /* temp buffer overtop of input data */
+	      if (s->hw->flags & ARTEC_FLAG_IMAGE_REV_LR)
+	        {
+	          blu_ptr = data;
+	          out_ptr = tmp_line_buf;
+	        }
+	      else
+	        {
+	          blu_ptr = data + 2;
+	          out_ptr = tmp_line_buf + 2;
+	        }
+
+	      for (count = 0; count < width; count++)
+		{
+		  *out_ptr = *blu_ptr;	/* copy blue pixel */
+
+		  blu_ptr += 3;
+		  out_ptr += 3;
+		}
+
+	      /* now just copy tmp_line_buf back over original data */
+	      memcpy (data, tmp_line_buf, *len);
+	    }
 	}
       else
 	{
-	  /* if we are in the first r_buf_lines, then we don't return anything */
+	  /* if in the first r_buf_lines, then don't return anything */
 	  *len = 0;
 	}
     }
@@ -870,22 +1015,17 @@ artec_buffer_line_offset_free (void)
 {
   int count;
 
+  DBG (7, "artec_buffer_line_offset_free()\n");
+
   free (tmp_line_buf);
   tmp_line_buf = NULL;
 
   for (count = 0; count < r_buf_lines; count++)
     {
-      free (r_line_buf[count]);
+      free (line_buffer[count]);
     }
-  free (r_line_buf);
-  r_line_buf = NULL;
-
-  for (count = 0; count < g_buf_lines; count++)
-    {
-      free (g_line_buf[count]);
-    }
-  free (g_line_buf);
-  g_line_buf = NULL;
+  free (line_buffer);
+  line_buffer = NULL;
 
   return (SANE_STATUS_GOOD);
 }
@@ -894,6 +1034,12 @@ artec_buffer_line_offset_free (void)
 static SANE_Byte **mono_line_buf = NULL;
 static SANE_Int excess_lines;
 
+/*
+ * artec_mono_bit_offset() corrects a 1bpp stream of pixel_per_line pixels
+ * to a line of bytes_per_line * 8 pixels.  This is needed, for example
+ * by the A6000C. This correction is activated by setting
+ * ARTEC_FLAG_MONO_ADJUST in the scanner capabilities.
+ */
 static SANE_Status
 artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
 {
@@ -908,6 +1054,9 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
   int line1_bytes, line2_bytes;
   SANE_Byte offset_buf = 0;
 
+  DBG (8, "artec_mono_bit_offset()\n");
+
+  /* Set up the mono data buffer the first time through */
   if (tmp_line_buf == NULL)
     {
       /* initialise global variables:  */
@@ -932,10 +1081,12 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
 
       for (count = 0; count < excess_lines; count++)
 	{
-	  mono_line_buf[count] = malloc (s->params.bytes_per_line * sizeof (SANE_Byte));
+	  mono_line_buf[count] = malloc (s->params.bytes_per_line
+					 * sizeof (SANE_Byte));
 	  if (mono_line_buf[count] == NULL)
 	    {
-	      DBG (1, "couldn't allocate memory for mono line buffer %d\n", count);
+	      DBG (1, "couldn't allocate memory for mono line buffer %d\n",
+		   count);
 	      return (SANE_STATUS_NO_MEM);
 	    }
 	}
@@ -943,7 +1094,7 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
       tmp_line_buf = malloc (*len);
       if (tmp_line_buf == NULL)
 	{
-	  DBG (1, "couldn't allocate memory for temp line buffer\n");
+	  DBG (1, "couldn't allocate memory for temp mono line buffer\n");
 	  return (SANE_STATUS_NO_MEM);
 	}
 
@@ -954,7 +1105,7 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
   if (*len == 0)
     return (SANE_STATUS_GOOD);
 
-  DBG (7, "artec_mono_bit_offset: excess_lines = %d, lines_in_buf = %d\n",
+  DBG (50, "artec_mono_bit_offset: excess_lines = %d, lines_in_buf = %d\n",
        excess_lines, lines_in_buf);
 
   /* Now process the incoming mono data */
@@ -969,24 +1120,32 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
     {
       /* Assuming the excess_lines calculation is correct, this should
          never occur! */
-      DBG (7, "artec_mono_bit_offset: mono buffer overflow!\n");
-      return (SANE_STATUS_NO_MEM);	/* a more appropriate status should be returned */
+      DBG (50, "artec_mono_bit_offset: mono buffer overflow!\n");
+      return (SANE_STATUS_IO_ERROR);
     }
 
   offset_byte = bits_read / 8;	/* byte index (from 0) of next data */
-  offset_bit = bits_read - offset_byte * 8;	/* bit index in that byte (from 0) */
+  offset_bit = bits_read - offset_byte * 8;	/* bit index in byte (from 0) */
 
-  DBG (7, "artec_mono_bit_offset: bits_read = %d, offset_byte = %d, offset_bit = %d\n",
-       bits_read, offset_byte, offset_bit);
+  DBG (50,
+     "artec_mono_bit_offset: bits_read = %d, offset_byte = %d, offset_bit = %d\n",
+     bits_read, offset_byte, offset_bit);
 
-  /* copy mono data from the buffer into the tmp line buffer */
+  /* Copy mono data from the buffer into the tmp line buffer */
+  /* Case 1: Data starts at the start of the buffer line */
   if ((offset_byte == 0) && (offset_bit == 0))
     {
-      DBG (7, "artec_mono_bit_offset: Copying whole buffer line\n");
+      DBG (50, "artec_mono_bit_offset: Copying whole buffer line\n");
       memcpy (tmp_line_buf, mono_line_buf[0], s->params.bytes_per_line);
     }
+  /* Case 2: Data starts mid-way through the buffer line */
   else
     {
+      /*
+       * In this case each byte of data is read from across two bytes
+       * in the buffer.  Furthermore, some data is on the first line
+       * in the buffer and the rest is on the second line in the buffer
+       */
       line1_bits = s->params.bytes_per_line * 8 - bits_read;
       if (line1_bits > s->params.pixels_per_line)
 	line1_bits = s->params.pixels_per_line;
@@ -1001,14 +1160,14 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
 	  line2_bytes = 0;
 	  line2_bits = 0;
 	}
-      DBG (7, "artec_mono_bit_offset: line1_bits = %d, line1bytes = %d\n",
+      DBG (50, "artec_mono_bit_offset: line1_bits = %d, line1bytes = %d\n",
 	   line1_bits, line1_bytes);
-      DBG (7, "artec_mono_bit_offset: line2_bits = %d, line2bytes = %d\n",
+      DBG (50, "artec_mono_bit_offset: line2_bits = %d, line2bytes = %d\n",
 	   line2_bits, line2_bytes);
 
       count = 0;
 
-      /* read the data from the first buffer line */
+      /* Read the data from the first line in the buffer */
       for (byte = 0; byte < line1_bytes; byte++)
 	{
 	  if (offset_bit == 0)
@@ -1031,7 +1190,7 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
 		}
 	    }
 	}
-      /* read the data from the second buffer line */
+      /* Read the data from the second line in the buffer */
       for (byte = 0; byte < line2_bytes; byte++)
 	{
 	  if (offset_bit == 0)
@@ -1056,12 +1215,15 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
     }
 
   bits_read += s->params.pixels_per_line;
+
+  /* If a whole line in the buffer was used, rotate the used line to the */
+  /* end of the buffer */
   if (bits_read >= s->params.bytes_per_line * 8)
     {
       bits_read -= s->params.bytes_per_line * 8;
-      DBG (7, "artec_mono_bit_offset: rotating used line to end of buffer\n");
-      /* the first line in the buffer is completely used so rotate the
-         unused mono data up the buffer */
+      DBG (50, "artec_mono_bit_offset: rotating used line to end of buffer\n");
+      /* the first line in the buffer is completely used so rotate the */
+      /* unused mono data up the buffer */
       tmp_buf_ptr = mono_line_buf[0];
       for (count = 0; count < s->params.bytes_per_line; count++)
 	{
@@ -1086,19 +1248,22 @@ artec_mono_buffer_free (void)
 {
   int count;
 
-  DBG (7, "artec_mono_buffer_free\n");
-  free (tmp_line_buf);
-  tmp_line_buf = NULL;
+  DBG (7, "artec_mono_buffer_free()\n");
+  if (tmp_line_buf != NULL)
+    {
+      free (tmp_line_buf);
+      tmp_line_buf = NULL;
 
-  for (count = 0; count < excess_lines; count++)
-    free (mono_line_buf[count]);
-  free (mono_line_buf);
-  mono_line_buf = NULL;
+      for (count = 0; count < excess_lines; count++)
+	free (mono_line_buf[count]);
+      free (mono_line_buf);
+      mono_line_buf = NULL;
+    }
 
   return (SANE_STATUS_GOOD);
 }
 
-static SANE_Status
+SANE_Status
 artec_read_gamma_table (SANE_Handle handle)
 {
   ARTEC_Scanner *s = handle;
@@ -1106,18 +1271,31 @@ artec_read_gamma_table (SANE_Handle handle)
   char *data;
   int i;
 
-  DBG (7, "artec_read_gamma_table\n");
+  DBG (7, "artec_read_gamma_table()\n");
 
   memset (write_6, 0, sizeof (*write_6));
 
   write_6[0] = 0x28;		/* read data code */
+
+  /* FIXME: AT12 and AM12S use 0x0E for reading all channels of data */
   write_6[2] = 0x03;		/* data type code "gamma data" */
+
   write_6[6] = (s->gamma_length + 9) >> 16;
   write_6[7] = (s->gamma_length + 9) >> 8;
   write_6[8] = (s->gamma_length + 9);
 
-  data = write_6 + 19;
+  /* FIXME: AT12 and AM12S have one less byte so use 18 */
+  if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
+      ( ! strcmp( s->hw->sane.model, "AM12S" )))
+    {
+      data = write_6 + 18;
+    }
+  else
+    {
+      data = write_6 + 19;
+    }
 
+  /* FIXME: AT12 & AM12S ignore this, it's a reserved field */
   write_6[10] = 0x08;		/* bitmask, bit 3 means mono type */
 
   if (!s->val[OPT_CUSTOM_GAMMA].w)
@@ -1125,14 +1303,14 @@ artec_read_gamma_table (SANE_Handle handle)
       write_6[11] = 1;		/* internal gamma table #1 (hope this is default) */
     }
 
-  if (DBG_LEVEL > 10)
+  if (DBG_LEVEL >= 9)
     {
       fprintf (stderr, "Gamma Table\n==================================\n");
     }
 
   for (i = 0; i < s->gamma_length; i++)
     {
-      if (DBG_LEVEL > 10)
+      if (DBG_LEVEL >= 9)
 	{
 	  if (!(i % 16))
 	    fprintf (stderr, "\n%02x: ", i);
@@ -1142,15 +1320,23 @@ artec_read_gamma_table (SANE_Handle handle)
       data[i] = s->gamma_table[0][i];
     }
 
-  if (DBG_LEVEL > 10)
+  if (DBG_LEVEL >= 9)
     {
       fprintf (stderr, "\n\n");
     }
 
-  return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
+  if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
+      ( ! strcmp( s->hw->sane.model, "AM12S" )))
+    {
+      return (sanei_scsi_cmd (s->fd, write_6, 10 + 8 + s->gamma_length, 0, 0));
+    }
+  else
+    {
+      return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
+    }
 }
 
-static SANE_Status
+SANE_Status
 artec_send_gamma_table (SANE_Handle handle)
 {
   ARTEC_Scanner *s = handle;
@@ -1158,13 +1344,25 @@ artec_send_gamma_table (SANE_Handle handle)
   char *data;
   int i;
 
-  DBG (7, "artec_send_gamma_table\n");
+  DBG (7, "artec_send_gamma_table()\n");
 
   memset (write_6, 0, sizeof (*write_6));
 
   write_6[0] = 0x2a;		/* send data code */
-  write_6[2] = 0x03;		/* data type code "gamma data" */
 
+  if (s->hw->setwindow_cmd_size > 55)
+    {
+      /* newer scanners support sending 3 channels of gamma, or populating all */
+      /* 3 channels with same data by using code 0x0e */
+      write_6[2] = 0x0e;
+    }
+  else
+    {
+      /* older scanners only support 1 channel of gamma data using code 0x3 */
+      write_6[2] = 0x03;
+    }
+
+  /* FIXME: AT12 & AM!2S ignore this, it's a reserved field */
   write_6[10] = 0x08;		/* bitmask, bit 3 means mono type */
 
   if (!s->val[OPT_CUSTOM_GAMMA].w)
@@ -1172,7 +1370,7 @@ artec_send_gamma_table (SANE_Handle handle)
       write_6[6] = 9 >> 16;
       write_6[7] = 9 >> 8;
       write_6[8] = 9;
-      write_6[11] = 1;		/* internal gamma table #1 (hope this is default) */
+      write_6[11] = 1;	/* internal gamma table #1 (hope this is default) */
 
       return (sanei_scsi_cmd (s->fd, write_6, 10 + 9, 0, 0));
     }
@@ -1182,17 +1380,26 @@ artec_send_gamma_table (SANE_Handle handle)
       write_6[7] = (s->gamma_length + 9) >> 8;
       write_6[8] = (s->gamma_length + 9);
 
-      if (DBG_LEVEL > 10)
+      if (DBG_LEVEL >= 9)
 	{
 	  fprintf (stderr,
 		   "Gamma Table\n==================================\n");
 	}
 
-      data = write_6 + 19;
+      /* FIXME: AT12 and AM12S have one less byte so use 18 */
+      if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
+          ( ! strcmp( s->hw->sane.model, "AM12S" )))
+        {
+          data = write_6 + 18;
+        }
+      else
+        {
+          data = write_6 + 19;
+        }
 
       for (i = 0; i < s->gamma_length; i++)
 	{
-	  if (DBG_LEVEL > 10)
+	  if (DBG_LEVEL >= 9)
 	    {
 	      if (!(i % 16))
 		fprintf (stderr, "\n%02x: ", i);
@@ -1202,14 +1409,23 @@ artec_send_gamma_table (SANE_Handle handle)
 	  data[i] = s->gamma_table[0][i];
 	}
 
-      data[255] = 0;
+      data[s->gamma_length - 1] = 0;
 
-      if (DBG_LEVEL > 10)
+      if (DBG_LEVEL >= 9)
 	{
 	  fprintf (stderr, "\n\n");
 	}
 
-      return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
+      /* FIXME: AT12 and AM12S have one less byte so use 18 */
+      if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
+          ( ! strcmp( s->hw->sane.model, "AM12S" )))
+        {
+          return (sanei_scsi_cmd (s->fd, write_6, 10 + 8 + s->gamma_length, 0, 0));
+        }
+      else
+        {
+          return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
+        }
     }
 }
 
@@ -1221,96 +1437,121 @@ artec_set_scan_window (SANE_Handle handle)
   char *data;
   int counter;
 
-  DBG (7, "artec_set_scan_window\n");
+  DBG (7, "artec_set_scan_window()\n");
 
   /*
    * if we can, start before the desired window since we have to throw away
    * s->line_offset number of rows because of the RGB fixup.
    */
-  if ((s->line_offset > 0) && (s->tl_x > 0))
-    s->tl_x -= s->line_offset;
+  if ((s->line_offset) &&
+      (s->tl_x) &&
+      (s->tl_x >= ( s->line_offset * 2 )))
+    {
+      s->tl_x -= ( s->line_offset * 2 );
+    }
 
   data = write_6 + 10;
 
-  DBG (4, "Scan window info:\n");
-  DBG (4, "  X resolution: %5d (%d-%d)\n",
+  DBG (5, "Scan window info:\n");
+  DBG (5, "  X resolution: %5d (%d-%d)\n",
        s->x_resolution, ARTEC_MIN_X (s->hw), ARTEC_MAX_X (s->hw));
-  DBG (4, "  Y resolution: %5d (%d-%d)\n",
+  DBG (5, "  Y resolution: %5d (%d-%d)\n",
        s->y_resolution, ARTEC_MIN_Y (s->hw), ARTEC_MAX_Y (s->hw));
-  DBG (4, "  TL_X (pixel): %5d\n",
+  DBG (5, "  TL_X (pixel): %5d\n",
        s->tl_x);
-  DBG (4, "  TL_Y (pixel): %5d\n",
+  DBG (5, "  TL_Y (pixel): %5d\n",
        s->tl_y);
-  DBG (4, "  Width       : %5d (%d-%d)\n",
+  DBG (5, "  Width       : %5d (%d-%d)\n",
        s->params.pixels_per_line,
        s->hw->x_range.min,
        (int) ((SANE_UNFIX (s->hw->x_range.max) / MM_PER_INCH) *
 	      s->x_resolution));
-  DBG (4, "  Height      : %5d (%d-%d)\n",
+  DBG (5, "  Height      : %5d (%d-%d)\n",
        s->params.lines,
        s->hw->y_range.min,
        (int) ((SANE_UNFIX (s->hw->y_range.max) / MM_PER_INCH) *
 	      s->y_resolution));
 
-  DBG (4, "  Image Comp. : %s\n", s->mode);
-  DBG (4, "  Line Offset : %lu\n", (u_long) s->line_offset);
+  DBG (5, "  Image Comp. : %s\n", s->mode);
+  DBG (5, "  Line Offset : %lu\n", (u_long) s->line_offset);
 
   memset (write_6, 0, 4096);
   write_6[0] = 0x24;
   write_6[8] = s->hw->setwindow_cmd_size;	/* total size of command */
 
   /* beginning of set window data header */
-  data[7] = s->hw->setwindow_cmd_size - 8;	/* actual data byte count */
-  data[10] = s->x_resolution >> 8;	/* x resolution */
+  /* actual SCSI command data byte count */
+  data[7] = s->hw->setwindow_cmd_size - 8;
+
+  /* x resolution */
+  data[10] = s->x_resolution >> 8;
   data[11] = s->x_resolution;
-  data[12] = s->y_resolution >> 8;	/* y resolution */
+
+  /* y resolution */
+  data[12] = s->y_resolution >> 8;
   data[13] = s->y_resolution;
-  data[14] = s->tl_x >> 24;	/* top left X value */
+
+  /* top left X value */
+  data[14] = s->tl_x >> 24;
   data[15] = s->tl_x >> 16;
   data[16] = s->tl_x >> 8;
   data[17] = s->tl_x;
-  data[18] = s->tl_y >> 24;	/* top left Y value */
+
+  /* top left Y value */
+  data[18] = s->tl_y >> 24;
   data[19] = s->tl_y >> 16;
   data[20] = s->tl_y >> 8;
   data[21] = s->tl_y;
-  data[22] = s->params.pixels_per_line >> 24;	/* width */
+
+  /* width */
+  data[22] = s->params.pixels_per_line >> 24;
   data[23] = s->params.pixels_per_line >> 16;
   data[24] = s->params.pixels_per_line >> 8;
   data[25] = s->params.pixels_per_line;
-  data[26] = (s->params.lines + (s->line_offset * 2)) >> 24;	/* height */
+
+  /* height */
+  data[26] = (s->params.lines + (s->line_offset * 2)) >> 24;
   data[27] = (s->params.lines + (s->line_offset * 2)) >> 16;
   data[28] = (s->params.lines + (s->line_offset * 2)) >> 8;
   data[29] = (s->params.lines + (s->line_offset * 2));
-  data[30] = s->val[OPT_BRIGHTNESS].w;	/* brightness (if supported) */
+
+  /* misc. single-byte settings */
   data[31] = s->val[OPT_THRESHOLD].w;	/* threshold */
-  data[32] = s->val[OPT_CONTRAST].w;	/* contrast */
 
   /* byte 33 is mode, byte 37 bit 7 is "negative" setting */
   if (strcmp (s->mode, "Lineart") == 0)
     {
+      data[32] = s->val[OPT_CONTRAST].w;
       data[33] = ARTEC_COMP_LINEART;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x0 : 0x80;
     }
   else if (strcmp (s->mode, "Halftone") == 0)
     {
+      data[32] = s->val[OPT_CONTRAST].w;
       data[33] = ARTEC_COMP_HALFTONE;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x0 : 0x80;
     }
   else if (strcmp (s->mode, "Gray") == 0)
     {
+      data[32] = 0x80;	/* leave contrast at mid-way */
       data[33] = ARTEC_COMP_GRAY;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x80 : 0x0;
     }
   else if (strcmp (s->mode, "Color") == 0)
     {
+      data[32] = 0x80;	/* leave contrast at mid-way */
       data[33] = ARTEC_COMP_COLOR;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x80 : 0x0;
     }
 
   data[34] = s->params.depth;	/* bits per pixel */
 
-  data[35] = artec_get_str_index (halftone_pattern_list,
-				  s->val[OPT_HALFTONE_PATTERN].s);	/* halftone pattern */
+  if ( s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN )
+    {
+      data[35] = artec_get_str_index (halftone_pattern_list,
+	  s->val[OPT_HALFTONE_PATTERN].s);	/* halftone pattern */
+    }
+
   /* user supplied halftone pattern not supported for now so override with */
   /* 8x8 Bayer */
   if (data[35] == 0)
@@ -1320,34 +1561,68 @@ artec_set_scan_window (SANE_Handle handle)
 
   /* NOTE: AT12 doesn't support mono according to docs. */
   data[48] = artec_get_str_index (filter_type_list,
-				  s->val[OPT_FILTER_TYPE].s);	/* filter mode */
+		  s->val[OPT_FILTER_TYPE].s);	/* filter mode */
 
   if (s->hw->setwindow_cmd_size > 55)
     {
       data[48] = 0x2;		/* DB filter type green for AT12,see above */
-      /* this stuff is for models like the AT12 which support additional info */
-      data[55] = 0x00;		/* buffer full line count */
-      data[56] = 0x00;		/* buffer full line count */
-      data[57] = 0x00;		/* buffer full line count */
-      data[58] = 0x0a;		/* buffer full line count *//* guessing at this value */
-      data[59] = 0x00;		/* access line count */
-      data[60] = 0x00;		/* access line count */
-      data[61] = 0x00;		/* access line count */
-      data[62] = 0x0a;		/* access line count *//* guessing at this value */
 
-      /* DB : following fields : high order bit (0x80) is enable */
-      data[63] = 0x80;		/* scanner handles line offset fixup, 0 = driver handles */
-      data[64] = 0;		/* disable pixel average function, 0x80 = enable */
-      data[65] = 0;		/* disable lineart edge enhancement function, 0x80 = enable */
-      data[66] = 0;		/* data is R-G-B format, 0x80 = G-B-R format (reversed) */
+      if ( s->hw->flags & ARTEC_FLAG_SC_BUFFERS_LINES )
+        {
+          /* FIXME: guessing at this value, use formula instead */
+          data[55] = 0x00;	/* buffer full line count */
+          data[56] = 0x00;	/* buffer full line count */
+          data[57] = 0x00;	/* buffer full line count */
+          data[58] = 0x0a;	/* buffer full line count */
+
+          /* FIXME: guessing at this value, use formula instead */
+          data[59] = 0x00;	/* access line count */
+          data[60] = 0x00;	/* access line count */
+          data[61] = 0x00;	/* access line count */
+          data[62] = 0x0a;	/* access line count */
+        }
+
+      if ( s->hw->flags & ARTEC_FLAG_SC_HANDLES_OFFSET )
+        {
+          /* DB : following fields : high order bit (0x80) is enable */
+          /* scanner handles line offset fixup, 0 = driver handles */
+          data[63] = 0x80;
+        }
+
+      if (( s->hw->flags & ARTEC_FLAG_PIXEL_AVERAGING ) &&
+          ( s->val[OPT_PIXEL_AVG].w ))
+        {
+          /* enable pixel average function */
+              data[64] = 0x80;
+        }
+      else
+        {
+          /* disable pixel average function */
+              data[64] = 0;
+        }
+
+      if (( s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE ) &&
+          ( s->val[OPT_EDGE_ENH].w ))
+        {
+          /* enable lineart edge enhancement function */
+          data[65] = 0x80;
+        }
+      else
+        {
+          /* disable lineart edge enhancement function */
+          data[65] = 0;
+        }
+
+      /* data is R-G-B format, 0x80 = G-B-R format (reversed) */
+      data[66] = 0;
     }
 
-  DBG (100, "Set Window data : \n");
+  DBG (50, "Set Window data : \n");
   for (counter = 0; counter < s->hw->setwindow_cmd_size; counter++)
     {
-      DBG (100, "  byte %2d = %02x \n", counter, data[counter] & 0xff);		/* DB */
+      DBG (50, "  byte %2d = %02x \n", counter, data[counter] & 0xff);	/* DB */
     }
-  DBG (100, "\n");
+  DBG (50, "\n");
 
   /* set the scan window */
   return (sanei_scsi_cmd (s->fd, write_6, 10 +
@@ -1360,15 +1635,25 @@ artec_start_scan (SANE_Handle handle)
   ARTEC_Scanner *s = handle;
   char write_7[7];
 
-  DBG (7, "artec_start_scan\n");
+  DBG (7, "artec_start_scan()\n");
 
   /* setup cmd to start scanning */
   memset (write_7, 0, 7);
-  write_7[0] = 0x1b;
-  write_7[4] = 0x01;
+  write_7[0] = 0x1b;	/* code to start scan */
 
-  /* start the scan */
-  return (sanei_scsi_cmd (s->fd, write_7, 7, 0, 0));
+  /* FIXME: need to make this a flag */
+  if ( ! strcmp( s->hw->sane.model, "AM12S" ))
+    {
+      /* start the scan */
+      return (sanei_scsi_cmd (s->fd, write_7, 6, 0, 0));
+    }
+  else
+    {
+      write_7[4] = 0x01;	/* need to send 1 data byte */
+
+      /* start the scan */
+      return (sanei_scsi_cmd (s->fd, write_7, 7, 0, 0));
+    }
 }
 
 static SANE_Status
@@ -1376,6 +1661,8 @@ artec_software_rgb_calibrate (SANE_Handle handle, SANE_Byte * buf, int lines)
 {
   ARTEC_Scanner *s = handle;
   int line, i, loop, offset;
+
+  DBG (7, "artec_software_rgb_calibrate()\n");
 
   for (line = 0; line < lines; line++)
     {
@@ -1397,38 +1684,41 @@ artec_software_rgb_calibrate (SANE_Handle handle, SANE_Byte * buf, int lines)
 
       for (loop = 0; loop < s->params.pixels_per_line; loop++)
 	{
-	  if (( DBG_LEVEL == 100 ) &&
-	      ( loop < 100 )) {
-            fprintf( stderr, "  %2d-%4d R (%4d,%4d): %d * %5.2f = %d\n",
-              line, loop, i, offset, buf[i],
-              s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][offset],
-              (int)(buf[i] *
-                s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][offset]) );
-	  }
+	  if ((DBG_LEVEL == 100) &&
+	      (loop < 100))
+	    {
+	      fprintf (stderr, "  %2d-%4d R (%4d,%4d): %d * %5.2f = %d\n",
+		       line, loop, i, offset, buf[i],
+		       s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][offset],
+		       (int) (buf[i] *
+		     s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][offset]));
+	    }
 	  buf[i] = buf[i] *
 	    s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][offset];
 	  i++;
 
-	  if (( DBG_LEVEL == 100 ) &&
-	      ( loop < 100 )) {
-            fprintf( stderr, "          G (%4d,%4d): %d * %5.2f = %d\n",
-              i, offset, buf[i],
-              s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][offset],
-              (int)(buf[i] *
-                s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][offset]) );
-	  }
+	  if ((DBG_LEVEL == 100) &&
+	      (loop < 100))
+	    {
+	      fprintf (stderr, "          G (%4d,%4d): %d * %5.2f = %d\n",
+		       i, offset, buf[i],
+		     s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][offset],
+		       (int) (buf[i] *
+		   s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][offset]));
+	    }
 	  buf[i] = buf[i] *
 	    s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][offset];
 	  i++;
 
-	  if (( DBG_LEVEL == 100 ) &&
-	      ( loop < 100 )) {
-            fprintf( stderr, "          B (%4d,%4d): %d * %5.2f = %d\n",
-              i, offset, buf[i],
-              s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][offset],
-              (int)(buf[i] *
-                s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][offset]) );
-	  }
+	  if ((DBG_LEVEL == 100) &&
+	      (loop < 100))
+	    {
+	      fprintf (stderr, "          B (%4d,%4d): %d * %5.2f = %d\n",
+		       i, offset, buf[i],
+		       s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][offset],
+		       (int) (buf[i] *
+		    s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][offset]));
+	    }
 	  buf[i] = buf[i] *
 	    s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][offset];
 	  i++;
@@ -1462,7 +1752,7 @@ artec_calibrate_shading (SANE_Handle handle)
   SANE_Word save_pixels_per_line;
   int i;
 
-  DBG (7, "artec_calibrate_white_shading\n");
+  DBG (7, "artec_calibrate_shading()\n");
 
   if (s->hw->flags & ARTEC_FLAG_CALIBRATE_RGB)
     {
@@ -1471,53 +1761,62 @@ artec_calibrate_shading (SANE_Handle handle)
       /* calibration so we have it if user requests */
       len = 4 * 2592;		/* 4 lines of data, 2592 pixels wide */
 
-      if ( DBG_LEVEL == 100 ) {
-        fprintf( stderr, "RED Software Calibration data\n" );
-      }
+      if (DBG_LEVEL == 100)
+	{
+	  fprintf (stderr, "RED Software Calibration data\n");
+	}
 
       read_data (s->fd, ARTEC_DATA_RED_SHADING, buf, &len);
-      for (i = 0; i < 2592; i++) {
-	s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][i] =
-	  255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
-        if ( DBG_LEVEL == 100 ) {
-          fprintf( stderr,
-            "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
-            i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
-            s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][i] );
-        }
-      }
+      for (i = 0; i < 2592; i++)
+	{
+	  s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][i] =
+	    255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
+	  if (DBG_LEVEL == 100)
+	    {
+	      fprintf (stderr,
+	       "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
+		     i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
+		       s->soft_calibrate_data[ARTEC_SOFT_CALIB_RED][i]);
+	    }
+	}
 
-      if ( DBG_LEVEL == 100 ) {
-        fprintf( stderr, "GREEN Software Calibration data\n" );
-      }
+      if (DBG_LEVEL == 100)
+	{
+	  fprintf (stderr, "GREEN Software Calibration data\n");
+	}
 
       read_data (s->fd, ARTEC_DATA_GREEN_SHADING, buf, &len);
-      for (i = 0; i < 2592; i++) {
-	s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][i] =
-	  255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
-        if ( DBG_LEVEL == 100 ) {
-          fprintf( stderr,
-            "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
-            i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
-	    s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][i] );
+      for (i = 0; i < 2592; i++)
+	{
+	  s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][i] =
+	    255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
+	  if (DBG_LEVEL == 100)
+	    {
+	      fprintf (stderr,
+	       "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
+		     i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
+		       s->soft_calibrate_data[ARTEC_SOFT_CALIB_GREEN][i]);
+	    }
 	}
-      }
 
-      if ( DBG_LEVEL == 100 ) {
-        fprintf( stderr, "BLUE Software Calibration data\n" );
-      }
+      if (DBG_LEVEL == 100)
+	{
+	  fprintf (stderr, "BLUE Software Calibration data\n");
+	}
 
       read_data (s->fd, ARTEC_DATA_BLUE_SHADING, buf, &len);
-      for (i = 0; i < 2592; i++) {
-	s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][i] =
-	  255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
-        if ( DBG_LEVEL == 100 ) {
-          fprintf( stderr,
-            "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
-            i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
-	    s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][i] );
+      for (i = 0; i < 2592; i++)
+	{
+	  s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][i] =
+	    255.0 / ((buf[i] + buf[i + 2592] + buf[i + 5184] + buf[i + 7776]) / 4);
+	  if (DBG_LEVEL == 100)
+	    {
+	      fprintf (stderr,
+	       "   %4d: 255.0 / (( %3d + %3d + %3d + %3d ) / 4 ) = %5.2f\n",
+		     i, buf[i], buf[i + 2592], buf[i + 5184], buf[i + 7776],
+		       s->soft_calibrate_data[ARTEC_SOFT_CALIB_BLUE][i]);
+	    }
 	}
-      }
     }
   else if (s->hw->flags & ARTEC_FLAG_CALIBRATE_DARK_WHITE)
     {
@@ -1555,11 +1854,24 @@ end_scan (SANE_Handle handle)
      {0x1B, 0, 0, 0, 0, 0};
    */
 
-  DBG (7, "end_scan...\n");
+  DBG (7, "end_scan()\n");
+
   s->scanning = SANE_FALSE;
 
-  if (s->this_pass == 3)
-    s->this_pass = 0;
+/*  if (s->this_pass == 3) */
+  s->this_pass = 0;
+
+  if ((s->hw->flags & ARTEC_FLAG_RGB_LINE_OFFSET) &&
+      (tmp_line_buf != NULL))
+    {
+      artec_buffer_line_offset_free ();
+    }
+
+  if ((s->hw->flags & ARTEC_FLAG_MONO_ADJUST) &&
+      (tmp_line_buf != NULL))
+    {
+      artec_mono_buffer_free ();
+    }
 
   /* DB
      return (sanei_scsi_cmd (s->fd, write_6, 6, 0, 0));
@@ -1574,6 +1886,8 @@ artec_get_cap_data (ARTEC_Device * dev, int fd)
   int cap_model, loop;
   SANE_Status status;
   u_char cap_buf[256];		/* buffer for cap data */
+
+  DBG (7, "artec_get_cap_data()\n");
 
   /* DB always use the hard-coded capability info first 
    * if we get cap data from the scanner, we override */
@@ -1621,10 +1935,6 @@ artec_get_cap_data (ARTEC_Device * dev, int fd)
 
   dev->sane.type = cap_data[cap_model].type;
 
-  dev->brightness_range.min = cap_data[cap_model].brightness_min;
-  dev->brightness_range.max = cap_data[cap_model].brightness_max;
-  dev->brightness_range.quant = 1;
-
   dev->max_read_size = cap_data[cap_model].max_read_size;
 
   dev->flags = cap_data[cap_model].flags;
@@ -1653,73 +1963,65 @@ artec_get_cap_data (ARTEC_Device * dev, int fd)
       size_t len = sizeof (cap_buf);
 
       /* read the capability data from the scanner */
-      DBG (20, "reading capability data from scanner...\n");
+      DBG (9, "reading capability data from scanner...\n");
 
       wait_ready (fd);
 
       read_data (fd, ARTEC_DATA_CAPABILITY_DATA, cap_buf, &len);
 
-      DBG (100, "scanner capability data : \n");
-      /*
-         for (i = 0; i < 59; i++)
-         {
-         DBG (100, "  byte %2d = %02x \n", i, cap_buf[i]&0xff); 
-         }
-         DBG (100, "\n");
-       */
-
+      DBG (50, "scanner capability data : \n");
       strncpy (info, (const char *) &cap_buf[0], 8);
       info[8] = '\0';
-      DBG (100, "  Vendor                    : %s\n", info);
+      DBG (50, "  Vendor                    : %s\n", info);
       strncpy (info, (const char *) &cap_buf[8], 16);
       info[16] = '\0';
-      DBG (100, "  Device Name               : %s\n", info);
+      DBG (50, "  Device Name               : %s\n", info);
       strncpy (info, (const char *) &cap_buf[24], 4);
       info[4] = '\0';
-      DBG (100, "  Version Number            : %s\n", info);
+      DBG (50, "  Version Number            : %s\n", info);
       sprintf (info, "%d ", cap_buf[29]);
-      DBG (100, "  CCD Type                  : %s\n", info);
+      DBG (50, "  CCD Type                  : %s\n", info);
       sprintf (info, "%d ", cap_buf[30]);
-      DBG (100, "  AD Converter Type         : %s\n", info);
+      DBG (50, "  AD Converter Type         : %s\n", info);
       sprintf (info, "%d ", (cap_buf[31] << 8) | cap_buf[32]);
-      DBG (100, "  Buffer size               : %s\n", info);
+      DBG (50, "  Buffer size               : %s\n", info);
       sprintf (info, "%d ", cap_buf[33]);
-      DBG (100, "  Channels of RGB Gamma     : %s\n", info);
+      DBG (50, "  Channels of RGB Gamma     : %s\n", info);
       sprintf (info, "%d ", (cap_buf[34] << 8) | cap_buf[35]);
-      DBG (100, "  Opt. res. of R channel    : %s\n", info);
+      DBG (50, "  Opt. res. of R channel    : %s\n", info);
       sprintf (info, "%d ", (cap_buf[36] << 8) | cap_buf[37]);
-      DBG (100, "  Opt. res. of G channel    : %s\n", info);
+      DBG (50, "  Opt. res. of G channel    : %s\n", info);
       sprintf (info, "%d ", (cap_buf[38] << 8) | cap_buf[39]);
-      DBG (100, "  Opt. res. of B channel    : %s\n", info);
+      DBG (50, "  Opt. res. of B channel    : %s\n", info);
       sprintf (info, "%d ", (cap_buf[40] << 8) | cap_buf[41]);
-      DBG (100, "  Min. Hor. Resolution      : %s\n", info);
+      DBG (50, "  Min. Hor. Resolution      : %s\n", info);
       sprintf (info, "%d ", (cap_buf[42] << 8) | cap_buf[43]);
-      DBG (100, "  Max. Vert. Resolution     : %s\n", info);
+      DBG (50, "  Max. Vert. Resolution     : %s\n", info);
       sprintf (info, "%d ", (cap_buf[44] << 8) | cap_buf[45]);
-      DBG (100, "  Min. Vert. Resolution     : %s\n", info);
+      DBG (50, "  Min. Vert. Resolution     : %s\n", info);
       sprintf (info, "%s ", cap_buf[46] == 0x80 ? "yes" : "no");
-      DBG (100, "  Chunky Data Format        : %s\n", info);
+      DBG (50, "  Chunky Data Format        : %s\n", info);
       sprintf (info, "%s ", cap_buf[47] == 0x80 ? "yes" : "no");
-      DBG (100, "  RGB Data Format           : %s\n", info);
+      DBG (50, "  RGB Data Format           : %s\n", info);
       sprintf (info, "%s ", cap_buf[48] == 0x80 ? "yes" : "no");
-      DBG (100, "  BGR Data Format           : %s\n", info);
+      DBG (50, "  BGR Data Format           : %s\n", info);
       sprintf (info, "%d ", cap_buf[49]);
-      DBG (100, "  Line Offset               : %s\n", info);
+      DBG (50, "  Line Offset               : %s\n", info);
       sprintf (info, "%s ", cap_buf[50] == 0x80 ? "yes" : "no");
-      DBG (100, "  Channel Valid Sequence    : %s\n", info);
+      DBG (50, "  Channel Valid Sequence    : %s\n", info);
       sprintf (info, "%s ", cap_buf[51] == 0x80 ? "yes" : "no");
-      DBG (100, "  True Gray                 : %s\n", info);
+      DBG (50, "  True Gray                 : %s\n", info);
       sprintf (info, "%s ", cap_buf[52] == 0x80 ? "yes" : "no");
-      DBG (100, "  Force Host Not Do Shading : %s\n", info);
+      DBG (50, "  Force Host Not Do Shading : %s\n", info);
       sprintf (info, "%s ", cap_buf[53] == 0x00 ? "AT006" : "AT010");
-      DBG (100, "  ASIC                      : %s\n", info);
+      DBG (50, "  ASIC                      : %s\n", info);
       sprintf (info, "%s ", cap_buf[54] == 0x82 ? "SCSI2" :
 	       cap_buf[54] == 0x81 ? "SCSI1" : "Parallel");
-      DBG (100, "  Interface                 : %s\n", info);
+      DBG (50, "  Interface                 : %s\n", info);
       sprintf (info, "%d ", (cap_buf[55] << 8) | cap_buf[56]);
-      DBG (100, "  Phys. Area Width          : %s\n", info);
+      DBG (50, "  Phys. Area Width          : %s\n", info);
       sprintf (info, "%d ", (cap_buf[57] << 8) | cap_buf[58]);
-      DBG (100, "  Phys. Area Length         : %s\n", info);
+      DBG (50, "  Phys. Area Length         : %s\n", info);
 
       /* fill in the information we've got from the scanner */
 
@@ -1729,32 +2031,32 @@ artec_get_cap_data (ARTEC_Device * dev, int fd)
       /* DB ----- */
     }
 
-  DBG (8, "Scanner capability info.\n");
-  DBG (8, "  Vendor      : %s\n", dev->sane.vendor);
-  DBG (8, "  Model       : %s\n", dev->sane.model);
-  DBG (8, "  Type        : %s\n", dev->sane.type);
+  DBG (9, "Scanner capability info.\n");
+  DBG (9, "  Vendor      : %s\n", dev->sane.vendor);
+  DBG (9, "  Model       : %s\n", dev->sane.model);
+  DBG (9, "  Type        : %s\n", dev->sane.type);
   DBG (5, "  Width       : %.2f inches\n", dev->width);
-  DBG (8, "  Height      : %.2f inches\n", dev->height);
-  DBG (8, "  X Range(mm) : %d-%d\n",
+  DBG (9, "  Height      : %.2f inches\n", dev->height);
+  DBG (9, "  X Range(mm) : %d-%d\n",
        dev->x_range.min,
        (int) (SANE_UNFIX (dev->x_range.max)));
-  DBG (8, "  Y Range(mm) : %d-%d\n",
+  DBG (9, "  Y Range(mm) : %d-%d\n",
        dev->y_range.min,
        (int) (SANE_UNFIX (dev->y_range.max)));
 
-  DBG (8, "  Horz. DPI   : %d-%d\n", ARTEC_MIN_X (dev), ARTEC_MAX_X (dev));
-  DBG (8, "  Vert. DPI   : %d-%d\n", ARTEC_MIN_Y (dev), ARTEC_MAX_Y (dev));
-  DBG (8, "  Contrast    : %d-%d\n",
+  DBG (9, "  Horz. DPI   : %d-%d\n", ARTEC_MIN_X (dev), ARTEC_MAX_X (dev));
+  DBG (9, "  Vert. DPI   : %d-%d\n", ARTEC_MIN_Y (dev), ARTEC_MAX_Y (dev));
+  DBG (9, "  Contrast    : %d-%d\n",
        dev->contrast_range.min, dev->contrast_range.max);
-  DBG (8, "  REQ Sh. Cal.: %d\n",
+  DBG (9, "  REQ Sh. Cal.: %d\n",
        dev->flags & ARTEC_FLAG_CALIBRATE ? 1 : 0);
-  DBG (8, "  REQ Ln. Offs: %d\n",
+  DBG (9, "  REQ Ln. Offs: %d\n",
        dev->flags & ARTEC_FLAG_RGB_LINE_OFFSET ? 1 : 0);
-  DBG (8, "  REQ Ch. Shft: %d\n",
+  DBG (9, "  REQ Ch. Shft: %d\n",
        dev->flags & ARTEC_FLAG_RGB_CHAR_SHIFT ? 1 : 0);
-  DBG (8, "  SetWind Size: %d\n",
+  DBG (9, "  SetWind Size: %d\n",
        dev->setwindow_cmd_size);
-  DBG (8, "  Calib Method: %s\n",
+  DBG (9, "  Calib Method: %s\n",
        dev->flags & ARTEC_FLAG_CALIBRATE_RGB ? "RGB" :
        dev->flags & ARTEC_FLAG_CALIBRATE_DARK_WHITE ? "white/black" : "N/A");
 
@@ -1765,18 +2067,28 @@ static SANE_Status
 dump_inquiry (unsigned char *result)
 {
   int i;
+  int j;
 
-  DBG (4, "dump_inquiry.\n");
-  fprintf (stderr, " === SANE/Artec backend v%d.%d ===\n",
-	   ARTEC_MAJOR, ARTEC_MINOR);
+  DBG (4, "dump_inquiry()\n");
+
+  fprintf (stderr, " === SANE/Artec backend v%d.%d.%d ===\n",
+	   ARTEC_MAJOR, ARTEC_MINOR, ARTEC_SUB);
   fprintf (stderr, " ===== Scanner Inquiry Block =====\n");
-  for (i = 0; i < 96; i++)
+  for (i = 0; i < 96; i += 16)
     {
-      if (!(i % 16))
-	fprintf (stderr, "\n%02x: ", i);
-      fprintf (stderr, "%02x ", (int) result[i]);
+      fprintf (stderr, "0x%02x: ", i);
+      for (j = 0; j < 16; j++ )
+        {
+          fprintf (stderr, "%02x ", (int) result[i + j] );
+        }
+      fprintf( stderr, "  " );
+      for (j = 0; j < 16; j++ )
+        {
+          fprintf( stderr, "%c",
+            isprint( result[i + j] ) ? result[i + j] : '.' );
+        }
+      fprintf( stderr, "\n" );
     }
-  fprintf (stderr, "\n\n");
 
   return (SANE_STATUS_GOOD);
 }
@@ -1792,6 +2104,8 @@ attach (const char *devname, ARTEC_Device ** devp)
   SANE_Status status;
   ARTEC_Device *dev;
   size_t size;
+
+  DBG (7, "attach()\n");
 
   for (dev = first_dev; dev; dev = dev->next)
     {
@@ -1847,11 +2161,25 @@ attach (const char *devname, ARTEC_Device ** devp)
       (strncmp (result + 8, "        ", 8) == 0) &&
       (strncmp (result + 16, "Flatbed Scanner ", 16) == 0))
     {
-      DBG (4, "Found BlackWidow BW4800SP scanner, setting up like AT3\n");
+      DBG (6, "Found BlackWidow BW4800SP scanner, setting up like AT3\n");
 
       /* setup the vendor and product to mimic the Artec/Ultima AT3 */
       strncpy (result + 8, "ULTIMA", 6);
       strncpy (result + 16, "AT3             ", 16);
+    }
+
+  /*
+   * The Plustek 19200S is actually a rebadged AM12S, with the vendor string
+   * set to 8 spaces.
+   */
+  if ((strncmp (result + 8, "        ", 8) == 0) &&
+      (strncmp (result + 16, "SCAN19200       ", 16) == 0))
+    {
+      DBG (6, "Found Plustek 19200S scanner, setting up like AM12S\n");
+
+      /* setup the vendor and product to mimic the Artec/Ultima AM12S */
+      strncpy (result + 8, "ULTIMA", 6);
+      strncpy (result + 16, "AM12S           ", 16);
     }
 
   /*
@@ -1918,7 +2246,7 @@ attach (const char *devname, ARTEC_Device ** devp)
 
   memset (dev, 0, sizeof (*dev));
 
-  if (DBG_LEVEL > 0)
+  if (DBG_LEVEL >= 4)
     dump_inquiry ((unsigned char *) result);
 
   dev->sane.name = strdup (devname);
@@ -1959,6 +2287,9 @@ attach (const char *devname, ARTEC_Device ** devp)
   *t = '\0';
   dev->sane.vendor = str;
 
+  DBG (5, "scanner vendor: '%s', model: '%s', revision: '%s'\n",
+    dev->sane.vendor, dev->sane.model, product_revision );
+
   /* Artec docs say if bytes 36-43 = "ULTIMA  ", then supports read cap. data */
   if (strncmp (result + 36, "ULTIMA  ", 8) == 0)
     {
@@ -1998,7 +2329,7 @@ init_options (ARTEC_Scanner * s)
 {
   int i;
 
-  DBG (7, "init_options\n");
+  DBG (7, "init_options()\n");
 
   memset (s->opt, 0, sizeof (s->opt));
   memset (s->val, 0, sizeof (s->val));
@@ -2086,6 +2417,22 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_NEGATIVE].desc = "Negative Image";
   s->opt[OPT_NEGATIVE].type = SANE_TYPE_BOOL;
   s->val[OPT_NEGATIVE].w = SANE_FALSE;
+
+  /* transparency */
+  s->opt[OPT_TRANSPARENCY].name = "transparency";
+  s->opt[OPT_TRANSPARENCY].title = "Transparency";
+  s->opt[OPT_TRANSPARENCY].desc = "Use transparency adaptor";
+  s->opt[OPT_TRANSPARENCY].type = SANE_TYPE_BOOL;
+  s->val[OPT_TRANSPARENCY].w = SANE_FALSE;
+  s->opt[OPT_TRANSPARENCY].cap = SANE_CAP_ADVANCED;
+
+  /* ADF */
+  s->opt[OPT_ADF].name = "adf";
+  s->opt[OPT_ADF].title = "ADF";
+  s->opt[OPT_ADF].desc = "Use ADF";
+  s->opt[OPT_ADF].type = SANE_TYPE_BOOL;
+  s->val[OPT_ADF].w = SANE_FALSE;
+  s->opt[OPT_ADF].cap = SANE_CAP_ADVANCED;
 
   /* "Geometry" group: */
   s->opt[OPT_GEOMETRY_GROUP].title = "Geometry";
@@ -2193,6 +2540,11 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_CONTRAST].constraint.range = &s->hw->contrast_range;
   s->val[OPT_CONTRAST].w = 0x80;
 
+  if (!(s->hw->flags & ARTEC_FLAG_OPT_CONTRAST))
+    {
+      s->opt[OPT_CONTRAST].cap |= SANE_CAP_INACTIVE;
+    }
+
   /* threshold */
   s->opt[OPT_THRESHOLD].name = SANE_NAME_THRESHOLD;
   s->opt[OPT_THRESHOLD].title = SANE_TITLE_THRESHOLD;
@@ -2203,21 +2555,6 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_THRESHOLD].constraint.range = &s->hw->threshold_range;
   s->val[OPT_THRESHOLD].w = 0x80;
 
-  /* brightness */
-  s->opt[OPT_BRIGHTNESS].name = SANE_NAME_BRIGHTNESS;
-  s->opt[OPT_BRIGHTNESS].title = SANE_TITLE_BRIGHTNESS;
-  s->opt[OPT_BRIGHTNESS].desc = SANE_DESC_BRIGHTNESS;
-  s->opt[OPT_BRIGHTNESS].type = SANE_TYPE_INT;
-  s->opt[OPT_BRIGHTNESS].unit = SANE_UNIT_NONE;
-  s->opt[OPT_BRIGHTNESS].constraint_type = SANE_CONSTRAINT_RANGE;
-  s->opt[OPT_BRIGHTNESS].constraint.range = &s->hw->brightness_range;
-  s->val[OPT_BRIGHTNESS].w = 0x80;
-
-  if (!(s->hw->flags & ARTEC_FLAG_OPT_BRIGHTNESS))
-    {
-      s->opt[OPT_BRIGHTNESS].cap |= SANE_CAP_INACTIVE;
-    }
-
   /* halftone pattern */
   s->opt[OPT_HALFTONE_PATTERN].name = SANE_NAME_HALFTONE_PATTERN;
   s->opt[OPT_HALFTONE_PATTERN].title = SANE_TITLE_HALFTONE_PATTERN;
@@ -2227,6 +2564,35 @@ init_options (ARTEC_Scanner * s)
   s->opt[OPT_HALFTONE_PATTERN].constraint_type = SANE_CONSTRAINT_STRING_LIST;
   s->opt[OPT_HALFTONE_PATTERN].constraint.string_list = halftone_pattern_list;
   s->val[OPT_HALFTONE_PATTERN].s = strdup (halftone_pattern_list[1]);
+
+  if (!(s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN))
+    {
+      s->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
+    }
+
+  /* pixel averaging */
+  s->opt[OPT_PIXEL_AVG].name = "pixel-avg";
+  s->opt[OPT_PIXEL_AVG].title = "Pixel Averaging";
+  s->opt[OPT_PIXEL_AVG].desc = "Enable HardWare Pixel Averaging function";
+  s->opt[OPT_PIXEL_AVG].type = SANE_TYPE_BOOL;
+  s->val[OPT_PIXEL_AVG].w = SANE_FALSE;
+
+  if (!(s->hw->flags & ARTEC_FLAG_PIXEL_AVERAGING))
+    {
+      s->opt[OPT_PIXEL_AVG].cap |= SANE_CAP_INACTIVE;
+    }
+
+  /* lineart line edge enhancement */
+  s->opt[OPT_EDGE_ENH].name = "edge-enh";
+  s->opt[OPT_EDGE_ENH].title = "Line Edge Enhancement";
+  s->opt[OPT_EDGE_ENH].desc = "Enable HardWare Lineart Line Edge Enhancement";
+  s->opt[OPT_EDGE_ENH].type = SANE_TYPE_BOOL;
+  s->val[OPT_EDGE_ENH].w = SANE_FALSE;
+
+  if (!(s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE))
+    {
+      s->opt[OPT_EDGE_ENH].cap |= SANE_CAP_INACTIVE;
+    }
 
   /* custom-gamma table */
   s->opt[OPT_CUSTOM_GAMMA].name = SANE_NAME_CUSTOM_GAMMA;
@@ -2301,13 +2667,25 @@ init_options (ARTEC_Scanner * s)
 static SANE_Status
 do_cancel (ARTEC_Scanner * s)
 {
-  DBG (7, "do_cancel\n");
+  DBG (7, "do_cancel()\n");
 
   s->scanning = SANE_FALSE;
 
   /* DAL: Terminate a three pass scan properly */
-  if (s->this_pass == 3)
-    s->this_pass = 0;
+/*  if (s->this_pass == 3) */
+  s->this_pass = 0;
+
+  if ((s->hw->flags & ARTEC_FLAG_RGB_LINE_OFFSET) &&
+      (tmp_line_buf != NULL))
+    {
+      artec_buffer_line_offset_free ();
+    }
+
+  if ((s->hw->flags & ARTEC_FLAG_MONO_ADJUST) &&
+      (tmp_line_buf != NULL))
+    {
+      artec_mono_buffer_free ();
+    }
 
 
   if (s->fd >= 0)
@@ -2323,7 +2701,7 @@ do_cancel (ARTEC_Scanner * s)
 SANE_Status
 attach_one (const char *dev)
 {
-  DBG (7, "attach_one\n");
+  DBG (7, "attach_one()\n");
 
   attach (dev, 0);
   return (SANE_STATUS_GOOD);
@@ -2339,8 +2717,8 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
 
   DBG_INIT ();
 
-  DBG (1, "Artec/Ultima backend version %d.%d, last mod: %s\n",
-       ARTEC_MAJOR, ARTEC_MINOR, ARTEC_LAST_MOD);
+  DBG (1, "Artec/Ultima backend version %d.%d.%d, last mod: %s\n",
+       ARTEC_MAJOR, ARTEC_MINOR, ARTEC_SUB, ARTEC_LAST_MOD);
   DBG (1, "http://www4.infi.net/~cpinkham/sane-artec-doc.html\n");
 
   /* make sure these 2 are empty */
@@ -2362,17 +2740,20 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
     {
       cp = (char *) sanei_config_skip_whitespace (dev_name);
 
-      if ((!*cp) || (*cp == '#'))	/* ignore line comments and blank lines */
+      /* ignore line comments and blank lines */
+      if ((!*cp) || (*cp == '#'))
 	continue;
 
       len = strlen (cp);
       if (cp[len - 1] == '\n')
 	cp[--len] = '\0';
 
+      /* ignore empty lines */
       if (!len)
-	continue;		/* ignore empty lines */
+	continue;
 
-      DBG (100, "%s line: '%s', len = %d\n", ARTEC_CONFIG_FILE, cp, len);
+      DBG (50, "%s line: '%s', len = %lu\n", ARTEC_CONFIG_FILE, cp,
+	   (u_long) len);
 
       /* check to see if they forced a vendor string in artec.conf */
       if ((strncmp (cp, "vendor", 6) == 0) && isspace (cp[6]))
@@ -2412,7 +2793,7 @@ sane_exit (void)
 {
   ARTEC_Device *dev, *next;
 
-  DBG (7, "sane_exit\n");
+  DBG (7, "sane_exit()\n");
 
   for (dev = first_dev; dev; dev = next)
     {
@@ -2430,7 +2811,7 @@ sane_get_devices (const SANE_Device *** device_list, SANE_Bool local_only)
   ARTEC_Device *dev;
   int i;
 
-  DBG (7, "sane_get_devices\n");
+  DBG (7, "sane_get_devices()\n");
 
   if (devlist)
     free (devlist);
@@ -2457,7 +2838,7 @@ sane_open (SANE_String_Const devicename, SANE_Handle * handle)
   ARTEC_Scanner *s;
   int i, j;
 
-  DBG (7, "sane_open\n");
+  DBG (7, "sane_open()\n");
 
   if (devicename[0])
     {
@@ -2550,7 +2931,14 @@ sane_close (SANE_Handle handle)
 {
   ARTEC_Scanner *prev, *s;
 
-  DBG (7, "sane_close\n");
+  DBG (7, "sane_close()\n");
+
+  if (( DBG_LEVEL == 101 ) &&
+      ( debug_fd > -1 ))
+    {
+      close( debug_fd );
+      DBG (101, "closed artec.data.raw output file\n" );
+    }
 
   /* remove handle from list of open handles: */
   prev = 0;
@@ -2583,6 +2971,8 @@ sane_get_option_descriptor (SANE_Handle handle, SANE_Int option)
 {
   ARTEC_Scanner *s = handle;
 
+  DBG (7, "sane_get_option_descriptor()\n");
+
   if ((unsigned) option >= NUM_OPTIONS)
     return (0);
 
@@ -2596,6 +2986,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
   ARTEC_Scanner *s = handle;
   SANE_Status status;
   SANE_Word w, cap;
+
+  DBG (7, "sane_control_option()\n");
 
   if (info)
     *info = 0;
@@ -2627,6 +3019,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	case OPT_GRAY_PREVIEW:
 	case OPT_RESOLUTION_BIND:
 	case OPT_NEGATIVE:
+	case OPT_TRANSPARENCY:
+	case OPT_ADF:
 	case OPT_TL_X:
 	case OPT_TL_Y:
 	case OPT_BR_X:
@@ -2637,6 +3031,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	case OPT_CONTRAST:
 	case OPT_THRESHOLD:
 	case OPT_CUSTOM_GAMMA:
+	case OPT_PIXEL_AVG:
+	case OPT_EDGE_ENH:
 	  *(SANE_Word *) val = s->val[option].w;
 	  return (SANE_STATUS_GOOD);
 
@@ -2686,8 +3082,12 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	case OPT_SOFTWARE_CAL:
 	case OPT_NUM_OPTS:
 	case OPT_NEGATIVE:
+	case OPT_TRANSPARENCY:
+	case OPT_ADF:
 	case OPT_CONTRAST:
 	case OPT_THRESHOLD:
+	case OPT_PIXEL_AVG:
+	case OPT_EDGE_ENH:
 	  s->val[option].w = *(SANE_Word *) val;
 	  return (SANE_STATUS_GOOD);
 
@@ -2705,7 +3105,7 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 
 	    s->val[OPT_CUSTOM_GAMMA].w = SANE_FALSE;
 
-	    /* s->opt[OPT_NEGATIVE].cap           |= SANE_CAP_INACTIVE; */
+	    /* options INvisible by default */
 	    s->opt[OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
@@ -2713,31 +3113,37 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 	    s->opt[OPT_CONTRAST].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_THRESHOLD].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_FILTER_TYPE].cap |= SANE_CAP_INACTIVE;
-	    s->opt[OPT_BRIGHTNESS].cap |= SANE_CAP_INACTIVE;
 	    s->opt[OPT_HALFTONE_PATTERN].cap |= SANE_CAP_INACTIVE;
-
+	    s->opt[OPT_SOFTWARE_CAL].cap |= SANE_CAP_INACTIVE;
+	    s->opt[OPT_EDGE_ENH].cap |= SANE_CAP_INACTIVE;
 
 	    halftoning = (strcmp (val, "Halftone") == 0);
 
 	    if (halftoning || (strcmp (val, "Lineart") == 0))
 	      {
-		/* s->opt[OPT_NEGATIVE].cap &= ~SANE_CAP_INACTIVE; */
 		s->opt[OPT_FILTER_TYPE].cap &= ~SANE_CAP_INACTIVE;
 
 		if (halftoning)
 		  {
 		    /* halftone mode */
-		    s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
-		    s->opt[OPT_HALFTONE_PATTERN].cap &= ~SANE_CAP_INACTIVE;
+		    if (!(s->hw->flags & ARTEC_FLAG_OPT_CONTRAST))
+		      s->opt[OPT_CONTRAST].cap &= ~SANE_CAP_INACTIVE;
 
-		    if (s->hw->flags & ARTEC_FLAG_OPT_BRIGHTNESS)
-		      s->opt[OPT_BRIGHTNESS].cap &= ~SANE_CAP_INACTIVE;
+		    if (!(s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN))
+		      s->opt[OPT_HALFTONE_PATTERN].cap &= ~SANE_CAP_INACTIVE;
 		  }
 		else
 		  {
 		    /* lineart mode */
 		    s->opt[OPT_THRESHOLD].cap &= ~SANE_CAP_INACTIVE;
+
+                    if (s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE)
+	  	      s->opt[OPT_EDGE_ENH].cap &= ~SANE_CAP_INACTIVE;
 		  }
+	      }
+	    else if (strcmp (val, "Color") == 0)
+	      {
+		s->opt[OPT_SOFTWARE_CAL].cap &= ~SANE_CAP_INACTIVE;
 	      }
 	  }
 	  return (SANE_STATUS_GOOD);
@@ -2838,15 +3244,17 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
   return (SANE_STATUS_INVAL);
 }
 
-void 
+void
 set_pass_parameters (SANE_Handle handle)
 {
   ARTEC_Scanner *s = handle;
 
+  DBG (7, "set_pass_parameters()\n");
+
   if (s->threepasscolor)
     {
       s->this_pass += 1;
-      DBG (20, "set_pass_parameters:  three-pass, on %d\n", s->this_pass);
+      DBG (9, "set_pass_parameters:  three-pass, on %d\n", s->this_pass);
       switch (s->this_pass)
 	{
 	case 1:
@@ -2862,7 +3270,7 @@ set_pass_parameters (SANE_Handle handle)
 	  s->params.last_frame = SANE_TRUE;
 	  break;
 	default:
-	  DBG (20, "set_pass_parameters:  What?!? pass %d = filter?\n",
+	  DBG (9, "set_pass_parameters:  What?!? pass %d = filter?\n",
 	       s->this_pass);
 	  break;
 	}
@@ -2875,6 +3283,8 @@ SANE_Status
 sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
 {
   ARTEC_Scanner *s = handle;
+
+  DBG (7, "sane_get_parameters()\n");
 
   if (!s->scanning)
     {
@@ -2928,6 +3338,13 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
 	  s->params.bytes_per_line = (s->params.pixels_per_line + 7) / 8;
 	  s->params.depth = 1;
 	  s->line_offset = 0;
+
+	  /* round pixels_per_line up to the next full byte of pixels */
+	  /* this way we don't have to do bit buffering, pixels_per_line is */
+	  /* what is used in the set window command. */
+	  /* SANE expects the last byte in a line to be padded if it's not */
+	  /* full, so this should not affect scans in a negative way */
+	  s->params.pixels_per_line = s->params.bytes_per_line * 8;
 	}
       else if (strcmp (s->mode, "Gray") == 0)
 	{
@@ -2947,27 +3364,38 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
 	      s->params.format = SANE_FRAME_RGB;
 	      s->params.bytes_per_line *= 3;
 
-	      switch (s->y_resolution)
-		{
-		case 600:
-		  s->line_offset = 16;
-		  break;
-		case 300:
-		  s->line_offset = 8;
-		  break;
-		case 200:
-		  s->line_offset = 5;
-		  break;
-		case 100:
-		  s->line_offset = 2;
-		  break;
-		case 50:
-		  s->line_offset = 1;
-		  break;
-		default:
-		  s->line_offset = 8 *
-		    (int) (s->y_resolution / 300.0);
-		  break;
+	      /*
+	       * line offsets from documentation.
+	       * (I don't yet see a common formula I can easily use)
+	       */
+	      /* FIXME: figure out a cleaner way to do this... */
+	      s->line_offset = 0;	/* default */
+	      if (( ! strcmp( s->hw->sane.model, "AT3" )) ||
+	          ( ! strcmp( s->hw->sane.model, "A6000C" )) ||
+	          ( ! strcmp( s->hw->sane.model, "A6000C PLUS" )) ||
+	          ( ! strcmp( s->hw->sane.model, "AT6" )))
+	        {
+	          /* formula #2 */
+	          /* ranges from 1 at 50dpi to 16 at 600dpi */
+	          s->line_offset = 8 * ( s->y_resolution / 300.0 );
+	        }
+	      else if ( ! strcmp( s->hw->sane.model, "AT12" ))
+	        {
+	          /* formula #2 */
+	          /* ranges from 0 at 25dpi to 16 at 1200dpi */
+	          /***********************************************************/
+	          /* this should be handled in hardware for now, so leave it */
+	          /* sitting at zero for now.                                */
+	          /***********************************************************/
+	          /*
+	          s->line_offset = 16 * ( s->y_resolution / 1200.0 );
+	          */
+	        }
+	      else if ( ! strcmp( s->hw->sane.model, "AM12S" ))
+	        {
+	          /* formula #3 */
+	          /* ranges from 0 at 50dpi to 8 at 1200dpi */
+	          s->line_offset = 8 * ( s->y_resolution / 1200.0 );
 		}
 	    }
 	  else
@@ -2985,27 +3413,50 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
   return (SANE_STATUS_GOOD);
 }
 
+/* DAL: This is used for mono offset correction in 1bpp (on the A6000C) */
+static int total_rows_read;	/* these are the "bytes per line" rows */
+
 SANE_Status
 sane_start (SANE_Handle handle)
 {
   ARTEC_Scanner *s = handle;
   SANE_Status status;
 
-  DBG (7, "sane_start\n");
+  DBG (7, "sane_start()\n");
 
-  /* First make sure we have a current parameter set.  Some of the
-   * parameters will be overwritten below, but that's OK.  */
+  /* hate doing this, but the sense handler must know which model we have */
+  /* FIXME: find some other way to accomplish this!!! */
+  global_s = s;
+
+  if ( debug_fd != -1 )
+    {
+      close( debug_fd );
+      debug_fd = -1;
+    }
+
+  if ( DBG_LEVEL == 101 )
+    {
+      debug_fd = open( "artec.data.raw",
+        O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, 0666 );
+      if ( debug_fd > -1 )
+        DBG (101, "opened artec.data.raw output file\n" );
+    }
+
+  /* First make sure we have a current parameter set.  Some of the */
+  /* parameters will be overwritten below, but that's OK.  */
   status = sane_get_parameters (s, 0);
   if (status != SANE_STATUS_GOOD)
     return status;
 
-  /* DAL: This is part of the RGB 3 pass fix */
+  /* DAL: For 3 pass colour set the current pass parameters */
   if ((strcmp (s->mode, "Color") == 0) && s->threepasscolor)
     set_pass_parameters (s);
 
-  /* DAL: This is part of the RGB 3 pass fix */
-  if ((strcmp (s->mode, "Color") != 0) || !s->threepasscolor ||
-      (s->threepasscolor && s->this_pass == 1))
+  /* DAL: For single pass scans and the first pass of a 3 pass scan */
+  if ((strcmp (s->mode, "Color") != 0) ||
+      (!s->threepasscolor) ||
+      ((s->threepasscolor) &&
+       (s->this_pass == 1)))
     {
 
       if (s->hw->flags & ARTEC_FLAG_SENSE_HANDLER)
@@ -3028,19 +3479,20 @@ sane_start (SANE_Handle handle)
       status = wait_ready (s->fd);
       if (status != SANE_STATUS_GOOD)
 	{
-	  DBG (1, "wait for scanner ready failed: %s\n", sane_strstatus (status));
+	  DBG (1, "wait for scanner ready failed: %s\n",
+	    sane_strstatus (status));
 	  return status;
 	}
     }
 
   s->bytes_to_read = s->params.bytes_per_line * s->params.lines;
 
-  DBG (20, "%d pixels per line, %d bytes, %d lines high, xdpi = %d, "
+  DBG (9, "%d pixels per line, %d bytes, %d lines high, xdpi = %d, "
        "ydpi = %d, btr = %lu\n",
        s->params.pixels_per_line, s->params.bytes_per_line, s->params.lines,
        s->x_resolution, s->y_resolution, (u_long) s->bytes_to_read);
 
-  /* DAL: This is part of the RGB 3 pass fix */
+  /* DAL: For single pass scans and the first pass of a 3 pass scan */
   if ((strcmp (s->mode, "Color") != 0) || !s->threepasscolor ||
       (s->threepasscolor && s->this_pass == 1))
     {
@@ -3063,7 +3515,8 @@ sane_start (SANE_Handle handle)
       status = wait_ready (s->fd);
       if (status != SANE_STATUS_GOOD)
 	{
-	  DBG (1, "wait for scanner ready failed: %s\n", sane_strstatus (status));
+	  DBG (1, "wait for scanner ready failed: %s\n",
+	    sane_strstatus (status));
 	  return status;
 	}
 
@@ -3085,21 +3538,35 @@ sane_start (SANE_Handle handle)
       status = wait_ready (s->fd);
       if (status != SANE_STATUS_GOOD)
 	{
-	  DBG (1, "wait for scanner ready failed: %s\n", sane_strstatus (status));
+	  DBG (1, "wait for scanner ready failed: %s\n",
+	    sane_strstatus (status));
 	  return status;
 	}
     }
 
-  /* now we can start the actual scan */
-  /* DAL: This is part of the RGB 3 scan fix */
-  if ((strcmp (s->mode, "Color") != 0) || !s->threepasscolor || s->this_pass == 1)
+  /* DAL : This is used for mono offset correction in 1bpp (on the A6000C) */
+  if (((strcmp (s->mode, "Lineart") == 0) ||
+       (strcmp (s->mode, "Halftone") == 0)) &&
+      (s->hw->flags & ARTEC_FLAG_MONO_ADJUST))
     {
+      total_rows_read = 0;
+    }
+
+  /* now we can start the actual scan */
+  /* DAL: For single pass scans and the first pass of a 3 pass scan */
+  if ((strcmp (s->mode, "Color") != 0) ||
+      (!s->threepasscolor) ||
+      (s->this_pass == 1))
+    {
+      /* DAL - do mode select before each scan */
+      /*       The mode is NOT turned off at the end of the scan */
+      artec_mode_select (s);
+
       status = artec_start_scan (s);
 
       if (status != SANE_STATUS_GOOD)
 	{
-	  DBG (1, "start scan: %s\n",
-	       sane_strstatus (status));
+	  DBG (1, "start scan: %s\n", sane_strstatus (status));
 	  return status;
 	}
     }
@@ -3109,7 +3576,7 @@ sane_start (SANE_Handle handle)
   return (SANE_STATUS_GOOD);
 }
 
-void 
+void
 binout (SANE_Byte byte)
 {
   SANE_Byte b = byte;
@@ -3117,7 +3584,7 @@ binout (SANE_Byte byte)
 
   for (bit = 0; bit < 8; bit++)
     {
-      DBG (7, "%d", b & 128 ? 1 : 0);
+      DBG (9, "%d", b & 128 ? 1 : 0);
       b = b << 1;
     }
 }
@@ -3133,13 +3600,18 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
   int rows_read;
   int max_read_rows;
   int max_ret_rows;
-  /* DAL: Changed usage of above variables and added one more */
   int remaining_rows;
 
   int rows_available;
   int line;
   SANE_Byte temp_buf[ARTEC_MAX_READ_SIZE];
   SANE_Byte line_buf[ARTEC_MAX_READ_SIZE];
+
+  /* DAL: These are used for mono offset correction in 1bpp (on the A6000C) */
+  int total_pixels_read = 0;
+  int total_lines_read = 0;	/* these are "pixels_per_line" lines */
+  int pipline = 0;		/* pixels in the partial line read */
+  int pixels_avail = 0;
 
   DBG (7, "artec_sane_read( %p, %p, %d, %d )\n", handle, buf, max_len, *len);
 
@@ -3151,7 +3623,8 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	  (s->threepasscolor && s->this_pass == 3))
 	{
 	  do_cancel (s);
-	  s->scanning = SANE_FALSE;	/* without this a 4th pass is attempted, yet do_cancel does this */
+	  /* without this a 4th pass is attempted, yet do_cancel does this */
+	  s->scanning = SANE_FALSE;
 	}
       return (SANE_STATUS_EOF);
     }
@@ -3165,7 +3638,7 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 
   while (artec_get_status (s->fd) == 0)
     {
-      DBG (100, "hokey loop till data available\n");
+      DBG (120, "hokey loop till data available\n");
       usleep (50000);		/* sleep for .05 second */
     }
 
@@ -3173,7 +3646,7 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
   bytes_read = 0;
   while ((rows_read < max_ret_rows) && (rows_read < remaining_rows))
     {
-      DBG (100, "top of while loop, rr = %d, mrr = %d, rem = %d\n",
+      DBG (50, "top of while loop, rr = %d, mrr = %d, rem = %d\n",
 	   rows_read, max_ret_rows, remaining_rows);
 
       if (s->bytes_to_read - bytes_read <= s->params.bytes_per_line * max_read_rows)
@@ -3200,26 +3673,39 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 
       while ((rows_available = artec_get_status (s->fd)) == 0)
 	{
-	  DBG (100, "hokey loop till data available\n");
+	  DBG (120, "hokey loop till data available\n");
 	  usleep (50000);	/* sleep for .05 second */
 	}
 
-/* **** This is a test for 1BPP modes: there is a discrepancy
-   **** between "lines of bpl" and "lines of ppl":
-   **** "rows_available" refer to "lines of ppl"
-   **** so reading "lines of bpl" could result in image corruption! */
+      /* DAL: This is used for mono offset correction in 1bpp (on the A6000C) */
+      /*      This ensures data is only read after it is available from the
+         scanner - a bit tricky as 'rows_available' may include a
+         partial row due to the "bits per line" vs "bytes per line"
+         discrepancy on the A6000C in 1bpp modes */
       if (((strcmp (s->mode, "Lineart") == 0) ||
 	   (strcmp (s->mode, "Halftone") == 0)) &&
 	  (s->hw->flags & ARTEC_FLAG_MONO_ADJUST))
 	{
-	  while ((rows_available = artec_get_status (s->fd)) < lread)
+	  total_pixels_read = total_rows_read * s->params.bytes_per_line * 8;
+	  total_lines_read = total_pixels_read / s->params.pixels_per_line;
+	  pipline = total_pixels_read - total_lines_read *
+	    s->params.pixels_per_line;
+	  do
 	    {
-	      DBG (100, "hokey loop till data available\n");
+	      DBG (120, "hokey loop till data available\n");
 	      usleep (50000);	/* sleep for .05 second */
+	      rows_available = artec_get_status (s->fd);
+	      pixels_avail = rows_available * s->params.pixels_per_line -
+		pipline;
+	      DBG (50,
+	      "1BPP: trr = %d tlt = %d ra = %d tpr = %d pa = %d pipl = %d\n",
+		   total_rows_read, total_lines_read, rows_available,
+		   total_pixels_read, pixels_avail, pipline);
 	    }
+	  while ((pixels_avail < lread * s->params.bytes_per_line * 8) &&
+		 (total_lines_read + rows_available < s->params.lines));
 	}
-
-      if (rows_available < lread)
+      else if (rows_available < lread)
 	{
 	  lread = rows_available;
 	  nread = lread * s->params.bytes_per_line;
@@ -3236,15 +3722,15 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
        * the number of pre-computed bytes_to_read is not accurate
        * so follow the number of available rows returned from the scanner
        * the last time it is set (AT12) to the maximum again
-       * Reason is when asking for a read with a number of bytes less than a line
-       * you get a timeout on the read command with the AT12
+       * Reason is when asking for a read with a number of bytes less than a
+       * line you get a timeout on the read command with the AT12
        */
-      DBG (20, "rows_available=%d,params.lines=%d,btr=%lu,bpl=%d\n",
+      DBG (50, "rows_available=%d,params.lines=%d,btr=%lu,bpl=%d\n",
 	   rows_available, s->params.lines,
 	   (u_long) s->bytes_to_read, s->params.bytes_per_line);
       /* kludge for the ??AT12 model?? */
       /* this breaks the AT3 & A6000C+ if turned on for them */
-      if ((!strcmp (s->hw->sane.model, "AT12")) &&
+      if ((s->hw->flags & ARTEC_FLAG_1BPP_BYTE_ALIGN) &&
 	  ((strcmp (s->mode, "Lineart") == 0) ||
 	   (strcmp (s->mode, "Halftone") == 0)))
 	{
@@ -3260,10 +3746,10 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	    }
 	}
 
-      DBG (20, "bytes_to_read = %lu, max_len = %d, max_rows = %d, "
+      DBG (50, "bytes_to_read = %lu, max_len = %d, max_rows = %d, "
 	   "rows_avail = %d\n",
 	   (u_long) s->bytes_to_read, max_len, max_ret_rows, rows_available);
-      DBG (20, "nread = %lu, lread = %lu, bytes_read = %d, rows_read = %d\n",
+      DBG (50, "nread = %lu, lread = %lu, bytes_read = %d, rows_read = %d\n",
 	   (u_long) nread, (u_long) lread, bytes_read, rows_read);
 
       status = read_data (s->fd, ARTEC_DATA_IMAGE, temp_buf, &nread);
@@ -3274,6 +3760,12 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	  do_cancel (s);
 	  return (SANE_STATUS_IO_ERROR);
 	}
+
+      if (( DBG_LEVEL == 101 ) &&
+          ( debug_fd > -1 ))
+        {
+          write( debug_fd, temp_buf, nread );
+        }
 
       if ((strcmp (s->mode, "Color") == 0) &&
 	  (s->hw->flags & ARTEC_FLAG_RGB_LINE_OFFSET))
@@ -3286,7 +3778,7 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 
 	      nread = s->params.bytes_per_line;
 
-	      artec_buffer_line_offset (s->line_offset, line_buf, &nread);
+	      artec_buffer_line_offset (s, s->line_offset, line_buf, &nread);
 
 	      if (nread > 0)
 		{
@@ -3328,6 +3820,7 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	      memcpy (buf + bytes_read, line_buf, s->params.bytes_per_line);
 	      bytes_read += nread;
 	      rows_read++;
+	      total_rows_read++;
 	    }
 	}
       else
@@ -3354,7 +3847,8 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	    }
 
 	  /* do software calibration if necessary */
-	  if (s->val[OPT_SOFTWARE_CAL].w)
+	  if ((s->val[OPT_SOFTWARE_CAL].w) &&
+	      (strcmp (s->mode, "Color") == 0))
 	    {
 	      artec_software_rgb_calibrate (s, temp_buf, lread);
 	    }
@@ -3368,7 +3862,7 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
   *len = bytes_read;
   s->bytes_to_read -= bytes_read;
 
-  DBG (20, "artec_sane_read() returning, we read %lu bytes, %lu left\n",
+  DBG (9, "artec_sane_read() returning, we read %lu bytes, %lu left\n",
        (u_long) * len, (u_long) s->bytes_to_read);
 
   if ((s->bytes_to_read == 0) &&
@@ -3399,7 +3893,7 @@ sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int * len
   static int bytes_in_buf = 0;
 
   DBG (7, "sane_read( %p, %p, %d, %d )\n", handle, buf, max_len, *len);
-  DBG (7, "sane_read: bib = %d, ml = %d\n", bytes_in_buf, max_len);
+  DBG (9, "sane_read: bib = %d, ml = %d\n", bytes_in_buf, max_len);
 
   if (bytes_in_buf != 0)
     {
@@ -3430,7 +3924,7 @@ sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int * len
   bytes_in_buf -= bytes_to_copy;
   *len = bytes_to_copy;
 
-  DBG (7, "sane_read: btc = %d, bib now = %d\n",
+  DBG (9, "sane_read: btc = %d, bib now = %d\n",
        bytes_to_copy, bytes_in_buf);
 
   for (loop = 0; loop < bytes_in_buf; loop++)
@@ -3446,7 +3940,7 @@ sane_cancel (SANE_Handle handle)
 {
   ARTEC_Scanner *s = handle;
 
-  DBG (7, "sane_cancel\n");
+  DBG (7, "sane_cancel()\n");
 
   if (s->scanning)
     {
@@ -3469,7 +3963,7 @@ sane_set_io_mode (SANE_Handle handle, SANE_Bool non_blocking)
 SANE_Status
 sane_get_select_fd (SANE_Handle handle, SANE_Int * fd)
 {
-  DBG (7, "sane_get_select_fd\n");
+  DBG (7, "sane_get_select_fd()\n");
 
   return (SANE_STATUS_UNSUPPORTED);
 }
