@@ -1,3 +1,8 @@
+2000-02-14  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/m3096g-scsi.h backend/sp15c-scsi.h: Make lint_catcher
+	static to avoid link problems with duplicate symbols.
+	
 2000-02-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* README.unixware2: Information from Wolfgang Rapp on how to build
