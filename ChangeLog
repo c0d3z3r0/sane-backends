@@ -1,3 +1,10 @@
+2000-06-23  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* configure.in backend/Makefile.in backend/dll.conf
+	backend/v4l-frequencies.h backend/v4l-grab.h backend/v4l.c
+	backend/v4l.conf backend/v4l.desc backend/v4l.h: Added Video4Linux
+	backend from Juergen G. Schimmer.
+
 2000-06-22  Henning Meier-Geinitz <hmg@gmx.de>
 
         * include/sane/sanei_pa4s2.h sanei/sanei_pa4s2.c Makefile.in 
