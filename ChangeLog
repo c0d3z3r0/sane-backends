@@ -1,3 +1,8 @@
+2000-01-21: Rene Rebe: <rene.rebe@okay.net>
+
+	* ChangeLog: updated (oversaw last time, sorry)
+	* backend/avision.c: fixed some compiling warnings
+	
 2000-01-21  Petter Reinholdtsen <pere@td.org.uit.no>
 
         * sanei/sanei_scsi.c: Bugfix: Added return type for dummy
@@ -14,7 +19,13 @@
 	one call to scanimage.  This modification was created by Christian
 	Bucher so that his Epson scanner could use the ADF.  Patch from
 	Karl Heinz Kremer.
-	
+
+2000-01-19  Rene Rebe <rene.rebe@okay.net>
+
+	* backend/avision.*: added - the (very) basic avision backend
+	* backend/Makefile.in: updated for the avision backend
+	* AUTHORS: updated
+
 2000-01-18  Karl Heinz Kremer <khk@khk.net>
 	* fixed typo in epson.desc and fixed the dates for
 	  two of my earlier submissions in ChangeLog file
