@@ -186,12 +186,13 @@ static LensInfo lens = {{0,0,0,0,},{0,0,0,0,},{0,0,0,0,},{0,0,0,0,},0,0};
  * FIXME: currently only one device is supported !
  */
 static Plustek_Device dummy_dev = {
-	{
-   		NULL,
-	    "Plustek",
-   		NULL,
-	    "flatbed scanner"
-	}
+	{ NULL, "Plustek", NULL, "flatbed scanner" },
+	0, 0, 0, 0,
+	{ 0, 0, 0 },
+	{ 0, 0, 0 },
+	{ 0, 0, 0 },
+	NULL,
+ 	0
 };
 
 /*
@@ -268,7 +269,7 @@ static const pModeParam getModeList( Plustek_Scanner *handle )
 	 * the transparency/negative mode supports only GRAY/COLOR/COLOR32/COLOR48
 	 */
 	if( 0 != handle->val[OPT_EXT_MODE].w )
-		mp = &mp[$TPAModeSupportMin];
+		mp = &mp[_TPAModeSupportMin];
 
 	return mp;
 }
@@ -401,7 +402,7 @@ static SANE_Status do_cancel( Plustek_Scanner *scanner, SANE_Bool closepipe  )
  */
 static SANE_Status limitResolution( Plustek_Device *dev )
 {
-	dev->dpi_range.min = $DefDpi;
+	dev->dpi_range.min = _DEF_DPI;
 
 	/*
 	 * CHANGE: limit resolution to max. physical available one
@@ -639,11 +640,11 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 	/* save the info we got from the driver */
 	s->hw->model  = scaps.Model;
 	s->hw->asic   = scaps.AsicID;
-	s->hw->max_y  = scaps.wMaxExtentY*MM_PER_INCH/$MeasureBase;
+	s->hw->max_y  = scaps.wMaxExtentY*MM_PER_INCH/_MEASURE_BASE;
 
 	init_options( s );
 
-	s->hw->res_list = (SANE_Int *) calloc(((lens.rDpiX.wMax -$DefDpi)/25 + 1),
+	s->hw->res_list = (SANE_Int *) calloc(((lens.rDpiX.wMax -_DEF_DPI)/25 + 1),
 				sizeof (SANE_Int));  /* one more to avoid a buffer overflow */
 
 	if (NULL == s->hw->res_list) {
@@ -653,7 +654,7 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 	}
 
 	s->hw->res_list_size = 0;
-	for (cntr = $DefDpi; cntr <= lens.rDpiX.wMax; cntr += 25) {
+	for (cntr = _DEF_DPI; cntr <= lens.rDpiX.wMax; cntr += 25) {
 		s->hw->res_list_size++;
 		s->hw->res_list[s->hw->res_list_size - 1] = (SANE_Int) cntr;
 	}
@@ -770,10 +771,10 @@ void sane_exit( void )
 	 * check pointer, because they're might be NULL
 	 */
 	if( NULL != dummy_dev.sane.model )
-  		free ((char *) dummy_dev.sane.model);
+  		free((char *)dummy_dev.sane.model);
 
 	if( NULL != dummy_dev.sane.name )
-		free ((char *) dummy_dev.sane.name);
+		free((char *)dummy_dev.sane.name);
 
 	auth = NULL;
 }
@@ -1052,7 +1053,7 @@ SANE_Status sane_control_option( SANE_Handle handle, SANE_Int option,
 				 */
 				if( s->val[option].w == 0 ) {
 
-					s->hw->dpi_range.min = $DefDpi;
+					s->hw->dpi_range.min = _DEF_DPI;
 
 					s->hw->x_range.max = SANE_FIX(_NORMAL_X);
 					s->hw->y_range.max = SANE_FIX(s->hw->max_y);
@@ -1071,7 +1072,7 @@ SANE_Status sane_control_option( SANE_Handle handle, SANE_Int option,
 
 				} else {
 
-					s->hw->dpi_range.min = $TPAMinDpi;
+					s->hw->dpi_range.min = _TPAMinDpi;
 
 					if( s->val[option].w == 1 ) {
     					s->hw->x_range.max = SANE_FIX(_TP_X);
@@ -1092,10 +1093,10 @@ SANE_Status sane_control_option( SANE_Handle handle, SANE_Int option,
 
 					if( MODEL_OP_9636T == s->hw->model ) {
 						s->opt[OPT_MODE].constraint.string_list =
-											&mode_9636_list[$TPAModeSupportMin];
+											&mode_9636_list[_TPAModeSupportMin];
 					} else {
 						s->opt[OPT_MODE].constraint.string_list =
-												&mode_list[$TPAModeSupportMin];
+												&mode_list[_TPAModeSupportMin];
 					}
 					s->val[OPT_MODE].w = 1;		/* _COLOR_TRUE24 */
     			}

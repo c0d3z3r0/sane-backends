@@ -53,6 +53,33 @@
 #ifndef __PLUSTEK_SHARE_H__
 #define __PLUSTEK_SHARE_H__
 
+/*
+ * for other OS than Linux, we might have to define the _IO macros
+ */
+#ifndef _IOC
+#define _IOC(dir,type,nr,size) \
+	(((dir)  << 30) | \
+	 ((type) << 8)  | \
+	 ((nr)   << 0)  | \
+	 ((size) << 16))
+#endif
+
+#ifndef _IO
+#define _IO(type,nr)		_IOC(0U,(type),(nr),0)
+#endif
+
+#ifndef _IOR
+#define _IOR(type,nr,size)	_IOC(2U,(type),(nr),sizeof(size))
+#endif
+
+#ifndef _IOW
+#define _IOW(type,nr,size)	_IOC(1U,(type),(nr),sizeof(size))
+#endif
+
+#ifndef _IOWR
+#define _IOWR(type,nr,size)	_IOC(3U,(type),(nr),sizeof(size))
+#endif
+
 /*.............................................................................
  * the ioctl interface
  */
@@ -267,8 +294,8 @@ typedef struct {
 #define SCANDEF_WindowStyle	    	0x00000038
 
 /* these values will be combined with ScannerInfo.dwFlag */
-#define $ScannerScanning	    0x8000000
-#define $ScannerPaperOut	    0x4000000
+#define _SCANNER_SCANNING	    	0x8000000
+#define _SCANNER_PAPEROUT			0x4000000
 
 
 /* (3.2): SCANINFO.wMapType */
@@ -314,7 +341,7 @@ typedef struct {
 /******************************************************************************
  *			SECTION 4 - Generic Equates
  */
-#define $MeasureBase		    300UL
+#define _MEASURE_BASE		300UL
 
 /* for GetLensInformation */
 #define SOURCE_Reflection	0
@@ -324,10 +351,10 @@ typedef struct {
 /******************************************************************************
  * Section 5 - Scanmodes
  */
-#define $ScanMode_AverageOut	1	/* CCD averaged 2 pixels value for output*/
-#define $ScanMode_Mono			2   /* not color mode						 */
-#define $FastScanMode			$ScanMode_AverageOut
-#define $SetGrayMode			$ScanMode_Mono
+#define _ScanMode_AverageOut	1	/* CCD averaged 2 pixels value for output*/
+#define _ScanMode_Mono			2   /* not color mode						 */
+#define _FastScanMode			_ScanMode_AverageOut
+#define _SetGrayMode			_ScanMode_Mono
 
 /******************************************************************************
  * Section 6 - additional definitions
@@ -351,23 +378,23 @@ typedef struct {
 /*
  * transparency/negative mode set ranges
  */
-#define $TPAPageWidth		    		500U	/* org. was 450 = 38.1 mm */
-#define $TPAPageHeight		    		510U 	/* org. was 460 = 38.9 mm */
-#define $TPAModeSupportMin	    		2	    /* _COLOR_256GRAY	*/
-#define $TPAModeSupportMax	    		4	    /* _COLOR48 		*/
-#define $TPAModeSupportDef	    		3	    /* _COLOR24 		*/
-#define $TPAMinDpi		    			150
+#define _TPAPageWidth		    		500U	/* org. was 450 = 38.1 mm */
+#define _TPAPageHeight		    		510U 	/* org. was 460 = 38.9 mm */
+#define _TPAModeSupportMin	    		2	    /* _COLOR_256GRAY	*/
+#define _TPAModeSupportMax	    		4	    /* _COLOR48 		*/
+#define _TPAModeSupportDef	    		3	    /* _COLOR24 		*/
+#define _TPAMinDpi		    			150
 
-#define $Transparency48OriginOffsetX	375
-#define $Transparency48OriginOffsetY	780
+#define _Transparency48OriginOffsetX	375
+#define _Transparency48OriginOffsetY	780
 
-#define $Transparency96OriginOffsetX  	0x03DB  /* org. was 0x0430	*/
-#define $Negative96OriginOffsetX	  	0x03F3	/* org. was 0x0428	*/
+#define _Transparency96OriginOffsetX  	0x03DB  /* org. was 0x0430	*/
+#define _Negative96OriginOffsetX	  	0x03F3	/* org. was 0x0428	*/
 
-#define $NegativePageWidth				460U	/* 38.9 mm */
-#define $NegativePageHeight	    		350U	/* 29.6 mm */
+#define _NegativePageWidth				460U	/* 38.9 mm */
+#define _NegativePageHeight	    		350U	/* 29.6 mm */
 
-#define $DefDpi 		 50
+#define _DEF_DPI		 		 50
 
 /*
  * model override defines
