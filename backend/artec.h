@@ -127,7 +127,7 @@ ARTEC_Option;
 #define ARTEC_FLAG_IMAGE_REV_LR         0x00000400 /* reversed left-right */
 #define ARTEC_FLAG_ENHANCE_LINE_EDGE    0x00000800 /* line edge enhancement */
 #define ARTEC_FLAG_MONO_ADJUST          0x00001000
-#define ARTEC_FLAG_1BPP_BYTE_ALIGN		0x00002000 /* 1bpp byte align fixup */
+#define ARTEC_FLAG_REVERSE_WINDOW       0x00002000 /* reverse selected area */
 #define ARTEC_FLAG_SC_BUFFERS_LINES     0x00004000 /* scanner has line buffer */
 #define ARTEC_FLAG_SC_HANDLES_OFFSET    0x00008000 /* sc. handles line offset */
 #define ARTEC_FLAG_SENSE_HANDLER        0x00010000 /* supports sense handler */

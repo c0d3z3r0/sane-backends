@@ -80,8 +80,8 @@
 
 #define ARTEC_MAJOR     0
 #define ARTEC_MINOR     5
-#define ARTEC_SUB       6
-#define ARTEC_LAST_MOD  "01/25/2000 15:10 EST"
+#define ARTEC_SUB       9
+#define ARTEC_LAST_MOD  "01/30/2000 03:49 EST"
 
 #define MM_PER_INCH	25.4
 
@@ -95,7 +95,6 @@
 static int num_devices;
 static ARTEC_Device *first_dev;
 static ARTEC_Scanner *first_handle;
-static ARTEC_Scanner *global_s = NULL;	/* sense handler must know model */
 
 static const SANE_String_Const mode_list[] =
 {
@@ -174,8 +173,8 @@ cap_data[] =
     "A6000C", "flatbed",
       8.3, 14, 0, 255, 0, 255, 8, 55, 8192,
 /* some have reported that Calibration does not work the same as AT3 & A6000C+
-      ARTEC_FLAG_CALIBRATE_RGB |
-*/
+   ARTEC_FLAG_CALIBRATE_RGB |
+ */
       ARTEC_FLAG_OPT_CONTRAST |
       ARTEC_FLAG_SEPARATE_RES |
       ARTEC_FLAG_SENSE_HANDLER |
@@ -210,8 +209,8 @@ cap_data[] =
       ARTEC_FLAG_RGB_CHAR_SHIFT |
       ARTEC_FLAG_OPT_CONTRAST |
 /* gamma not working totally correct yet.
-      ARTEC_FLAG_GAMMA_SINGLE |
-*/
+   ARTEC_FLAG_GAMMA_SINGLE |
+ */
       ARTEC_FLAG_SEPARATE_RES |
       ARTEC_FLAG_SENSE_HANDLER |
       ARTEC_FLAG_ADF |
@@ -224,15 +223,13 @@ cap_data[] =
     "AT12", "flatbed",
       8.5, 11, 0, 255, 0, 255, 12, 67, 32768,
 /* calibration works slower so disabled
-      ARTEC_CALIBRATE_DARK_WHITE |
-*/
+   ARTEC_CALIBRATE_DARK_WHITE |
+ */
 /* gamma not working totally correct yet.
-      ARTEC_FLAG_GAMMA |
-*/
+   ARTEC_FLAG_GAMMA |
+ */
       ARTEC_FLAG_OPT_CONTRAST |
-      ARTEC_FLAG_GAMMA_SINGLE |	/* quick fix to test single-gamma mode */
       ARTEC_FLAG_SEPARATE_RES |
-      ARTEC_FLAG_1BPP_BYTE_ALIGN |
       ARTEC_FLAG_SENSE_HANDLER |
       ARTEC_FLAG_SENSE_ENH_18 |
       ARTEC_FLAG_SENSE_BYTE_22 |
@@ -251,16 +248,15 @@ cap_data[] =
     "AM12S", "flatbed",
       8.26, 11.7, 0, 255, 0, 255, 12, 67, ARTEC_MAX_READ_SIZE,
 /* calibration works slower so disabled
-      ARTEC_CALIBRATE_DARK_WHITE |
-*/
+   ARTEC_CALIBRATE_DARK_WHITE |
+ */
 /* gamma not working totally correct yet.
-      ARTEC_FLAG_GAMMA |
-*/
-      ARTEC_FLAG_GAMMA_SINGLE |	/* quick fix to test single-gamma mode */
+   ARTEC_FLAG_GAMMA |
+ */
       ARTEC_FLAG_RGB_LINE_OFFSET |
       ARTEC_FLAG_SEPARATE_RES |
-      ARTEC_FLAG_1BPP_BYTE_ALIGN |
       ARTEC_FLAG_IMAGE_REV_LR |
+      ARTEC_FLAG_REVERSE_WINDOW |
       ARTEC_FLAG_SENSE_HANDLER |
       ARTEC_FLAG_SENSE_ENH_18 |
       ARTEC_FLAG_ONE_PASS_SCANNER,
@@ -375,201 +371,209 @@ max_string_size (const SANE_String_Const strings[])
 }
 
 /* DB added a sense handler */
-
+/* last argument is expected to be a pointer to a Artec_Scanner structure */
 static SANE_Status
 sense_handler (int fd, u_char * sense, void *arg)
 {
-  int s;
+  ARTEC_Scanner *s = (ARTEC_Scanner *)arg;
+  int err;
 
-  s = 0;
+  err = 0;
+
+  DBG(2, "sense data: %02x %02x %02x %02x %02x %02x %02x %02x "
+    "%02x %02x %02x %02x %02x %02x %02x %02x\n",
+    sense[0], sense[1], sense[2], sense[3],
+    sense[4], sense[5], sense[6], sense[7],
+    sense[8], sense[9], sense[10], sense[11],
+    sense[12], sense[13], sense[14], sense[15]);
 
   /* byte 18 info pertaining to ADF */
-  if ( global_s->hw->flags & ARTEC_FLAG_ADF )
+  if ((s) && (s->hw->flags & ARTEC_FLAG_ADF))
     {
       if (sense[18] & 0x01)
-        {
-          DBG (2, "sense:  ADF PAPER JAM\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  ADF PAPER JAM\n");
+	  err++;
+	}
       if (sense[18] & 0x02)
-        {
-          DBG (2, "sense:  ADF NO DOCUMENT IN BIN\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  ADF NO DOCUMENT IN BIN\n");
+	  err++;
+	}
       if (sense[18] & 0x04)
-        {
-          DBG (2, "sense:  ADF SWITCH COVER OPEN\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  ADF SWITCH COVER OPEN\n");
+	  err++;
+	}
       /* DB : next is, i think no failure, so no incrementing s */
       if (sense[18] & 0x08)
-        {
-          DBG (2, "sense:  ADF SET CORRECTLY ON TARGET\n");
-        }
+	{
+	  DBG (2, "sense:  ADF SET CORRECTLY ON TARGET\n");
+	}
       /* The following only for AT12, its reserved (zero?) on other models,  */
       if (sense[18] & 0x10)
-        {
-          DBG (2, "sense:  ADF LENGTH TOO SHORT\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  ADF LENGTH TOO SHORT\n");
+	  err++;
+	}
     }
 
   /* enhanced byte 18 sense data */
-  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_ENH_18 )
+  if ((s) && (s->hw->flags & ARTEC_FLAG_SENSE_ENH_18))
     {
       if (sense[18] & 0x20)
-        {
-          DBG (2, "sense:  LAMP FAIL : NOT WARM \n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  LAMP FAIL : NOT WARM \n");
+	  err++;
+	}
       if (sense[18] & 0x40)
-        {
-          DBG (2, "sense:  NOT READY STATE\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  NOT READY STATE\n");
+	  err++;
+	}
     }
 
-  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_BYTE_19 )
+  if ((s) && (s->hw->flags & ARTEC_FLAG_SENSE_BYTE_19))
     {
       if (sense[19] & 0x01)
-        {
-          DBG (2, "sense:  8031 program ROM checksum Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  8031 program ROM checksum Error\n");
+	  err++;
+	}
       if (sense[19] & 0x02)
-        {
-          DBG (2, "sense:  8031 data RAM R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  8031 data RAM R/W Error\n");
+	  err++;
+	}
       if (sense[19] & 0x04)
-        {
-          DBG (2, "sense:  Shadow Correction RAM R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Shadow Correction RAM R/W Error\n");
+	  err++;
+	}
       if (sense[19] & 0x08)
-        {
-          DBG (2, "sense:  Line RAM R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Line RAM R/W Error\n");
+	  err++;
+	}
       if (sense[19] & 0x10)
-        {
-          /* docs say "reserved to '0'" */
-          DBG (2, "sense:  CCD control circuit Error\n");
-          s++;
-        }
+	{
+	  /* docs say "reserved to '0'" */
+	  DBG (2, "sense:  CCD control circuit Error\n");
+	  err++;
+	}
       if (sense[19] & 0x20)
-        {
-          DBG (2, "sense:  Motor End Switch Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Motor End Switch Error\n");
+	  err++;
+	}
       if (sense[19] & 0x40)
-        {
-          /* docs say "reserved to '0'" */
-          DBG (2, "sense:  Lamp Error\n");
-          s++;
-        }
+	{
+	  /* docs say "reserved to '0'" */
+	  DBG (2, "sense:  Lamp Error\n");
+	  err++;
+	}
       if (sense[19] & 0x80)
-        {
-          DBG (2, "sense:  Optical Calibration/Shading Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Optical Calibration/Shading Error\n");
+	  err++;
+	}
     }
 
   /* These are the self test results for tests 0-15 */
-  if ( global_s->hw->flags & ARTEC_FLAG_SENSE_BYTE_22 )
+  if ((s) && (s->hw->flags & ARTEC_FLAG_SENSE_BYTE_22))
     {
       if (sense[22] & 0x01)
-        {
-          DBG (2, "sense:  8031 Internal Memory R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  8031 Internal Memory R/W Error\n");
+	  err++;
+	}
       if (sense[22] & 0x02)
-        {
-          DBG (2, "sense:  EEPROM test pattern R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  EEPROM test pattern R/W Error\n");
+	  err++;
+	}
       if (sense[22] & 0x04)
-        {
-          DBG (2, "sense:  ASIC Test Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  ASIC Test Error\n");
+	  err++;
+	}
       if (sense[22] & 0x08)
-        {
-          DBG (2, "sense:  Line RAM R/W Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Line RAM R/W Error\n");
+	  err++;
+	}
       if (sense[22] & 0x10)
-        {
-          DBG (2, "sense:  PSRAM R/W Test Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  PSRAM R/W Test Error\n");
+	  err++;
+	}
       if (sense[22] & 0x20)
-        {
-          DBG (2, "sense:  Positioning Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Positioning Error\n");
+	  err++;
+	}
       if (sense[22] & 0x40)
-        {
-          DBG (2, "sense:  Test 6 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 6 Error\n");
+	  err++;
+	}
       if (sense[22] & 0x80)
-        {
-          DBG (2, "sense:  Test 7 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 7 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x01)
-        {
-          DBG (2, "sense:  Test 8 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 8 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x02)
-        {
-          DBG (2, "sense:  Test 9 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 9 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x04)
-        {
-          DBG (2, "sense:  Test 10 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 10 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x08)
-        {
-          DBG (2, "sense:  Test 11 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 11 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x10)
-        {
-          DBG (2, "sense:  Test 12 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 12 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x20)
-        {
-          DBG (2, "sense:  Test 13 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 13 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x40)
-        {
-          DBG (2, "sense:  Test 14 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 14 Error\n");
+	  err++;
+	}
       if (sense[23] & 0x80)
-        {
-          DBG (2, "sense:  Test 15 Error\n");
-          s++;
-        }
+	{
+	  DBG (2, "sense:  Test 15 Error\n");
+	  err++;
+	}
     }
 
-  if (s)
+  if (err)
     return SANE_STATUS_IO_ERROR;
 
   switch (sense[0])
     {
-    case 0x70:	/* ALWAYS */
+    case 0x70:			/* ALWAYS */
       switch (sense[2])
-  	{
+	{
 	case 0x01:
-	  DBG (2, "sense:  Successful command\n" );
+	  DBG (2, "sense:  Successful command\n");
 	  return SANE_STATUS_GOOD;
 	case 0x02:
 	  DBG (2, "sense:  Not Ready, target can not be accessed\n");
@@ -611,7 +615,7 @@ wait_ready (int fd)
   while (retry-- > 0)
     {
       status = sanei_scsi_cmd (fd, test_unit_ready,
-                 sizeof (test_unit_ready), 0, 0);
+			       sizeof (test_unit_ready), 0, 0);
       if (status == SANE_STATUS_GOOD)
 	return status;
 
@@ -978,15 +982,15 @@ artec_buffer_line_offset (SANE_Handle handle, SANE_Int line_offset,
 	      /* copy the blue data into our temp buffer then copy full */
 	      /* temp buffer overtop of input data */
 	      if (s->hw->flags & ARTEC_FLAG_IMAGE_REV_LR)
-	        {
-	          blu_ptr = data;
-	          out_ptr = tmp_line_buf;
-	        }
+		{
+		  blu_ptr = data;
+		  out_ptr = tmp_line_buf;
+		}
 	      else
-	        {
-	          blu_ptr = data + 2;
-	          out_ptr = tmp_line_buf + 2;
-	        }
+		{
+		  blu_ptr = data + 2;
+		  out_ptr = tmp_line_buf + 2;
+		}
 
 	      for (count = 0; count < width; count++)
 		{
@@ -1128,8 +1132,8 @@ artec_mono_bit_offset (SANE_Handle handle, SANE_Byte * data, size_t * len)
   offset_bit = bits_read - offset_byte * 8;	/* bit index in byte (from 0) */
 
   DBG (50,
-     "artec_mono_bit_offset: bits_read = %d, offset_byte = %d, offset_bit = %d\n",
-     bits_read, offset_byte, offset_bit);
+       "artec_mono_bit_offset: bits_read = %d, offset_byte = %d, offset_bit = %d\n",
+       bits_read, offset_byte, offset_bit);
 
   /* Copy mono data from the buffer into the tmp line buffer */
   /* Case 1: Data starts at the start of the buffer line */
@@ -1285,8 +1289,8 @@ artec_read_gamma_table (SANE_Handle handle)
   write_6[8] = (s->gamma_length + 9);
 
   /* FIXME: AT12 and AM12S have one less byte so use 18 */
-  if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
-      ( ! strcmp( s->hw->sane.model, "AM12S" )))
+  if ((!strcmp (s->hw->sane.model, "AT12")) ||
+      (!strcmp (s->hw->sane.model, "AM12S")))
     {
       data = write_6 + 18;
     }
@@ -1325,8 +1329,8 @@ artec_read_gamma_table (SANE_Handle handle)
       fprintf (stderr, "\n\n");
     }
 
-  if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
-      ( ! strcmp( s->hw->sane.model, "AM12S" )))
+  if ((!strcmp (s->hw->sane.model, "AT12")) ||
+      (!strcmp (s->hw->sane.model, "AM12S")))
     {
       return (sanei_scsi_cmd (s->fd, write_6, 10 + 8 + s->gamma_length, 0, 0));
     }
@@ -1370,7 +1374,7 @@ artec_send_gamma_table (SANE_Handle handle)
       write_6[6] = 9 >> 16;
       write_6[7] = 9 >> 8;
       write_6[8] = 9;
-      write_6[11] = 1;	/* internal gamma table #1 (hope this is default) */
+      write_6[11] = 1;		/* internal gamma table #1 (hope this is default) */
 
       return (sanei_scsi_cmd (s->fd, write_6, 10 + 9, 0, 0));
     }
@@ -1387,15 +1391,15 @@ artec_send_gamma_table (SANE_Handle handle)
 	}
 
       /* FIXME: AT12 and AM12S have one less byte so use 18 */
-      if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
-          ( ! strcmp( s->hw->sane.model, "AM12S" )))
-        {
-          data = write_6 + 18;
-        }
+      if ((!strcmp (s->hw->sane.model, "AT12")) ||
+	  (!strcmp (s->hw->sane.model, "AM12S")))
+	{
+	  data = write_6 + 18;
+	}
       else
-        {
-          data = write_6 + 19;
-        }
+	{
+	  data = write_6 + 19;
+	}
 
       for (i = 0; i < s->gamma_length; i++)
 	{
@@ -1417,15 +1421,15 @@ artec_send_gamma_table (SANE_Handle handle)
 	}
 
       /* FIXME: AT12 and AM12S have one less byte so use 18 */
-      if (( ! strcmp( s->hw->sane.model, "AT12" )) ||
-          ( ! strcmp( s->hw->sane.model, "AM12S" )))
-        {
-          return (sanei_scsi_cmd (s->fd, write_6, 10 + 8 + s->gamma_length, 0, 0));
-        }
+      if ((!strcmp (s->hw->sane.model, "AT12")) ||
+	  (!strcmp (s->hw->sane.model, "AM12S")))
+	{
+	  return (sanei_scsi_cmd (s->fd, write_6, 10 + 8 + s->gamma_length, 0, 0));
+	}
       else
-        {
-          return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
-        }
+	{
+	  return (sanei_scsi_cmd (s->fd, write_6, 10 + 9 + s->gamma_length, 0, 0));
+	}
     }
 }
 
@@ -1436,6 +1440,8 @@ artec_set_scan_window (SANE_Handle handle)
   char write_6[4096];
   char *data;
   int counter;
+  int reversed_x;
+  int max_x;
 
   DBG (7, "artec_set_scan_window()\n");
 
@@ -1444,10 +1450,10 @@ artec_set_scan_window (SANE_Handle handle)
    * s->line_offset number of rows because of the RGB fixup.
    */
   if ((s->line_offset) &&
-      (s->tl_x) &&
-      (s->tl_x >= ( s->line_offset * 2 )))
+      (s->tl_y) &&
+      (s->tl_y >= (s->line_offset * 2)))
     {
-      s->tl_x -= ( s->line_offset * 2 );
+      s->tl_y -= (s->line_offset * 2);
     }
 
   data = write_6 + 10;
@@ -1491,17 +1497,35 @@ artec_set_scan_window (SANE_Handle handle)
   data[12] = s->y_resolution >> 8;
   data[13] = s->y_resolution;
 
-  /* top left X value */
-  data[14] = s->tl_x >> 24;
-  data[15] = s->tl_x >> 16;
-  data[16] = s->tl_x >> 8;
-  data[17] = s->tl_x;
+  if ( s->hw->flags & ARTEC_FLAG_REVERSE_WINDOW )
+    {
+      /* top left X value */
+      /* the select area is flipped across the page, so we have to do some */
+      /* calculation here to get the the real starting X value */
+      max_x = (int) ((SANE_UNFIX (s->hw->x_range.max) / MM_PER_INCH) *
+	      s->x_resolution);
+      reversed_x = max_x - s->tl_x - s->params.pixels_per_line;
+
+      data[14] = reversed_x >> 24;
+      data[15] = reversed_x >> 16;
+      data[16] = reversed_x >> 8;
+      data[17] = reversed_x;
+    }
+  else
+    {
+      /* top left X value */
+      data[14] = s->tl_x >> 24;
+      data[15] = s->tl_x >> 16;
+      data[16] = s->tl_x >> 8;
+      data[17] = s->tl_x;
+    }
 
   /* top left Y value */
   data[18] = s->tl_y >> 24;
   data[19] = s->tl_y >> 16;
   data[20] = s->tl_y >> 8;
   data[21] = s->tl_y;
+
 
   /* width */
   data[22] = s->params.pixels_per_line >> 24;
@@ -1518,38 +1542,50 @@ artec_set_scan_window (SANE_Handle handle)
   /* misc. single-byte settings */
   data[31] = s->val[OPT_THRESHOLD].w;	/* threshold */
 
-  /* byte 33 is mode, byte 37 bit 7 is "negative" setting */
+  /*
+   * byte 32 is contrast
+   * byte 33 is mode
+   * byte 37 bit 7 is "negative" setting
+   */
   if (strcmp (s->mode, "Lineart") == 0)
     {
-      data[32] = s->val[OPT_CONTRAST].w;
+      if (s->hw->flags & ARTEC_FLAG_OPT_CONTRAST)
+        data[32] = s->val[OPT_CONTRAST].w;
+
       data[33] = ARTEC_COMP_LINEART;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x0 : 0x80;
     }
   else if (strcmp (s->mode, "Halftone") == 0)
     {
-      data[32] = s->val[OPT_CONTRAST].w;
+      if (s->hw->flags & ARTEC_FLAG_OPT_CONTRAST)
+        data[32] = s->val[OPT_CONTRAST].w;
+
       data[33] = ARTEC_COMP_HALFTONE;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x0 : 0x80;
     }
   else if (strcmp (s->mode, "Gray") == 0)
     {
-      data[32] = 0x80;	/* leave contrast at mid-way */
+      if (s->hw->flags & ARTEC_FLAG_OPT_CONTRAST)
+        data[32] = 0x80;		/* leave contrast at mid-way */
+
       data[33] = ARTEC_COMP_GRAY;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x80 : 0x0;
     }
   else if (strcmp (s->mode, "Color") == 0)
     {
-      data[32] = 0x80;	/* leave contrast at mid-way */
+      if (s->hw->flags & ARTEC_FLAG_OPT_CONTRAST)
+        data[32] = 0x80;		/* leave contrast at mid-way */
+
       data[33] = ARTEC_COMP_COLOR;
       data[37] = (s->val[OPT_NEGATIVE].w == SANE_TRUE) ? 0x80 : 0x0;
     }
 
   data[34] = s->params.depth;	/* bits per pixel */
 
-  if ( s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN )
+  if (s->hw->flags & ARTEC_FLAG_HALFTONE_PATTERN)
     {
       data[35] = artec_get_str_index (halftone_pattern_list,
-	  s->val[OPT_HALFTONE_PATTERN].s);	/* halftone pattern */
+		      s->val[OPT_HALFTONE_PATTERN].s);	/* halftone pattern */
     }
 
   /* user supplied halftone pattern not supported for now so override with */
@@ -1561,57 +1597,57 @@ artec_set_scan_window (SANE_Handle handle)
 
   /* NOTE: AT12 doesn't support mono according to docs. */
   data[48] = artec_get_str_index (filter_type_list,
-		  s->val[OPT_FILTER_TYPE].s);	/* filter mode */
+				  s->val[OPT_FILTER_TYPE].s);	/* filter mode */
 
   if (s->hw->setwindow_cmd_size > 55)
     {
       data[48] = 0x2;		/* DB filter type green for AT12,see above */
 
-      if ( s->hw->flags & ARTEC_FLAG_SC_BUFFERS_LINES )
-        {
-          /* FIXME: guessing at this value, use formula instead */
-          data[55] = 0x00;	/* buffer full line count */
-          data[56] = 0x00;	/* buffer full line count */
-          data[57] = 0x00;	/* buffer full line count */
-          data[58] = 0x0a;	/* buffer full line count */
+      if (s->hw->flags & ARTEC_FLAG_SC_BUFFERS_LINES)
+	{
+	  /* FIXME: guessing at this value, use formula instead */
+	  data[55] = 0x00;	/* buffer full line count */
+	  data[56] = 0x00;	/* buffer full line count */
+	  data[57] = 0x00;	/* buffer full line count */
+	  data[58] = 0x0a;	/* buffer full line count */
 
-          /* FIXME: guessing at this value, use formula instead */
-          data[59] = 0x00;	/* access line count */
-          data[60] = 0x00;	/* access line count */
-          data[61] = 0x00;	/* access line count */
-          data[62] = 0x0a;	/* access line count */
-        }
+	  /* FIXME: guessing at this value, use formula instead */
+	  data[59] = 0x00;	/* access line count */
+	  data[60] = 0x00;	/* access line count */
+	  data[61] = 0x00;	/* access line count */
+	  data[62] = 0x0a;	/* access line count */
+	}
 
-      if ( s->hw->flags & ARTEC_FLAG_SC_HANDLES_OFFSET )
-        {
-          /* DB : following fields : high order bit (0x80) is enable */
-          /* scanner handles line offset fixup, 0 = driver handles */
-          data[63] = 0x80;
-        }
+      if (s->hw->flags & ARTEC_FLAG_SC_HANDLES_OFFSET)
+	{
+	  /* DB : following fields : high order bit (0x80) is enable */
+	  /* scanner handles line offset fixup, 0 = driver handles */
+	  data[63] = 0x80;
+	}
 
-      if (( s->hw->flags & ARTEC_FLAG_PIXEL_AVERAGING ) &&
-          ( s->val[OPT_PIXEL_AVG].w ))
-        {
-          /* enable pixel average function */
-              data[64] = 0x80;
-        }
+      if ((s->hw->flags & ARTEC_FLAG_PIXEL_AVERAGING) &&
+	  (s->val[OPT_PIXEL_AVG].w))
+	{
+	  /* enable pixel average function */
+	  data[64] = 0x80;
+	}
       else
-        {
-          /* disable pixel average function */
-              data[64] = 0;
-        }
+	{
+	  /* disable pixel average function */
+	  data[64] = 0;
+	}
 
-      if (( s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE ) &&
-          ( s->val[OPT_EDGE_ENH].w ))
-        {
-          /* enable lineart edge enhancement function */
-          data[65] = 0x80;
-        }
+      if ((s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE) &&
+	  (s->val[OPT_EDGE_ENH].w))
+	{
+	  /* enable lineart edge enhancement function */
+	  data[65] = 0x80;
+	}
       else
-        {
-          /* disable lineart edge enhancement function */
-          data[65] = 0;
-        }
+	{
+	  /* disable lineart edge enhancement function */
+	  data[65] = 0;
+	}
 
       /* data is R-G-B format, 0x80 = G-B-R format (reversed) */
       data[66] = 0;
@@ -1639,10 +1675,10 @@ artec_start_scan (SANE_Handle handle)
 
   /* setup cmd to start scanning */
   memset (write_7, 0, 7);
-  write_7[0] = 0x1b;	/* code to start scan */
+  write_7[0] = 0x1b;		/* code to start scan */
 
   /* FIXME: need to make this a flag */
-  if ( ! strcmp( s->hw->sane.model, "AM12S" ))
+  if (!strcmp (s->hw->sane.model, "AM12S"))
     {
       /* start the scan */
       return (sanei_scsi_cmd (s->fd, write_7, 6, 0, 0));
@@ -2077,17 +2113,17 @@ dump_inquiry (unsigned char *result)
   for (i = 0; i < 96; i += 16)
     {
       fprintf (stderr, "0x%02x: ", i);
-      for (j = 0; j < 16; j++ )
-        {
-          fprintf (stderr, "%02x ", (int) result[i + j] );
-        }
-      fprintf( stderr, "  " );
-      for (j = 0; j < 16; j++ )
-        {
-          fprintf( stderr, "%c",
-            isprint( result[i + j] ) ? result[i + j] : '.' );
-        }
-      fprintf( stderr, "\n" );
+      for (j = 0; j < 16; j++)
+	{
+	  fprintf (stderr, "%02x ", (int) result[i + j]);
+	}
+      fprintf (stderr, "  ");
+      for (j = 0; j < 16; j++)
+	{
+	  fprintf (stderr, "%c",
+		   isprint (result[i + j]) ? result[i + j] : '.');
+	}
+      fprintf (stderr, "\n");
     }
 
   return (SANE_STATUS_GOOD);
@@ -2119,7 +2155,7 @@ attach (const char *devname, ARTEC_Device ** devp)
 
   DBG (6, "attach: opening %s\n", devname);
 
-  status = sanei_scsi_open (devname, &fd, sense_handler, 0);
+  status = sanei_scsi_open (devname, &fd, sense_handler, NULL);
   if (status != SANE_STATUS_GOOD)
     {
       DBG (1, "attach: open failed (%s)\n", sane_strstatus (status));
@@ -2229,6 +2265,10 @@ attach (const char *devname, ARTEC_Device ** devp)
       return (SANE_STATUS_INVAL);
     }
 
+  /* turn this wait OFF for now since it appears to cause problems with */
+  /* AT12 models */
+  /* turned off by creating an "if" that can never be true */
+  if ( 1 == 2 ) {
   DBG (6, "attach: wait for scanner to come ready\n");
   status = wait_ready (fd);
 
@@ -2239,6 +2279,10 @@ attach (const char *devname, ARTEC_Device ** devp)
       sanei_scsi_close (fd);
       return (status);
     }
+  /* This is the end of the "if" that can never be true that in effect */
+  /* comments out this wait_ready() call */
+  }
+  /* end of "if( 1 == 2 )" */
 
   dev = malloc (sizeof (*dev));
   if (!dev)
@@ -2288,7 +2332,7 @@ attach (const char *devname, ARTEC_Device ** devp)
   dev->sane.vendor = str;
 
   DBG (5, "scanner vendor: '%s', model: '%s', revision: '%s'\n",
-    dev->sane.vendor, dev->sane.model, product_revision );
+       dev->sane.vendor, dev->sane.model, product_revision);
 
   /* Artec docs say if bytes 36-43 = "ULTIMA  ", then supports read cap. data */
   if (strncmp (result + 36, "ULTIMA  ", 8) == 0)
@@ -2933,11 +2977,11 @@ sane_close (SANE_Handle handle)
 
   DBG (7, "sane_close()\n");
 
-  if (( DBG_LEVEL == 101 ) &&
-      ( debug_fd > -1 ))
+  if ((DBG_LEVEL == 101) &&
+      (debug_fd > -1))
     {
-      close( debug_fd );
-      DBG (101, "closed artec.data.raw output file\n" );
+      close (debug_fd);
+      DBG (101, "closed artec.data.raw output file\n");
     }
 
   /* remove handle from list of open handles: */
@@ -3137,8 +3181,8 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 		    /* lineart mode */
 		    s->opt[OPT_THRESHOLD].cap &= ~SANE_CAP_INACTIVE;
 
-                    if (s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE)
-	  	      s->opt[OPT_EDGE_ENH].cap &= ~SANE_CAP_INACTIVE;
+		    if (s->hw->flags & ARTEC_FLAG_ENHANCE_LINE_EDGE)
+		      s->opt[OPT_EDGE_ENH].cap &= ~SANE_CAP_INACTIVE;
 		  }
 	      }
 	    else if (strcmp (val, "Color") == 0)
@@ -3370,32 +3414,32 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
 	       */
 	      /* FIXME: figure out a cleaner way to do this... */
 	      s->line_offset = 0;	/* default */
-	      if (( ! strcmp( s->hw->sane.model, "AT3" )) ||
-	          ( ! strcmp( s->hw->sane.model, "A6000C" )) ||
-	          ( ! strcmp( s->hw->sane.model, "A6000C PLUS" )) ||
-	          ( ! strcmp( s->hw->sane.model, "AT6" )))
-	        {
-	          /* formula #2 */
-	          /* ranges from 1 at 50dpi to 16 at 600dpi */
-	          s->line_offset = 8 * ( s->y_resolution / 300.0 );
-	        }
-	      else if ( ! strcmp( s->hw->sane.model, "AT12" ))
-	        {
-	          /* formula #2 */
-	          /* ranges from 0 at 25dpi to 16 at 1200dpi */
-	          /***********************************************************/
-	          /* this should be handled in hardware for now, so leave it */
-	          /* sitting at zero for now.                                */
-	          /***********************************************************/
-	          /*
-	          s->line_offset = 16 * ( s->y_resolution / 1200.0 );
-	          */
-	        }
-	      else if ( ! strcmp( s->hw->sane.model, "AM12S" ))
-	        {
-	          /* formula #3 */
-	          /* ranges from 0 at 50dpi to 8 at 1200dpi */
-	          s->line_offset = 8 * ( s->y_resolution / 1200.0 );
+	      if ((!strcmp (s->hw->sane.model, "AT3")) ||
+		  (!strcmp (s->hw->sane.model, "A6000C")) ||
+		  (!strcmp (s->hw->sane.model, "A6000C PLUS")) ||
+		  (!strcmp (s->hw->sane.model, "AT6")))
+		{
+		  /* formula #1 */
+		  /* ranges from 1 at 50dpi to 16 at 600dpi */
+		  s->line_offset = 8 * (s->y_resolution / 300.0);
+		}
+	      else if (!strcmp (s->hw->sane.model, "AT12"))
+		{
+		  /* formula #2 */
+		  /* ranges from 0 at 25dpi to 16 at 1200dpi */
+                  /***********************************************************/
+		  /* this should be handled in hardware for now, so leave it */
+		  /* sitting at zero for now.                                */
+                  /***********************************************************/
+		  /*
+		     s->line_offset = 16 * ( s->y_resolution / 1200.0 );
+		   */
+		}
+	      else if (!strcmp (s->hw->sane.model, "AM12S"))
+		{
+		  /* formula #3 */
+		  /* ranges from 0 at 50dpi to 8 at 1200dpi */
+		  s->line_offset = 8 * (s->y_resolution / 1200.0);
 		}
 	    }
 	  else
@@ -3424,22 +3468,18 @@ sane_start (SANE_Handle handle)
 
   DBG (7, "sane_start()\n");
 
-  /* hate doing this, but the sense handler must know which model we have */
-  /* FIXME: find some other way to accomplish this!!! */
-  global_s = s;
-
-  if ( debug_fd != -1 )
+  if (debug_fd != -1)
     {
-      close( debug_fd );
+      close (debug_fd);
       debug_fd = -1;
     }
 
-  if ( DBG_LEVEL == 101 )
+  if (DBG_LEVEL == 101)
     {
-      debug_fd = open( "artec.data.raw",
-        O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, 0666 );
-      if ( debug_fd > -1 )
-        DBG (101, "opened artec.data.raw output file\n" );
+      debug_fd = open ("artec.data.raw",
+		       O_WRONLY | O_CREAT | O_TRUNC | O_SYNC, 0666);
+      if (debug_fd > -1)
+	DBG (101, "opened artec.data.raw output file\n");
     }
 
   /* First make sure we have a current parameter set.  Some of the */
@@ -3461,7 +3501,8 @@ sane_start (SANE_Handle handle)
 
       if (s->hw->flags & ARTEC_FLAG_SENSE_HANDLER)
 	{
-	  status = sanei_scsi_open (s->hw->sane.name, &s->fd, sense_handler, 0);
+	  status = sanei_scsi_open (s->hw->sane.name, &s->fd, sense_handler,
+	    (void *)s);
 	}
       else
 	{
@@ -3480,7 +3521,7 @@ sane_start (SANE_Handle handle)
       if (status != SANE_STATUS_GOOD)
 	{
 	  DBG (1, "wait for scanner ready failed: %s\n",
-	    sane_strstatus (status));
+	       sane_strstatus (status));
 	  return status;
 	}
     }
@@ -3516,7 +3557,7 @@ sane_start (SANE_Handle handle)
       if (status != SANE_STATUS_GOOD)
 	{
 	  DBG (1, "wait for scanner ready failed: %s\n",
-	    sane_strstatus (status));
+	       sane_strstatus (status));
 	  return status;
 	}
 
@@ -3539,7 +3580,7 @@ sane_start (SANE_Handle handle)
       if (status != SANE_STATUS_GOOD)
 	{
 	  DBG (1, "wait for scanner ready failed: %s\n",
-	    sane_strstatus (status));
+	       sane_strstatus (status));
 	  return status;
 	}
     }
@@ -3712,43 +3753,16 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	}
 
       /* This should never happen, but just in case... */
-      if (nread > s->bytes_to_read - bytes_read)
+      if (nread > (s->bytes_to_read - bytes_read))
 	{
 	  nread = s->bytes_to_read - bytes_read;
 	  lread = 1;
 	}
 
-      /* DB check if done reading (lineart and halftone only?)
-       * the number of pre-computed bytes_to_read is not accurate
-       * so follow the number of available rows returned from the scanner
-       * the last time it is set (AT12) to the maximum again
-       * Reason is when asking for a read with a number of bytes less than a
-       * line you get a timeout on the read command with the AT12
-       */
-      DBG (50, "rows_available=%d,params.lines=%d,btr=%lu,bpl=%d\n",
-	   rows_available, s->params.lines,
-	   (u_long) s->bytes_to_read, s->params.bytes_per_line);
-      /* kludge for the ??AT12 model?? */
-      /* this breaks the AT3 & A6000C+ if turned on for them */
-      if ((s->hw->flags & ARTEC_FLAG_1BPP_BYTE_ALIGN) &&
-	  ((strcmp (s->mode, "Lineart") == 0) ||
-	   (strcmp (s->mode, "Halftone") == 0)))
-	{
-	  /* DB byte alignment for the AT12 */
-	  nread = (8192 / s->params.bytes_per_line) * s->params.bytes_per_line;
-	  if ((rows_available == s->params.lines) &&
-	   s->bytes_to_read != (s->params.lines * s->params.bytes_per_line))
-	    {
-	      s->bytes_to_read = 0;
-	      end_scan (s);
-	      do_cancel (s);
-	      return (SANE_STATUS_EOF);
-	    }
-	}
-
-      DBG (50, "bytes_to_read = %lu, max_len = %d, max_rows = %d, "
-	   "rows_avail = %d\n",
-	   (u_long) s->bytes_to_read, max_len, max_ret_rows, rows_available);
+      DBG (50, "rows_available = %d, params.lines = %d, bytes_per_line = %d\n",
+	   rows_available, s->params.lines, s->params.bytes_per_line);
+      DBG (50, "bytes_to_read = %lu, max_len = %d, max_rows = %d\n",
+	   (u_long) s->bytes_to_read, max_len, max_ret_rows);
       DBG (50, "nread = %lu, lread = %lu, bytes_read = %d, rows_read = %d\n",
 	   (u_long) nread, (u_long) lread, bytes_read, rows_read);
 
@@ -3761,11 +3775,11 @@ artec_sane_read (SANE_Handle handle, SANE_Byte * buf, SANE_Int max_len, SANE_Int
 	  return (SANE_STATUS_IO_ERROR);
 	}
 
-      if (( DBG_LEVEL == 101 ) &&
-          ( debug_fd > -1 ))
-        {
-          write( debug_fd, temp_buf, nread );
-        }
+      if ((DBG_LEVEL == 101) &&
+	  (debug_fd > -1))
+	{
+	  write (debug_fd, temp_buf, nread);
+	}
 
       if ((strcmp (s->mode, "Color") == 0) &&
 	  (s->hw->flags & ARTEC_FLAG_RGB_LINE_OFFSET))

@@ -10,7 +10,7 @@
 ;
 
 :backend "artec"                  ; name of backend
-:version "0.5.6"                  ; version of backend
+:version "0.5.9"                  ; version of backend
 :status :stable                   ; :alpha, :beta, :stable, :new
 ;:manpage "?"                     ; name of manpage (if it exists)
 :url "http://www4.infi.net/~cpinkham/sane/sane-artec-doc.html" ; backend's web page
@@ -30,9 +30,9 @@
 :model "AT6"
 :comment "testing in progress"
 :model "AT12"
-:comment "testing in progress"
+:comment "all modes working"
 :model "AM12S"
-:comment "color and greyscale OK, 1bpp modes partially working"
+:comment "all modes working"
 
 :mfg "BlackWidow"
 :url "http://www.blackwidow.co.uk/"
