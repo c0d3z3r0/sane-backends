@@ -3674,7 +3674,7 @@ sanei_scsi_req_flush_all (void)
 }
 
 void
-sanei_scsi_req_flush_all_extended (void)
+sanei_scsi_req_flush_all_extended (int fd)
 {
 }
 
