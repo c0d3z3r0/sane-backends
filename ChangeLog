@@ -1,3 +1,8 @@
+2000-01-24: Abel Deuring <a.deuring@satzbau-gmbh.de>
+
+	* backend/sharp.c, backend/sharp.h: update to version 0.30 
+	(sorry, forgot to make this note some days earlier)
+
 2000-01-24: Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
 	* Added test for libcam to configure.in
