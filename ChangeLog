@@ -1,3 +1,7 @@
+2000-04-05  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* Updated umax backend to version 1.0.2-build-20
+          take a look at backend/umax.CHANGES for details
+
 2000-04-05 Henning Meier-Geinitz <hmg@gmx.de>
 
 	* frontend/xscanimage.c, frontend/preview.c: Fixed a small bug 
