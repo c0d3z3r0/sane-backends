@@ -10,7 +10,7 @@
 ;
 
 :backend "epson"                  ; name of backend
-:version "0.1.15"                  ; version of backend
+:version "0.1.20"                  ; version of backend
 :status :alpha                    ; :alpha, :beta, :stable, :new
 :manpage "sane-epson"             ; name of manpage (if it exists)
 :url "http://www.khk.net/"        ; backend's web page
@@ -23,13 +23,22 @@
 :url "http://www.epson.com/"
 :model "GT-5000"                  ; name models for above-specified mfg.
 :comment "parallel interface"
+:model "Actionscanner II"
+:comment "parallel interface - US version of GT-5000"
 :model "GT-6000"
 :comment "parallel interface"
-:model "Actionscanner II"
+:model "ES-300C"
+:comment "parallel interface - US version of GT-6000"
+:model "GT-6500"
 :comment "parallel interface"
+:model "ES-600C"
+:comment "parallel interface - US version of GT-6500"
 :model "GT-7000"
 :model "Perfection 636S"
+:comment "SCSI interface - US version of GT-7000"
 :model "Perfection 636U"
+:comment "USB Interface"
+:model "Perfection 610"
 :comment "USB Interface"
 :model "Perfection 1200S"
 :model "Perfection 1200U"
