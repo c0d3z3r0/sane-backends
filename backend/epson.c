@@ -16,7 +16,7 @@
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.31 - 2000-07-15"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.32 - 2000-07-26"
 
 /*
    This file is part of the SANE package.
@@ -58,6 +58,8 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-06-26   Fixed problem with Perfection610: The variable
+   		s->color_shuffle_line was never correctly initialized
    2000-06-28   When closing the scanner device the data that's	
 		still in the scanner, waiting to be transferred
 		is flushed. This fixes the problem with scanimage -T
@@ -3832,6 +3834,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	s->hw->color_shuffle = SANE_FALSE;
 	s->current_output_line = 0;
 	s->lines_written = 0;
+	s->color_shuffle_line = 0;
 
 	if ((s->hw->optical_res != 0) && (mparam->depth == 8) && (mparam->mode_flags != 0))
 	 {

@@ -1,3 +1,9 @@
+2000-07-26  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.c: Fixed problem with Perfection610 scanner.
+	  The variable s->color_shuffle_line was not correctly initialized.
+	* backend/epson.desc: Updated version number
+
 2000-07-26  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 	* added info about variable scsi buffer sizes defined by backends
 	  umax, mustek, sharp (via sanei_scsi_open_extended()) to
