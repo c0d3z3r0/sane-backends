@@ -1,5 +1,6 @@
 -*-Mode: outline-*-
 New after 1.01 (unstable development release 2000-01-23):
+* Aliased and hidden backend support.
 * Port to UnixWare 2.x and UnixWare 7.
 * New script 'sane-config' to help frontend developers.
 * Added Ricoh IS50 support.
