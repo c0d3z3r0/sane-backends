@@ -220,7 +220,7 @@ static SANE_Status drvopen(Plustek_Scanner * s, const char *dev_name)
 	
 	result = ioctl(s->fd, _PTDRV_OPEN_DEVICE, &version );
 	if( result < 0 ) {
-		DBG( _DBG_FATAL,"ioctl PT_DRV_OPEN_DEVICE failed(%d)\n", result );
+		DBG( _DBG_ERROR,"ioctl PT_DRV_OPEN_DEVICE failed(%d)\n", result );
 		return SANE_STATUS_IO_ERROR;
     }
 
@@ -340,7 +340,7 @@ static int reader_process( Plustek_Scanner *scanner, int pipe_fd )
 
 	/* on error, there's no need to clean up, as this is done by the parent */
 	if((int)status < 0 ) {
-		DBG( _DBG_FATAL, "read failed, error %i\n", (int)status );
+		DBG( _DBG_ERROR, "read failed, error %i\n", (int)status );
 		return SANE_STATUS_IO_ERROR;
     }
 
@@ -618,21 +618,21 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 
 	result = ioctl(s->fd, _PTDRV_GET_CAPABILITIES, &scaps);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_GET_CAPABILITIES failed(%d)\n", result);
+		DBG( _DBG_ERROR, "ioctl _PTDRV_GET_CAPABILITIES failed(%d)\n", result);
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
     }
 
 	result = ioctl(s->fd, _PTDRV_GET_LENSINFO, &lens);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_GET_LENSINFO failed(%d)\n", result );
+		DBG( _DBG_ERROR, "ioctl _PTDRV_GET_LENSINFO failed(%d)\n", result );
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
 	}
 
 	/* did we fail on connection? */
 	if (scaps.wIOBase == _NO_BASE ) {
-		DBG( _DBG_FATAL, "failed to find Plustek scanner\n" );
+		DBG( _DBG_ERROR, "failed to find Plustek scanner\n" );
 		close(s->fd);
 		return SANE_STATUS_INVAL;
     }
@@ -648,7 +648,7 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 				sizeof (SANE_Int));  /* one more to avoid a buffer overflow */
 
 	if (NULL == s->hw->res_list) {
-		DBG( _DBG_FATAL, "alloc fail, resolution problem\n" );
+		DBG( _DBG_ERROR, "alloc fail, resolution problem\n" );
 		close(s->fd);
 		return SANE_STATUS_INVAL;
 	}
@@ -662,7 +662,7 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 	status = limitResolution( &dummy_dev );
 	drvclose( s );
 	if (status != SANE_STATUS_GOOD) {
-		DBG( _DBG_FATAL,"attach: device doesn't look like a Plustek scanner\n");
+		DBG( _DBG_ERROR,"attach: device doesn't look like a Plustek scanner\n");
 		close(s->fd);
 		return SANE_STATUS_INVAL;
 	}
@@ -677,7 +677,7 @@ static SANE_Status attach( const char *dev_name, Plustek_Device **devp )
 
 	str = malloc(_MODEL_STR_LEN);
 	if( NULL == str ) {
-		DBG(_DBG_FATAL,"attach: out of memory\n");
+		DBG(_DBG_ERROR,"attach: out of memory\n");
 		return SANE_STATUS_NO_MEM;
 	}
 
@@ -1196,7 +1196,7 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	status = sane_get_parameters (handle, NULL);
 	if (status != SANE_STATUS_GOOD) {
-		DBG( _DBG_FATAL, "sane_get_parameters failed\n" );
+		DBG( _DBG_ERROR, "sane_get_parameters failed\n" );
 		return status;
 	}
 
@@ -1204,27 +1204,27 @@ SANE_Status sane_start( SANE_Handle handle )
 	 * open the driver and get some information about the scanner
 	 */
 	if (SANE_STATUS_GOOD != (status = drvopen (s, s->hw->sane.name))) {
-		DBG( _DBG_FATAL,"sane_start: open failed: %s\n",sane_strstatus(status));
+		DBG( _DBG_ERROR,"sane_start: open failed: %s\n",sane_strstatus(status));
 		return status;
 	}
 
 	result = ioctl(s->fd, _PTDRV_GET_CAPABILITIES, &scaps);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_GET_CAPABILITIES failed(%d)\n", result);
+		DBG( _DBG_ERROR, "ioctl _PTDRV_GET_CAPABILITIES failed(%d)\n", result);
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
     }
 	
 	result = ioctl(s->fd, _PTDRV_GET_LENSINFO, &lens);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_GET_LENSINFO failed(%d)\n", result );
+		DBG( _DBG_ERROR, "ioctl _PTDRV_GET_LENSINFO failed(%d)\n", result );
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
     }
 
 	/* did we fail on connection? */
 	if (scaps.wIOBase == _NO_BASE ) {
-		DBG( _DBG_FATAL, "failed to find Plustek scanner\n" );
+		DBG( _DBG_ERROR, "failed to find Plustek scanner\n" );
 		close(s->fd);
 		return SANE_STATUS_INVAL;
 	}
@@ -1274,10 +1274,6 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	cb.ucmd.cInf.ImgDef.dwFlag = SCANDEF_QualityScan;
 
-	if (scanmode == COLOR_BW) {
-		cb.ucmd.cInf.ImgDef.dwFlag |= SCANDEF_Inverse;
-	}
-
 	switch( s->val[OPT_EXT_MODE].w ) {
 		case 1: cb.ucmd.cInf.ImgDef.dwFlag |= SCANDEF_Transparency; break;
 		case 2: cb.ucmd.cInf.ImgDef.dwFlag |= SCANDEF_Negative; 	break;
@@ -1288,14 +1284,14 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	result = ioctl(s->fd, _PTDRV_PUT_IMAGEINFO, &cb);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_PUT_IMAGEINFO failed(%d)\n", result );
+		DBG( _DBG_ERROR, "ioctl _PTDRV_PUT_IMAGEINFO failed(%d)\n", result );
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
 	}
 
 	result = ioctl(s->fd, _PTDRV_GET_CROPINFO, &crop);
 	if( result < 0 ) {
-	    DBG( _DBG_FATAL, "ioctl _PTDRV_GET_CROPINFO failed(%d)\n", result );
+	    DBG( _DBG_ERROR, "ioctl _PTDRV_GET_CROPINFO failed(%d)\n", result );
 	    close(s->fd);
     	return SANE_STATUS_IO_ERROR;
     }
@@ -1321,10 +1317,9 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	cb.ucmd.sInf.ImgDef.dwFlag = (SCANDEF_BuildBwMap | SCANDEF_QualityScan);
 
-	if (scanmode == COLOR_BW) {
-		cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Inverse;
-	}
-
+/*
+ *		cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Inverse;
+ */
 	switch( s->val[OPT_EXT_MODE].w ) {
 		case 1: cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Transparency; break;
 		case 2: cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Negative; 	break;
@@ -1342,14 +1337,14 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	result = ioctl(s->fd, _PTDRV_SET_ENV, &cb.ucmd.sInf);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_SET_ENV failed(%d)\n", result );
+		DBG( _DBG_ERROR, "ioctl _PTDRV_SET_ENV failed(%d)\n", result );
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
     }
 
 	result = ioctl(s->fd, _PTDRV_START_SCAN, &start);
 	if( result < 0 ) {
-		DBG( _DBG_FATAL, "ioctl _PTDRV_START_SCAN failed(%d)\n", result );
+		DBG( _DBG_ERROR, "ioctl _PTDRV_START_SCAN failed(%d)\n", result );
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
     }
@@ -1360,7 +1355,7 @@ SANE_Status sane_start( SANE_Handle handle )
 
 	s->buf = realloc( s->buf, (s->params.lines) * s->params.bytes_per_line );
 	if( NULL == s->buf ) {
-		DBG( _DBG_FATAL, "realloc failed\n" );
+		DBG( _DBG_ERROR, "realloc failed\n" );
 		close(s->fd);
 		return SANE_STATUS_NO_MEM;
 	}
@@ -1372,7 +1367,7 @@ SANE_Status sane_start( SANE_Handle handle )
 	 * pipe --> fds[0]=read-fd, fds[1]=write-fd
 	 */
 	if( pipe(fds) < 0 ) {
-		DBG( _DBG_FATAL, "ERROR: could not create pipe\n" );
+		DBG( _DBG_ERROR, "ERROR: could not create pipe\n" );
 	    s->scanning = SANE_FALSE;
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
@@ -1383,7 +1378,7 @@ SANE_Status sane_start( SANE_Handle handle )
 	s->reader_pid = fork();			
 
 	if( s->reader_pid < 0 ) {
-		DBG( _DBG_FATAL, "ERROR: could not create child process\n" );
+		DBG( _DBG_ERROR, "ERROR: could not create child process\n" );
 	    s->scanning = SANE_FALSE;
 		close(s->fd);
 		return SANE_STATUS_IO_ERROR;
@@ -1456,7 +1451,7 @@ SANE_Status sane_read( SANE_Handle handle, SANE_Byte *data,
 			return SANE_STATUS_GOOD;
 
 		} else {
-			DBG( _DBG_FATAL, "ERROR: errno=%d\n", errno );
+			DBG( _DBG_ERROR, "ERROR: errno=%d\n", errno );
 			do_cancel( s, SANE_TRUE );
 			return SANE_STATUS_IO_ERROR;
 		}
@@ -1497,12 +1492,12 @@ SANE_Status sane_set_io_mode (SANE_Handle handle, SANE_Bool non_blocking)
 	DBG( _DBG_SANE_INIT, "sane_set_io_mode: non_blocking=%d\n",non_blocking );
 
 	if ( !s->scanning ) {
-		DBG( _DBG_FATAL, "ERROR: not scanning !\n" );
+		DBG( _DBG_ERROR, "ERROR: not scanning !\n" );
 		return SANE_STATUS_INVAL;
 	}
 
 	if (fcntl (s->pipe, F_SETFL, non_blocking ? O_NONBLOCK : 0) < 0) {
-		DBG( _DBG_FATAL, "ERROR: can´t set to non-blocking mode !\n" );
+		DBG( _DBG_ERROR, "ERROR: can´t set to non-blocking mode !\n" );
 		return SANE_STATUS_IO_ERROR;
 	}
 
@@ -1520,7 +1515,7 @@ SANE_Status sane_get_select_fd( SANE_Handle handle, SANE_Int * fd )
 	DBG( _DBG_SANE_INIT, "sane_get_select_fd\n" );
 
 	if ( !s->scanning ) {
-		DBG( _DBG_FATAL, "ERROR: not scanning !\n" );
+		DBG( _DBG_ERROR, "ERROR: not scanning !\n" );
 		return SANE_STATUS_INVAL;
 	}
 
