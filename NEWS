@@ -4,6 +4,7 @@ New after 1.01 (unstable development release 2000-01-10):
 * Added Ricoh IS50 support.
 * Updated backends: Artec (v0.5), CANON (v991108), DC-25 (1.2), HP
   (v0.83), Microtek (0.11.0), Microtek2 (v0.8), UMAX (v1.0-build-14),
+  Epson (v0.1.6).
 * New Linux SCSI Generic driver.
 * Upgraded to libtool 1.3.3
 * GIMP compatibility patch.
