@@ -1,3 +1,8 @@
+1999-09-13  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+
+	* backend/umax* and doc/sane-umax* updated to version 1.0-build-12
+          for detailled info take a look at umax.CHANGES
+
 1999-09-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* include/sane/config.h.in: Add missing HAVE_SYS_SOCKET_H.
