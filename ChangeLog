@@ -1,3 +1,7 @@
+2000-05-26  Abel Deuring <a.deuringæsatzbau-gmbh.de>
+	* sanei/sanei_scsi.c: Fixed a bug in the Linux queue handling,
+	  as suggested by Simon Munton
+
 2000-05-22  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
         * ltconfig: Added option "-X" to ldconfig for linux-gnu
           this solves the problem with link /usr/local/libs/sane/libsane.so.1 => libsane-umax.so.1
