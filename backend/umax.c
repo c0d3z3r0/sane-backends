@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 17
+#define BUILD 18
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -5688,7 +5688,7 @@ SANE_Status sane_start(SANE_Handle handle)
     }
     DBG(DBG_info, "attach_scanner: sanei_scsi_open_extended returned scsi buffer size = %d\n", scanner->device->bufsize);
 #else
-    scanner->devive->bufsize = sanei_scsi_max_request_size;
+    scanner->device->bufsize = sanei_scsi_max_request_size;
 
     if ( sanei_scsi_open(scanner->device->sane.name, &(scanner->device->sfd), sense_handler,
                          scanner->device) != SANE_STATUS_GOOD )
