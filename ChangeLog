@@ -1,3 +1,8 @@
+2000-04-27  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* include/sane/sanei_debug.h: Bugfix.  Make sure the source
+	compiles even if NDEBUG is defined.
+
 2000-04-23  Henning Meier-Geinitz <hmg@gmx.de>
 
         * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
