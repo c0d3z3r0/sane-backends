@@ -40,7 +40,7 @@
 
 :model "OpticPro 4831P"
 :interface "Parport (SPP, EPP)"
-:comment "Not tested, same as model OP600P !"
+:comment "OK"
 
 :model "OpticPro 9630P"
 :interface "Parport (SPP, EPP)"
