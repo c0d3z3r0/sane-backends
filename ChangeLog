@@ -1,3 +1,11 @@
+2000-08-02  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/v4l.c: Check return value of ioctl() calls.  Use DBG()
+	instead of syslog() report progress.  Removed redundant check for
+	trailing newline in config file as we are now using
+	sanei_config_read().  Remove ioctl(VIDIOCSYNC), as it hangs on my
+	v4l2 device.
+
 2000-07-31  Henning Meier-Geinitz <hmg@gmx.de>
 	* backend/mustek.*: Update to Mustek backend 1.0-96. Fixed Problem
 	  with detecting some three-pass scanners.

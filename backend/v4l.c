@@ -68,7 +68,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <syslog.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
@@ -587,24 +586,28 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       if (dev_name[0] == '#')           /* ignore line comments */
         continue;
       len = strlen (dev_name);
-      if (dev_name[len - 1] == '\n')
-        dev_name[--len] = '\0';
 
       if (!len)
         continue;                       /* ignore empty lines */
 
+      /* Remove trailing space and trailing comments */
       for (str = dev_name; *str && !isspace (*str) && *str != '#'; ++str);
       *str = '\0';
       v4ldev = open ( dev_name,O_RDWR);
-      ioctl(v4ldev,VIDIOCGCAP,&capability);
       if (-1 != v4ldev)
         {
-          DBG(1, "sane_init: found videodev on `%s'\n", dev_name);
-          attach (dev_name, 0);
+          if (-1 != ioctl(v4ldev,VIDIOCGCAP,&capability))
+            {
+              DBG(1, "sane_init: found videodev on `%s'\n", dev_name);
+              attach (dev_name, 0);
+            }
+          else
+            DBG(1, "sane_init: ioctl(%d,VIDIOCGCAP,..) failed on `%s'\n",
+                v4ldev, dev_name);
+          close (v4ldev);
         }
       else
-        DBG(1, "sane_init: no videodev on `%s'\n", dev_name);
-      close (v4ldev);
+        DBG(1, "sane_init: failed to open device `%s'\n", dev_name);
     }
   fclose (fp);
   return SANE_STATUS_GOOD;
@@ -693,7 +696,7 @@ sane_open (SANE_String_Const devicename, SANE_Handle *handle)
         return SANE_STATUS_INVAL;
 
       if (-1 == ioctl(v4ldev,VIDIOCGMBUF,&ov_mbuf))
-        syslog (LOG_NOTICE,"No Fbuffer");
+        DBG(1, "No Fbuffer\n");
     }
   else
     /* empty devicname -> use first device */
@@ -818,7 +821,7 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
 
       if (-1 == ioctl(s->fd,VIDIOCGWIN,&window))
         {
-          syslog (LOG_NOTICE,"Cant get Window Geometry");
+          DBG(1, "Can not get Window Geometry\n");
           /*return SANE_STATUS_INVAL;*/
         }
       window.clipcount  = 0;
@@ -889,13 +892,16 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
         }
       if (-1 == ioctl(s->fd,VIDIOCSWIN,&window))
         {
-          syslog (LOG_NOTICE,"Cant set Window Geometry");
+          DBG(1, "Can not set Window Geometry\n");
           /*return SANE_STATUS_INVAL;*/
         }
-      ioctl(s->fd,VIDIOCGWIN,&window);
+      if (-1 == ioctl(s->fd,VIDIOCGWIN,&window))
+        {
+          DBG(1, "Can not get window geometry\n");
+        }
       if (-1 == ioctl(s->fd,VIDIOCSPICT,&pict))
         {
-          syslog (LOG_NOTICE,"Cant set Picture Parameters");
+          DBG(1, "Can not set Picture Parameters\n");
           /*return SANE_STATUS_INVAL;*/
         }
       return SANE_STATUS_GOOD;
@@ -949,37 +955,49 @@ sane_start (SANE_Handle handle)
       return SANE_STATUS_INVAL;         /* oops, not a handle we know about */
     }
   len = ioctl(v4ldev,VIDIOCGCAP,&capability);
+  if (-1 == len)
+    DBG(1, "Can not get capabilities\n");
   buffercount = 0;
-  syslog (LOG_NOTICE,"V4L SANE_START");
+  DBG(2, "sane_start\n");
   if (-1 == ioctl(s->fd,VIDIOCGMBUF,&ov_mbuf))
      {
         s->mmap = FALSE;
         buffer = malloc(capability.maxwidth * capability.maxheight * pict.depth);
         if (0 == buffer)
           return SANE_STATUS_NO_MEM;
-        syslog (LOG_NOTICE,"V4L READING Frame");
+        DBG(2, "V4L READING Frame\n");
         len = read (s->fd,buffer,parms.bytes_per_line * parms.lines);
-        syslog (LOG_NOTICE,"V4L Frame read");
+        DBG(2, "V4L Frame read\n");
      }
   else
      {
         s->mmap = TRUE;
-        syslog (LOG_NOTICE,"MMAP Frame");
-        syslog (LOG_NOTICE,"Buffersize %d , Buffers %d , Offset %d",ov_mbuf.size,ov_mbuf.frames,ov_mbuf.offsets);
+        DBG(2, "MMAP Frame\n");
+        DBG(2, "Buffersize %d , Buffers %d , Offset %d\n",
+            ov_mbuf.size,ov_mbuf.frames,ov_mbuf.offsets);
         buffer = mmap (0,ov_mbuf.size,PROT_READ|PROT_WRITE,MAP_SHARED,s->fd,0);
-        syslog (LOG_NOTICE,"MMAPed Frame, Capture 1 Pict into %x",buffer);
+        DBG(2, "MMAPed Frame, Capture 1 Pict into %x\n",buffer);
         gb.frame = 0;
         gb.width = window.width;
         gb.width = parms.pixels_per_line;
         gb.height = window.height;
         gb.height = parms.lines;
         gb.format = pict.palette;
-        syslog (LOG_NOTICE,"MMAPed Frame %d x %d with Palette %d",gb.width,gb.height,gb.format);
+        DBG(2,"MMAPed Frame %d x %d with Palette %d\n",
+            gb.width,gb.height,gb.format);
         len = ioctl(v4ldev,VIDIOCMCAPTURE,&gb);
-        syslog (LOG_NOTICE,"mmap-result %d",len);
-        syslog (LOG_NOTICE,"Frame %x",gb.frame);
+        DBG(2, "mmap-result %d\n",len);
+        DBG(2, "Frame %x\n",gb.frame);
+#if 0
         len = ioctl(v4ldev,VIDIOCSYNC,&(gb.frame));
+        if (-1 == len)
+          {
+            DBG(1, "Call to ioctl(%d, VIDIOCSYNC, ..) failed\n", v4ldev);
+            return SANE_STATUS_INVAL;
+          }
+#endif
      }
+  DBG(2, "sane_start: done\n");
   return SANE_STATUS_GOOD;
 }
 
