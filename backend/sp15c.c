@@ -45,6 +45,14 @@ static const char RCSid[] = "$Header$";
 
 /*
  * $Log$
+ * Revision 1.1.2.6  2000/07/30 11:16:06  hmg
+ * 2000-07-30  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/mustek.*: Update to Mustek backend 1.0-95. Changed from
+ * 	  wait() to waitpid() and removed unused code.
+ * 	* configure configure.in backend/m3096g.c backend/sp15c.c: Reverted
+ * 	  the V_REV patch. V_REV should not be used in backends.
+ *
  * Revision 1.1.2.5  2000/07/29 21:38:13  hmg
  * 2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
  *
@@ -221,7 +229,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   DBG (10, "sane_init\n");
 
   if (version_code)
-    *version_code = SANE_VERSION_CODE (V_MAJOR, V_MINOR, V_REV);
+    *version_code = SANE_VERSION_CODE (V_MAJOR, V_MINOR, 0);
   fp = sanei_config_open (SP15C_CONFIG_FILE);
   if (!fp)
     {

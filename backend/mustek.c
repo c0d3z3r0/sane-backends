@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 94
+#define BUILD 95
 /**************************************************************************/
 
 #include "sane/config.h"
@@ -2263,7 +2263,7 @@ do_stop (Mustek_Scanner *s)
       /* ensure child knows it's time to stop: */
       DBG(5, "do_stop: terminating reader process\n");
       kill (s->reader_pid, SIGTERM);
-      while (wait (&exit_status) != s->reader_pid);
+      waitpid (s->reader_pid, &exit_status, 0);
       DBG(5, "do_stop: reader process terminated with status 0x%x\n",
 	  exit_status);
       if (status != SANE_STATUS_CANCELLED && WIFEXITED(exit_status))
@@ -3860,27 +3860,7 @@ reader_process (Mustek_Scanner *s, int fd)
 	 The ScanExpress is similar to the 600 II N in this respect. 
 	 The ScanExpress and Pro scanners need more space beacuse their 
 	 x-resolution has to be increased if res > half_res */
-#if 0
-      if (s->hw->flags & (MUSTEK_FLAG_N || MUSTEK_FLAG_SE))   
-	{
-	  /* Some ScanExpress and Pro scanners need more memory to enlarge 
-	     the lines */
-	  if ((s->hw->flags & MUSTEK_FLAG_ENLARGE_X) && 
-	      (s->val[OPT_RESOLUTION].w > (s->hw->dpi_range.max / 2)))
-	    {
-	      extra = malloc ((lines_per_buffer + MAX_LINE_DIST) *
-			      (long) s->params.bytes_per_line);
-	    }
-	  else
-	    {
-	      extra = malloc ((lines_per_buffer + MAX_LINE_DIST) * (long) bpl);
-	    }
-	}
-      else
-	{
-	  extra = malloc (lines_per_buffer * (long) bpl);
-	}
-#endif
+
       extra = malloc ((lines_per_buffer + MAX_LINE_DIST) 
 		      * (long) s->params.bytes_per_line);
       if (!extra)

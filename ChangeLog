@@ -1,4 +1,11 @@
 2000-07-30  Henning Meier-Geinitz <hmg@gmx.de>
+	
+	* backend/mustek.*: Update to Mustek backend 1.0-95. Changed from
+	  wait() to waitpid() and removed unused code.
+	* configure configure.in backend/m3096g.c backend/sp15c.c: Reverted
+	  the V_REV patch. V_REV should not be used in backends.
+
+2000-07-30  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* configure configure.in: Add V_REV to CPPFLAGS (only V_MAJOR and 
 	  V_MINOR were defined until now).
@@ -6,7 +13,7 @@
 
 2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
 	
-	* backend/sp15.c backend/m3096g.c: Replace fgets with 
+	* backend/sp15c.c backend/m3096g.c: Replace fgets with 
 	  sanei_config_read, return V_REV as part of version_code string 
 	  (patch from Randolph Bentson).
 

@@ -1,5 +1,14 @@
 CHANGES for the SANE Mustek backend
 
+
+2000-07-30
+  * Removed while {wait ()} loop. Used waitpid() instead. Maybe this cures
+    some reported freezes. It's cleaner anyway.
+  * Removed dead code.
+
+2000-07-28
+  * Released backend version 1.0-94
+
 2000-07-29
   * Use #include "sane/..." instead of #include <sane/...>.
 
