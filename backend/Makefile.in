@@ -95,7 +95,7 @@ install:
 	done
 	@$(LIBTOOL) $(MINST) --finish $(libsanedir)
 	@# Assume the dll name without any versions is last
-	@dllend=`grep library_names= libsane-dll.la |rev|cut -d" " -f1|rev|sed 's/libsane-dll.//'|cut -d\' -f1`; \
+	@dllend=`../tools/libtool-get-dll-ext libsane-dll.la`; \
 	list="$(ALL_BACKENDS)"; cd $(libsanedir) && for be in $$list; do \
 	  file=libsane-$${be}.$$dllend.$(V_MAJOR); \
 	  lib=`grep dlname= libsane-$${be}.la | cut -f2 -d"'"`; \
@@ -104,7 +104,7 @@ install:
 	  fi; \
 	done
 	@# Assume the dll name without any versions is last
-	@dllend=`grep library_names= libsane-dll.la |rev|cut -f1 -d" "|rev|sed 's/libsane-dll.//'|cut -f1 -d\'`; \
+	@dllend=`../tools/libtool-get-dll-ext libsane-dll.la`; \
 	rm -f $(libdir)/libsane.a $(libdir)/libsane.$$dllend \
 		$(libdir)/libsane.$$dllend.$(V_MAJOR)*; \
 	$(LN_S) sane/libsane-dll.a $(libdir)/libsane.a; \
