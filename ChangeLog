@@ -1,3 +1,8 @@
+2000-07-22  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/v4l.c: Bugfix: Avoid crashing in
+	sane_control_option() when last param is NULL.
+
 2000-07-25  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/artec.c: Updated to v0.5.14. Added "Negative" mode as option

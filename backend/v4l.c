@@ -843,39 +843,45 @@ sane_control_option (SANE_Handle handle, SANE_Int option,
         case OPT_BR_X:
                 window.width    = *(SANE_Word *)val;
                 parms.pixels_per_line   = *(SANE_Word *)val;
-                *info           |= SANE_INFO_RELOAD_PARAMS;
+                if (info)
+                  *info         |= SANE_INFO_RELOAD_PARAMS;
                 break;
         case OPT_BR_Y:
                 window.height   = *(SANE_Word *)val;
                 parms.lines     = *(SANE_Word *)val;
-                *info           |= SANE_INFO_RELOAD_PARAMS;
+                if (info)
+                  *info         |= SANE_INFO_RELOAD_PARAMS;
                 break;
         case OPT_XFER_SCALE:
                 break;
         case OPT_DEPTH:
                 pict.depth      = *(SANE_Word *)val;
-                *info           |= SANE_INFO_RELOAD_PARAMS;
+                if (info)
+                  *info         |= SANE_INFO_RELOAD_PARAMS;
                 break;
           if (!s->scanning && info && s->val[option].w != *(SANE_Word *) val)
             /* only signal the reload params if we're not scanning---no point
                in creating the frontend useless work */
-                *info |= SANE_INFO_RELOAD_PARAMS;
+            if (info)
+              *info |= SANE_INFO_RELOAD_PARAMS;
           /* fall through */
         case OPT_NUM_OPTS:
         case OPT_TEST:
         case OPT_DESPECKLE:
         case OPT_BRIGHTNESS:
                 pict.brightness = *(SANE_Word *)val * 256;
-                *info           |= SANE_INFO_RELOAD_PARAMS;
+                if (info)
+                  *info         |= SANE_INFO_RELOAD_PARAMS;
                 break;
         case OPT_CONTRAST:
                 pict.contrast   = *(SANE_Word *)val * 256;
-                /* *info                |= SANE_INFO_RELOAD_PARAMS;*/
+                /* if (info) *info         |= SANE_INFO_RELOAD_PARAMS;*/
                 break;
         case OPT_BLACK_LEVEL:
         case OPT_WHITE_LEVEL:
                 pict.whiteness  = *(SANE_Word *)val * 256;
-                *info           |= SANE_INFO_RELOAD_PARAMS;
+                if (info)
+                  *info         |= SANE_INFO_RELOAD_PARAMS;
                 break;
         case OPT_HUE:
         case OPT_SATURATION:
