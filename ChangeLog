@@ -1,3 +1,8 @@
+2000-08-06  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* backend/hp4200.desc: Added description file for HP 4200 USB
+	  scanner.
+
 2000-08-05  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* AUTHORS: Added link to PROJECTS.
