@@ -16,7 +16,7 @@
 #  define O_NONBLOCK FNDELAY    /* last resort */
 # endif
 #endif
-#endif // HAVE_OS2_H
+#endif /* HAVE_OS2_H */
 
 #ifndef __GLIBC__
 # ifndef u_int8_t
