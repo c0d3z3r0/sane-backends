@@ -43,6 +43,9 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
@@ -57,12 +60,12 @@
 /*
  * starts a new thread or process
  * parameters:
- * start	address of reader function
- * arg_list	pointer to scanner data structure
+ * start        address of reader function
+ * arg_list     pointer to scanner data structure
  *
 */
 int
-sanei_thread_begin( void (*start)(void *arg), 
+sanei_thread_begin( void (*start)(void *arg),
                     void *arg_list)
 {
 #ifdef HAVE_OS2_H
