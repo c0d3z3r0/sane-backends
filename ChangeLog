@@ -1,5 +1,11 @@
 2000-07-13  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* backend/snapscan-310.c backend/snapscan-scsi.c
+	backend/snapscan-sources.c backend/snapscan-sources.h
+	backend/snapscan-utils.c backend/snapscan.c backend/snapscan.desc
+	backend/snapscan.h: New snapscan backend version dated 20000514
+	from Steve Underwood.
+
 	* backend/microtek2.h backend/microtek2.c backend/microtek2.desc:
 	Add support for ScanMaker X6USB.  Patch from Oliver Neukum.
 
