@@ -1,3 +1,10 @@
+2000-06-28  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.c Fixed sane_close() - when the scanner still had
+	  data to deliver at the time the scanner was closed, it was impossible
+	  to restart any frontend software. This also caused scanimge -T to
+	  work just once.
+
 2000-06-28  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* backend/mustek.* Update to Mustek backend 1.0-88. Small bugfixes.
