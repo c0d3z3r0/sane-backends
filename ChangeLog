@@ -1,6 +1,9 @@
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
-	* backend/lhii.desc backend/nec.desc backend/musteka4s2.desc
+	* include/sane/sanei_backend.h: Typedef u_int{8,16,32}_t.
+	Defining them gave bogus code in <sys/types.h> on Irix 6.5.
+
+	* backend/lhii.desc backend/musteka4s2.desc backend/nec.desc
 	backend/plustek.desc backend/sagitta.desc backend/st400.desc
 	backend/v4l.desc backend/v4l2.desc: Added info on existing
 	backends.  Placed version number in () to indicate that these
