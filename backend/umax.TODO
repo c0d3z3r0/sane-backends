@@ -1,0 +1,10 @@
+TODO UMAX BACKEND FOR SANE
+==========================
+
+ * change set_window if (dev->do_color_ordering != 0) {..}
+   one of the settings makes an error for Astra 6X0S scanners
+
+ * include push-button function to SANE_START (?)
+
+ * add support for parallel-port-scanners
+
