@@ -197,6 +197,14 @@ if test "${enable_dynamic}" != yes || test "${enable_preload}" = "yes"; then
 else
   DLL_PRELOAD=""
 fi
+
+AC_ARG_ENABLE(scsibuffersize, 
+  [  --enable-scsibuffersize=N 
+                        specify the default size of the buffer for SCSI commands],
+  [set_scsibuffersize="$enableval"], [set_scsibuffersize=131072])
+CFLAGS="$CFLAGS -DSCSIBUFFERSIZE=$set_scsibuffersize"
+echo "scsi buffersize: $set_scsibuffersize"
+
 AC_SUBST(V_MAJOR)
 AC_SUBST(V_MINOR)
 AC_SUBST(V_REV)
