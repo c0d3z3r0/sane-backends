@@ -14,7 +14,7 @@ Backends:
  artec:		Chris Pinkham (*)
  avision:	Meino Christian Cramer, Rene Rebe(*)
  canon:		Helmut Koeberle, Manuel Panea (*), and Markus Mertinat
- coolscan:	Didier Carlier
+ coolscan:	Didier Carlier, Andreas Rick (*)
  dc25:		Peter Fales (*)
  dc210:		Brian J. Murrell
  dll:		David Mosberger
@@ -62,6 +62,7 @@ Abel Deuring <a.deuring@satzbau-gmbh.de>
 Andreas Beck <becka@sunserver1.rz.uni-duesseldorf.de>
 Andreas Bolsch <ab@maths.nott.ac.uk>
 Andreas Czechanowski <m075@ins.uni-stuttgart.de>
+Andreas Rick <andreas.rick@free.fr>
 Andrew Kuchling <amk@magnet.com>
 Bernd Schroeder <bernd@aquila.muc.de>
 Brian J. Murrell <brian@interlinx.bc.ca>
