@@ -194,6 +194,99 @@ static int unit_ready (int fd);
 #endif
 
 int sanei_scsi_max_request_size = MAX_DATA;
+#if USE == LINUX_INTERFACE
+/* the following #defines follow Douglas Gilbert's sample code
+   to maintain run time compatibility with the old and the
+   new SG driver for Linux
+*/
+# ifdef SG_IO
+#  include "linux_sg3_err.h"  /* xxx contains several definitions of error codes */
+# endif
+#ifndef SG_SET_COMMAND_Q
+#define SG_SET_COMMAND_Q 0x2271
+#endif
+#ifndef SG_SET_RESERVED_SIZE
+#define SG_SET_RESERVED_SIZE 0x2275
+#endif
+#ifndef SG_GET_RESERVED_SIZE
+#define SG_GET_RESERVED_SIZE 0x2272
+#endif
+#ifndef SG_GET_SCSI_ID
+#define SG_GET_SCSI_ID 0x2276
+#endif
+#ifndef SG_GET_VERSION_NUM
+#define SG_GET_VERSION_NUM 0x2282
+#endif
+
+#ifndef SCSIBUFFERSIZE
+#define SCSIBUFFERSIZE (128 * 1024)
+#endif
+
+/* the struct returned by the SG ioctl call SG_GET_SCSI_ID changed
+   from version 2.1.34 to 2.1.35, and we need the informations from
+   the field s_queue_depth, which was introduced in 2.1.35.
+   To get this file compiling also with older versions of sg.h, the
+   struct is re-defined here.
+*/
+typedef struct xsg_scsi_id {
+    int host_no;        /* as in "scsi<n>" where 'n' is one of 0, 1, 2 etc */
+    int channel;
+    int scsi_id;        /* scsi id of target device */
+    int lun;
+    int scsi_type;      /* TYPE_... defined in scsi/scsi.h */
+    short h_cmd_per_lun;/* host (adapter) maximum commands per lun */
+    short d_queue_depth;/* device (or adapter) maximum queue length */
+    int unused1;        /* probably find a good use, set 0 for now */
+    int unused2;        /* ditto */
+} SG_scsi_id;
+
+typedef struct req
+  {
+    struct req *next;
+    int fd;
+    u_int running:1, done:1;
+    SANE_Status status;
+    size_t *dst_len;
+    void *dst;
+/* take the definition of the ioctl parameter SG_IO as a
+   compiler flag if the new SG driver is available
+*/
+    union
+      {
+        struct
+          {
+            struct sg_header hdr;
+            /* Make sure this is the last element, the real size is
+              SG_BIG_BUFF and machine dependant */
+            u_int8_t data[1];
+          }
+        cdb;
+#ifdef SG_IO
+/* at present, Linux's SCSI system limits the sense buffer to 16 bytes
+   which is definitely too small. Hoping that this will change at some time,
+   let's set the sense buffer size to 64.
+*/
+#define SENSE_MAX 64
+        struct
+          {
+            struct sg_io_hdr hdr;
+            u_char sense_buffer[SENSE_MAX];
+          } sg3;
+#endif
+      }
+    sgdata;
+  }
+req;
+
+typedef struct Fdparms
+  {
+    int sg_queue_used, sg_queue_max;
+    int buffersize;
+    req *sane_qhead, *sane_qtail, *sane_free_list;
+  }
+fdparms;
+
+#endif
 
 #if USE == FREEBSD_CAM_INTERFACE
 # define CAM_MAXDEVS	128
@@ -590,12 +683,26 @@ close_aspi (void)
 
 #endif /* USE_OS2_INTERFACE */
 
+static int num_alloced = 0;
+static int sg_version = 0;
+
+#if USE == LINUX_INTERFACE
+
+SANE_Status
+sanei_scsi_open_extended (const char *dev, int *fdp,
+                         SANEI_SCSI_Sense_Handler handler,
+                         void *handler_arg, int *buffersize)
+
+#else
+
 SANE_Status
 sanei_scsi_open (const char *dev, int *fdp,
 		 SANEI_SCSI_Sense_Handler handler, void *handler_arg)
+
+#endif
+
 {
   u_int bus = 0, target = 0, lun = 0, fake_fd = 0;
-  static int num_alloced = 0;
   char *real_dev = 0;
   void *pdata = 0;
   int fd;
@@ -621,6 +728,7 @@ sanei_scsi_open (const char *dev, int *fdp,
 	  sanei_scsi_max_request_size = atoi (buf);
 	  DBG (1, "sanei_scsi_open: sanei_scsi_max_request_size=%d bytes\n",
 	       sanei_scsi_max_request_size);
+	  close(fd);
 	}
     }
 #endif
@@ -914,6 +1022,125 @@ sanei_scsi_open (const char *dev, int *fdp,
       }
   }
 #endif /* SGIOCSTL */
+#if USE == LINUX_INTERFACE
+  {
+    SG_scsi_id sid;
+    int ioctl_val;
+    int real_buffersize;
+    fdparms *fdpa = 0;
+
+    pdata = fdpa = malloc(sizeof(fdparms));
+    if (!pdata)
+      {
+        close(fd);
+        return SANE_STATUS_NO_MEM;
+      }
+    memset(fdpa, 0, sizeof(fdparms));
+    /* default: allow only one command to be sent to the SG driver
+    */
+    fdpa->sg_queue_max = 1;
+
+    /* Try to read the SG version. If the ioctl call is successful,
+       we have the new SG driver, and we can increase the buffer size
+       using another ioctl call.
+       If we have SG version 2.1.35 or above, we can additionally enable
+       command queueing.
+    */
+    if (0 == ioctl(fd, SG_GET_VERSION_NUM, &sg_version))
+      {
+        DBG(1, "sanei_scsi_open: SG driver version: %i\n", sg_version);
+
+        /* try to reserve a SG buffer of the size specified by *buffersize
+        */
+        ioctl(fd, SG_SET_RESERVED_SIZE, buffersize);
+
+        /* the set call may not be able to allocate as much memory
+           as requested, thus we read the actual buffer size.
+
+           NOTE: sanei_scsi_max_request_size is a global variable
+           used for all devices/file handles, while version 2.0 and
+           above of the SG driver allocate buffer memory for each
+           opened file separately. Therefore, we have a possible
+           inconsistency, if more than one file is opened and
+           if the SG_GET_RESERVED_SIZE return different buffer sizes
+           for different file handles. (See Douglas Gilbert's
+           description of the SG driver for details:
+           http://www.torque.net/sg/p/scsi-generic_long.txt)
+
+           For this reason, sanei_scsi_open does not allow to open
+           two or more file handles simultaneously.
+        */
+        if (0 == ioctl(fd, SG_GET_RESERVED_SIZE, &real_buffersize))
+          {
+             /* if we got more memory than requested, we stick with
+                with the requested value, in order to allow
+                sanei_scsi_open to check the buffer size exactly.
+             */
+             if (real_buffersize > *buffersize)
+               {
+                 sanei_scsi_max_request_size = *buffersize;
+               }
+             else
+               {
+                 sanei_scsi_max_request_size = real_buffersize;
+                 *buffersize = real_buffersize;
+               }
+             fdpa->buffersize = *buffersize;
+          }
+        else
+          {
+            DBG(1, "sanei_scsi_open: cannot read SG buffer size - %s\n",
+                strerror(errno));
+            close(fd);
+            return SANE_STATUS_NO_MEM;
+          }
+        DBG(1, "sanei_scsi_open_extended: using %i bytes as SCSI buffer\n",
+            *buffersize);
+
+        if (sg_version >= 20135)
+          {
+            DBG(1, "trying to enable low level command queueing\n");
+
+            if (0 == ioctl(fd, SG_GET_SCSI_ID, &sid))
+              {
+                DBG(1, "sanei_scsi_open: Host adapter queue depth: %i\n",
+                    sid.d_queue_depth);
+
+                ioctl_val = 1;
+                if(0 == ioctl(fd, SG_SET_COMMAND_Q, &ioctl_val))
+                  {
+                    fdpa->sg_queue_max = sid.d_queue_depth;
+                    if (fdpa->sg_queue_max <= 0)
+                      fdpa->sg_queue_max = 1;
+                  }
+              }
+          }
+      }
+    else
+      {
+        /* we have the old SG driver: */
+        if (sanei_scsi_max_request_size < *buffersize)
+          *buffersize = sanei_scsi_max_request_size;
+          fdpa->buffersize = *buffersize;
+      }
+    if (sg_version == 0)
+      {
+        DBG(1, "sanei_scsi_open: using old SG driver logic\n");
+      }
+    else
+      {
+        DBG(1, "sanei_scsi_open: SG driver can change buffer size at run time\n");
+        if (fdpa->sg_queue_max > 1)
+          DBG(1, "sanei_scsi_open: low level command queueing enabled\n");
+        #ifdef SG_IO
+        if (sg_version >= 30000)
+          {
+            DBG(1, "sanei_scsi_open: using new SG header structure\n");
+          }
+        #endif
+      }
+  }
+#endif /* LINUX_INTERFACE */
 #endif /* !DECUNIX_INTERFACE */
 
   if (fd >= num_alloced)
@@ -959,9 +1186,78 @@ sanei_scsi_open (const char *dev, int *fdp,
   return SANE_STATUS_GOOD;
 }
 
+#if USE == LINUX_INTERFACE
+/* The "wrapper" for the old open call */
+SANE_Status
+sanei_scsi_open (const char *dev, int *fdp,
+                SANEI_SCSI_Sense_Handler handler, void *handler_arg)
+{
+  int i = 0;
+  int wanted_buffersize = SCSIBUFFERSIZE, real_buffersize;
+  SANE_Status res;
+  char *cc, *cc1;
+
+  cc = getenv("SANE_SG_BUFFERSIZE");
+  if (cc)
+    {
+      i = strtol(cc, &cc1, 10);
+      if (cc != cc1 && i >= 32768)
+        wanted_buffersize = i;
+    }
+
+  real_buffersize = wanted_buffersize;
+  res = sanei_scsi_open_extended(dev, fdp, handler, handler_arg,
+                                 &real_buffersize);
+
+  /* make sure that we got as much memory as we wanted, otherwise
+     the backend might be confused
+  */
+  if (real_buffersize != wanted_buffersize)
+    {
+      DBG(1, "sanei_scsi_open: could not allocate SG buffer memory "
+          "wanted: %i got: %i\n", wanted_buffersize, real_buffersize);
+      sanei_scsi_close(*fdp);
+      return SANE_STATUS_NO_MEM;
+    }
+
+  return res;
+}
+#else
+/* dummy for the proposed new open call */
+sanei_scsi_open_extended (const char *dev, int *fdp,
+                         SANEI_SCSI_Sense_Handler handler,
+                         void *handler_arg, int *buffersize)
+{
+  SANE_Status res;
+  res = sanei_scsi_open(dev, fdp, handler, handler_arg);
+  if (sanei_scsi_max_request_size < *buffersize)
+    *buffersize = sanei_scsi_max_request_size;
+  return res;
+}
+#endif
+
 void
 sanei_scsi_close (int fd)
 {
+#if USE == LINUX_INTERFACE
+  if (fd_info[fd].pdata)
+    {
+      req *req, *next_req;
+
+      /* make sure that there are no pending SCSI calls */
+      sanei_scsi_req_flush_all_extended(fd);
+
+      req = ((fdparms*) fd_info[fd].pdata)->sane_free_list;
+      while (req)
+        {
+          next_req = req->next;
+          free(req);
+          req = next_req;
+        }
+      free(fd_info[fd].pdata);
+    }
+#endif
+
   fd_info[fd].in_use = 0;
   fd_info[fd].sense_handler = 0;
   fd_info[fd].sense_handler_arg = 0;
@@ -1226,69 +1522,181 @@ do							\
   }							\
 while (0)
 
-static struct req
-  {
-    struct req *next;
-    int fd;
-    u_int running:1, done:1;
-    SANE_Status status;
-    size_t *dst_len;
-    void *dst;
-    struct
-      {
-	struct sg_header hdr;
-	/* Make sure this is the last element, the real size is
-	   SG_BIG_BUFF and machine dependant */
-	u_int8_t data[1];
-      }
-    cdb;
-  }
-*qhead, *qtail, *free_list;
-
 static void
 issue (struct req *req)
 {
   ssize_t nwritten;
+  fdparms *fdp;
+  struct req *rp;
+  int retries;
 
-  if (!req || req->running)
+  if (!req)
     return;
 
+  fdp = (fdparms*) fd_info[req->fd].pdata;
   DBG (4, "sanei_scsi.issue: %p\n", req);
 
-  ATOMIC (req->running = 1;
-	  nwritten = write (req->fd, &req->cdb, req->cdb.hdr.pack_len));
+  rp = fdp->sane_qhead;
+  while (rp && rp->running)
+    rp = rp->next;
 
-  if (nwritten != req->cdb.hdr.pack_len)
+  while (rp && fdp->sg_queue_used < fdp->sg_queue_max)
     {
-      DBG (1, "sanei_scsi.issue: bad write (errno=%s)\n",
-	   strerror (errno));
-      req->done = 1;
-      if (errno == ENOMEM)
-	{
-	  DBG (1, "sanei_scsi.issue: SG_BIG_BUF inconsistency?  "
-	       "Check file PROBLEMS.\n");
-	  req->status = SANE_STATUS_NO_MEM;
-	}
+      retries = 20;
+      while (retries)
+        {
+#ifdef SG_IO
+          if (sg_version < 30000)
+            {
+#endif
+              ATOMIC (rp->running = 1;
+                      nwritten = write (rp->fd, &rp->sgdata.cdb,
+                                        rp->sgdata.cdb.hdr.pack_len);
+                      if (nwritten != rp->sgdata.cdb.hdr.pack_len)
+                        {
+                          /* ENOMEM can easily happen, if both command queueing
+                             inside the SG driver and large buffers are used.
+                             Therefore, if ENOMEM does not occur for the first
+                             command in the queue, we simply try to issue
+                             it later again.
+                          */
+                          if (    errno == EAGAIN
+                              || (errno == ENOMEM && rp != fdp->sane_qhead))
+                            {
+                              /* don't try to send the data again, but
+                                 wait for the next call to issue()
+                              */
+                              rp->running = 0;
+                            }
+                        }
+                     );
+#ifdef SG_IO
+            }
+          else
+            {
+              ATOMIC (rp->running = 1;
+                      nwritten = write (rp->fd, &rp->sgdata.sg3.hdr, sizeof(Sg_io_hdr));
+                      if (nwritten < 0)
+                        {
+                          /* ENOMEM can easily happen, if both command queuein
+                             inside the SG driver and large buffers are used.
+                             Therefore, if ENOMEM does not occur for the first
+                             command in the queue, we simply try to issue
+                             it later again.
+                          */
+                          if (    errno == EAGAIN
+                              || (errno == ENOMEM && rp != fdp->sane_qhead))
+                            {
+                              /* don't try to send the data again, but
+                                 wait for the next call to issue()
+                              */
+                              rp->running = 0;
+                            }
+                        }
+                     );
+            }
+#endif
+          if (rp == fdp->sane_qhead && errno == EAGAIN)
+            {
+              retries--;
+              usleep(10000);
+            }
+          else
+            retries = 0;
+        }
+
+#ifndef SG_IO
+      if (nwritten != rp->sgdata.cdb.hdr.pack_len)
+#else
+      if (   (sg_version <  30000 && nwritten != rp->sgdata.cdb.hdr.pack_len)
+/* xxx doesn't work yet with kernel 2.3.18:
+          || (sg_version >= 30000 && nwritten < sizeof(Sg_io_hdr)))
+*/
+          || (sg_version >= 30000 && nwritten < 0))
+#endif
+        {
+          if (rp->running)
+            {
+              DBG (1, "sanei_scsi.issue: bad write (errno=%i) %s %i\n",
+                      errno, strerror (errno), nwritten);
+              rp->done = 1;
+              if (errno == ENOMEM)
+                {
+                     DBG (1, "sanei_scsi.issue: SG_BIG_BUF inconsistency? "
+                             "Check file PROBLEMS.\n");
+                     rp->status = SANE_STATUS_NO_MEM;
+                }
+              else
+                   rp->status = SANE_STATUS_IO_ERROR;
+               }
+          else
+            {
+              if (errno == ENOMEM)
+                DBG(1, "issue: ENOMEM - cannot queue SCSI command. "
+                       "Trying again later.\n");
+              else
+                DBG(1, "issue: EAGAIN - cannot queue SCSI command. "
+                       "Trying again later.\n");
+            }
+          break; /* in case of an error don't try to queue more commands */
+        }
       else
 	req->status = SANE_STATUS_IO_ERROR;
-    }
+      fdp->sg_queue_used++;
+      rp = rp->next;
+     }
 }
 
 void
-sanei_scsi_req_flush_all (void)
+sanei_scsi_req_flush_all_extended (int fd)
 {
+  fdparms *fdp;
   struct req *req, *next_req;
 
-  for (req = qhead; req; req = next_req)
+  fdp = (fdparms*) fd_info[fd].pdata;
+  for (req = fdp->sane_qhead; req; req = next_req)
     {
       if (req->running && !req->done)
-	read (req->fd, &req->cdb, req->cdb.hdr.reply_len);
+        {
+#ifdef SG_IO
+          if (sg_version < 30000)
+#endif
+            read (fd, &req->sgdata.cdb, req->sgdata.cdb.hdr.reply_len);
+#ifdef SG_IO
+          else
+            read (fd, &req->sgdata.sg3.hdr, sizeof(Sg_io_hdr));
+#endif
+          ((fdparms*) fd_info[req->fd].pdata)->sg_queue_used--;
+        }
       next_req = req->next;
 
-      req->next = free_list;
-      free_list = req;
+      req->next = fdp->sane_free_list;
+      fdp->sane_free_list = req;
     }
-  qhead = qtail = 0;
+  fdp->sane_qhead = fdp->sane_qtail = 0;
+}
+
+void
+sanei_scsi_req_flush_all ()
+{
+  int fd, i, j = 0;
+
+  /* sanei_scsi_open allows only one open file handle, so we
+     can simply look for the first entry where in_use is set
+  */
+
+  fd = num_alloced;
+  for (i = 0; i < num_alloced; i++)
+    if (fd_info[i].in_use)
+      {
+        j++;
+        fd = i;
+      }
+
+  assert(j < 2);
+
+  if (fd < num_alloced)
+    sanei_scsi_req_flush_all_extended(fd);
 }
 
 SANE_Status
@@ -1297,17 +1705,27 @@ sanei_scsi_req_enter (int fd, const void *src, size_t src_size,
 {
   struct req *req;
   size_t size;
+  fdparms *fdp;
 
-  if (free_list)
+  fdp = (fdparms*) fd_info[fd].pdata;
+
+  if (fdp->sane_free_list)
     {
-      req = free_list;
-      free_list = req->next;
+      req = fdp->sane_free_list;
+      fdp->sane_free_list = req->next;
       req->next = 0;
     }
   else
     {
-      size = (sizeof (*req) - sizeof (req->cdb.data)
-	      + sanei_scsi_max_request_size);
+#ifdef SG_IO
+      if (sg_version < 30000)
+#endif
+        size = (sizeof (*req) - sizeof (req->sgdata.cdb.data)
+             + fdp->buffersize);
+#ifdef SG_IO
+      else
+        size = sizeof(*req);
+#endif
       req = malloc (size);
       if (!req)
 	{
@@ -1322,24 +1740,72 @@ sanei_scsi_req_enter (int fd, const void *src, size_t src_size,
   req->status = SANE_STATUS_GOOD;
   req->dst = dst;
   req->dst_len = dst_size;
-  memset (&req->cdb.hdr, 0, sizeof (req->cdb.hdr));
-  req->cdb.hdr.pack_id = pack_id++;
-  req->cdb.hdr.pack_len = src_size + sizeof (req->cdb.hdr);
-  req->cdb.hdr.reply_len = (dst_size ? *dst_size : 0) + sizeof (req->cdb.hdr);
-  memcpy (&req->cdb.data, src, src_size);
+#ifdef SG_IO
+  if (sg_version < 30000)
+    {
+#endif
+      memset (&req->sgdata.cdb.hdr, 0, sizeof (req->sgdata.cdb.hdr));
+      req->sgdata.cdb.hdr.pack_id = pack_id++;
+      req->sgdata.cdb.hdr.pack_len = src_size + sizeof (req->sgdata.cdb.hdr);
+      req->sgdata.cdb.hdr.reply_len = (dst_size ? *dst_size : 0)
+                                      + sizeof (req->sgdata.cdb.hdr);
+      memcpy (&req->sgdata.cdb.data, src, src_size);
+#ifdef SG_IO
+    }
+  else
+    {
+      memset (&req->sgdata.sg3.hdr, 0, sizeof (req->sgdata.sg3.hdr));
+      req->sgdata.sg3.hdr.interface_id = 'S';
+      req->sgdata.sg3.hdr.cmd_len = CDB_SIZE (*(u_char *) src);
+      req->sgdata.sg3.hdr.iovec_count = 0;
+      req->sgdata.sg3.hdr.mx_sb_len = SENSE_MAX;
+      /* read or write? */
+      if (dst_size && *dst_size)
+        {
+          assert (req->sgdata.sg3.hdr.cmd_len == src_size);
+          req->sgdata.sg3.hdr.dxfer_direction = SG_DXFER_FROM_DEV;
+          req->sgdata.sg3.hdr.dxfer_len = *dst_size;
+          req->sgdata.sg3.hdr.dxferp = dst;
+        }
+      else if (req->sgdata.sg3.hdr.cmd_len < src_size)
+        {
+          req->sgdata.sg3.hdr.dxfer_direction = SG_DXFER_TO_DEV;
+          req->sgdata.sg3.hdr.dxfer_len = src_size - req->sgdata.sg3.hdr.cmd_len;
+          req->sgdata.sg3.hdr.dxferp = ((char*) src) + req->sgdata.sg3.hdr.cmd_len;
+        }
+      else
+        {
+          assert (req->sgdata.sg3.hdr.cmd_len == src_size);
+          req->sgdata.sg3.hdr.dxfer_direction = SG_DXFER_NONE;
+        }
+      (const void*) req->sgdata.sg3.hdr.cmdp = src;
+      req->sgdata.sg3.hdr.sbp = &(req->sgdata.sg3.sense_buffer[0]);
+      /* 10 seconds should be ok even for slow scanners */
+      req->sgdata.sg3.hdr.timeout = 10000;
+      req->sgdata.sg3.hdr.flags = SG_FLAG_DIRECT_IO;
+      req->sgdata.sg3.hdr.pack_id = pack_id++;
+      req->sgdata.sg3.hdr.usr_ptr = 0;
+    }
+#endif
 
   req->next = 0;
-  ATOMIC (if (qtail)
+  ATOMIC (if (fdp->sane_qtail)
 	  {
-	  qtail->next = req;
-	  qtail = req;
+            fdp->sane_qtail->next = req;
+            fdp->sane_qtail = req;
 	  }
 	  else
-	  qhead = qtail = req);
+          fdp->sane_qhead = fdp->sane_qtail = req);
 
   DBG (4, "scsi_req_enter: entered %p\n", req);
 
   *idp = req;
+   issue(req);
+ 
+   DBG(10, "scsi_req_enter: queue_used: %i, queue_max: %i\n",
+          ((fdparms*) fd_info[fd].pdata)->sg_queue_used,
+          ((fdparms*) fd_info[fd].pdata)->sg_queue_max);
+ 
   return SANE_STATUS_GOOD;
 }
 
@@ -1350,7 +1816,8 @@ sanei_scsi_req_wait (void *id)
   struct req *req = id;
   ssize_t nread = 0;
 
-  assert (req == qhead);	/* we don't support out-of-order completion */
+  /* we don't support out-of-order completion */
+  assert (req == ((fdparms*)fd_info[req->fd].pdata)->sane_qhead);
 
   DBG (4, "sanei_scsi_req_wait: waiting for %p\n", req);
 
@@ -1370,8 +1837,24 @@ sanei_scsi_req_wait (void *id)
       select (req->fd + 1, &readable, 0, 0, 0);
 
       /* now atomically read result and set DONE: */
-      ATOMIC (nread = read (req->fd, &req->cdb, req->cdb.hdr.reply_len);
-	      req->done = 1);
+#ifdef SG_IO
+      if (sg_version < 30000)
+        {
+#endif
+          ATOMIC (nread = read (req->fd, &req->sgdata.cdb,
+                                req->sgdata.cdb.hdr.reply_len);
+                 req->done = 1);
+#ifdef SG_IO
+       }
+      else
+        {
+          ATOMIC (nread = read (req->fd, &req->sgdata.sg3.hdr, sizeof(Sg_io_hdr));
+                 req->done = 1);
+       }
+#endif
+
+      if (fd_info[req->fd].pdata)
+        ((fdparms*) fd_info[req->fd].pdata)->sg_queue_used--;
 
       /* Now issue next command asap, if any.  We can't do this
          earlier since the Linux kernel has space for just one big
@@ -1388,47 +1871,93 @@ sanei_scsi_req_wait (void *id)
 	}
       else
 	{
-	  nread -= sizeof (req->cdb.hdr);
+#ifdef SG_IO
+          if (sg_version < 30000)
+            {
+#endif
+              nread -= sizeof (req->sgdata.cdb.hdr);
 
-	  /* check for errors, but let the sense_handler decide.... */
-	  if ((req->cdb.hdr.result != 0) ||
-	      ((req->cdb.hdr.sense_buffer[0] & 0x7f) != 0))
-	    {
-	      SANEI_SCSI_Sense_Handler handler
-		= fd_info[req->fd].sense_handler;
-	      void *arg = fd_info[req->fd].sense_handler_arg;
+              /* check for errors, but let the sense_handler decide.... */
+              if ( (req->sgdata.cdb.hdr.result != 0) ||
+                  ((req->sgdata.cdb.hdr.sense_buffer[0] & 0x7f) != 0))
+                {
+                  SANEI_SCSI_Sense_Handler handler
+                    = fd_info[req->fd].sense_handler;
+                  void *arg = fd_info[req->fd].sense_handler_arg;
 
-	      DBG (1, "sanei_scsi_req_wait: SCSI command complained: %s\n",
-		   strerror (req->cdb.hdr.result));
+                  DBG (1, "sanei_scsi_req_wait: SCSI command complained: %s\n",
+                       strerror (req->sgdata.cdb.hdr.result));
 
-	      if (req->cdb.hdr.result == EBUSY)
-		status = SANE_STATUS_DEVICE_BUSY;
-	      else if (handler)
-		/* sense handler should return SANE_STATUS_GOOD if it
-		   decided all was ok afterall */
-		status = (*handler) (req->fd, req->cdb.hdr.sense_buffer, arg);
-	      else
-		status = SANE_STATUS_IO_ERROR;
-	    }
+                 if (req->sgdata.cdb.hdr.result == EBUSY)
+                   status = SANE_STATUS_DEVICE_BUSY;
+                 else if (handler)
+                   /* sense handler should return SANE_STATUS_GOOD if it
+                      decided all was ok afterall */
+                   status = (*handler) (req->fd, req->sgdata.cdb.hdr.sense_buffer,
+                                        arg);
+                 else
+                   status = SANE_STATUS_IO_ERROR;
+               }
 
-	  /* if we are ok so far, copy over the return data */
-	  if (status == SANE_STATUS_GOOD)
-	    {
-	      if (req->dst)
-		memcpy (req->dst, req->cdb.data, nread);
+              /* if we are ok so far, copy over the return data */
+              if (status == SANE_STATUS_GOOD)
+                {
+                  if (req->dst)
+                    memcpy (req->dst, req->sgdata.cdb.data, nread);
 
-	      if (req->dst_len)
-		*req->dst_len = nread;
-	    }
+                 if (req->dst_len)
+                   *req->dst_len = nread;
+               }
+#ifdef SG_IO
+            }
+          else
+            {
+             /* check for errors, but let the sense_handler decide.... */
+             if (   (req->sgdata.sg3.hdr.info && SG_INFO_CHECK != 0)
+                 || (req->sgdata.sg3.hdr.sb_len_wr > 0 &&
+                 ((req->sgdata.sg3.sense_buffer[0] & 0x7f) != 0)))
+               {
+                 SANEI_SCSI_Sense_Handler handler
+                   = fd_info[req->fd].sense_handler;
+                 void *arg = fd_info[req->fd].sense_handler_arg;
+
+                 DBG (1, "sanei_scsi_req_wait: SCSI command complained: %s\n",
+                      strerror(errno));
+
+                 /* the first three tests below are an replacement of the
+                    error "classification" as it was with the old SG driver,
+                    the fourth test is new.
+                 */
+                 if (   req->sgdata.sg3.hdr.host_status == SG_ERR_DID_NO_CONNECT
+                     || req->sgdata.sg3.hdr.host_status == SG_ERR_DID_BUS_BUSY
+                     || req->sgdata.sg3.hdr.host_status == SG_ERR_DID_TIME_OUT
+                     || req->sgdata.sg3.hdr.driver_status == DRIVER_BUSY)
+                   status = SANE_STATUS_DEVICE_BUSY;
+                 else if (handler)
+                   /* sense handler should return SANE_STATUS_GOOD if it
+                      decided all was ok afterall */
+                   status = (*handler) (req->fd, req->sgdata.sg3.sense_buffer, arg);
+                 else
+                   status = SANE_STATUS_IO_ERROR;
+               }
+
+             if (status == SANE_STATUS_GOOD)
+               {
+                 if (req->dst_len)
+                   *req->dst_len -= req->sgdata.sg3.hdr.resid;
+               }
+           }
+#endif
 	}
     }
 
   /* dequeue and release processed request: */
-  ATOMIC (qhead = qhead->next;
-	  if (!qhead)
-	  qtail = 0;
-	  req->next = free_list;
-	  free_list = req);
+  ATOMIC (((fdparms*) fd_info[req->fd].pdata)->sane_qhead
+           = ((fdparms*) fd_info[req->fd].pdata)->sane_qhead->next;
+         if (!((fdparms*) fd_info[req->fd].pdata)->sane_qhead)
+             ((fdparms*) fd_info[req->fd].pdata)->sane_qtail = 0;
+         req->next = ((fdparms*) fd_info[req->fd].pdata)->sane_free_list;
+         ((fdparms*) fd_info[req->fd].pdata)->sane_free_list = req);
   return status;
 }
 
