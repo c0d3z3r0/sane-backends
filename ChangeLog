@@ -1,3 +1,7 @@
+2000-06-25  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.desc - Changed Parallel to Parport
+
 2000-06-25  Henning Meier-Geinitz <hmg@gmx.de>
 
         * doc/Makefile.in doc/sane-s9036.man doc/sane-tamarack.man 
