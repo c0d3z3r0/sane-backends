@@ -1,3 +1,18 @@
+2000-07-15  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+ 	  1.0-90. Fixed linedistance-handling for Paragon 8000SP. Fixed
+	  mustek.conf port entry. Updated man page (parallel port 
+	  scanners and 600 II N).
+
+	* NEWS: Updated (mustek backend version 1.0-90)
+
+	* backend/dll.conf: Commented out mustek_pp on behalf of the
+	  maintainer
+
+	* doc/.cvsignore: added sane-mustek_pp.5, sane-plustek.5 and
+	  sane-st400.5
+	  
 2000-07-15  Andreas Rick <andreas.rick@free.fr>
 
 	* backend/coolscan.c: added missing initialization in 
