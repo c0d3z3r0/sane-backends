@@ -682,5 +682,15 @@ build-15 -> build-16
 
     * OPT_SOURCE: removed change of width/height and "*info |= SANE_INFO_RELOAD_PARAMS;"
       from get_value to set_value and added "*info |= SANE_INFO_RELOAD_OPTIONS;"
+     
 
-      
+build-16 -> build-17
+--------------------
+
+    * changed calibration mode from SHADING_TYPE_AVERAGE_INVERT to SHADING_TYPE_AVERAGE
+      for UMAX S-6E, UMAX S-6EG and Vista-S6E
+
+    * changed several int -> unsigned int
+
+    * added support for sanei_scsi_open_extended and variable scsi buffer size
+
