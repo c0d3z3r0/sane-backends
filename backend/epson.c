@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.14 Date 19-Feb-2000
+   Version 0.1.15 Date 20-Feb-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,9 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-02-20   Added some cleanup on error conditions in attach()
+                Use new sanei_config_read() instead of fgets() for
+		compatibility with OS/2 (Yuri Dario)
    2000-02-19   Changed some "int" to "size_t" types
 		Removed "Preview Resolution"
 		Implemented resolution list as WORD_LIST instead of
@@ -82,7 +85,7 @@
    2000-01-24	Removed C++ style comments '//' (KHK)
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.14 - 2000-02-19"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.15 - 2000-02-20"
 
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
@@ -1374,6 +1377,9 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 		if( SANE_STATUS_GOOD != ( status = sanei_scsi_open( dev_name, &s->fd, NULL, NULL))) {
 			DBG( 1, "attach: open failed: %s\n", sane_strstatus( status));
+			if (dummy_dev.sane.name != NULL)
+				free(dummy_dev.sane.name);
+			dummy_dev.sane.name = NULL;
 			return status;
 		}
 
@@ -1382,6 +1388,9 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 		if( SANE_STATUS_GOOD != ( status = inquiry( s->fd, 0, buf, &buf_size))) {
 			DBG( 1, "attach: inquiry failed: %s\n", sane_strstatus( status));
+			if (dummy_dev.sane.name != NULL)
+				free(dummy_dev.sane.name);
+			dummy_dev.sane.name = NULL;
 			close_scanner( s);
 			return status;
 		}
@@ -1402,6 +1411,9 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 				&& strncmp( buf + 16, "Expression", 10) != 0))
 		{
 			DBG( 1, "attach: device doesn't look like an Epson scanner\n");
+			if (dummy_dev.sane.name != NULL)
+				free(dummy_dev.sane.name);
+			dummy_dev.sane.name = NULL;
 			close_scanner( s);
 			return SANE_STATUS_INVAL;
 		}
@@ -1424,6 +1436,9 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		if( SANE_STATUS_GOOD != ( status = sanei_pio_open( dev_name, &s->fd))) {
 			DBG( 1, "dev_open: %s: can't open %s as a parallel-port device\n",
 				sane_strstatus( status), dev_name);
+			if (dummy_dev.sane.name != NULL)
+				free(dummy_dev.sane.name);
+			dummy_dev.sane.name = NULL;
 			return status;
 		}
 	} else if (s->hw->connection == SANE_EPSON_USB) {
@@ -1452,6 +1467,9 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 				dev_name, strerror(errno));
 			status = (errno == EACCES) ? SANE_STATUS_ACCESS_DENIED 
 				: SANE_STATUS_INVAL;
+			if (dummy_dev.sane.name != NULL)
+				free(dummy_dev.sane.name);
+			dummy_dev.sane.name = NULL;
 			return status;
 		}
 	}
@@ -1766,7 +1784,7 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 			/* free the old string */
 			if (dummy_dev.sane.model != NULL)
-				free((char *) dummy_dev.sane.model);
+				free(dummy_dev.sane.model);
 
 			str = malloc( len + 1);
 			str[len] = '\0';
@@ -1852,7 +1870,7 @@ SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
     {
       char line[PATH_MAX];
 
-      while (fgets (line, sizeof (line), fp))
+      while (sanei_config_read (line, sizeof (line), fp))
 	{
 	  DBG( 4, "sane_init, >%s<\n", line);
 	  if( line[0] == '#')		/* ignore line comments */
@@ -1882,8 +1900,8 @@ SANE_Status sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize) {
 */
 
 void sane_exit ( void) {
-	free( ( char *) dummy_dev.sane.model);
-	free( ( char *) dummy_dev.sane.name);
+	free(dummy_dev.sane.model);
+	free(dummy_dev.sane.name);
 }
 
 /*

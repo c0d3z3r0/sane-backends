@@ -10,7 +10,7 @@
 ;
 
 :backend "epson"                  ; name of backend
-:version "0.1.14"                  ; version of backend
+:version "0.1.15"                  ; version of backend
 :status :alpha                    ; :alpha, :beta, :stable, :new
 :manpage "sane-epson"             ; name of manpage (if it exists)
 :url "http://www.khk.net/"        ; backend's web page
