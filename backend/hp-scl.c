@@ -44,7 +44,7 @@
 
 #define STUBS
 extern int sanei_debug_hp;
-#include <sane/config.h>
+#include "sane/config.h"
 #include <lalloca.h>		/* Must be first */
 
 #ifdef HAVE_UNISTD_H
@@ -58,12 +58,12 @@ extern int sanei_debug_hp;
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include <sane/sanei_scsi.h>
-#include <sane/sanei_pio.h>
+#include "sane/sanei_scsi.h"
+#include "sane/sanei_pio.h"
 
 #include "hp.h"
 
-#include <sane/sanei_backend.h>
+#include "sane/sanei_backend.h"
 
 #include "hp-option.h"
 #include "hp-scsi.h"

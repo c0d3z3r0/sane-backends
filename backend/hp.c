@@ -150,14 +150,14 @@ static char *hp_backend_version = "0.88";
 
 #define VERSIO                                8
 
-#include <sane/config.h>
+#include "sane/config.h"
 #include "hp.h"
 
 #include <string.h>
 /* #include <sys/types.h> */
 /* #include <sane/sane.h> */
-#include <sane/sanei_config.h>
-#include <sane/sanei_backend.h>
+#include "sane/sanei_config.h"
+#include "sane/sanei_backend.h"
 /* #include <sane/sanei_debug.h> */
 #include "hp-device.h"
 #include "hp-handle.h"
