@@ -1,3 +1,9 @@
+1999-11-14  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/artec.cbackend/artec.h backend/artec.desc
+	doc/sane-artec.5 doc/Makefile.in: Updated Artec backend to v0.5
+	from Chris Pinkham <cpinkham@infi.net>.
+
 1999-11-11  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/microtek2.c backend/microtek2.h backend/microtek2.desc:
