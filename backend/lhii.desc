@@ -13,9 +13,15 @@
 :version "(0.1)"                    ; version of backend
 :status :alpha                    ; :alpha, :beta, :stable, :new
 ; :manpage "sane-lhii"              ; name of manpage (if it exists)
-:url   "ftp://www.cs.ubishops.ca/pub/lhii/"          ; backend's web page
+:url "ftp://www.cs.ubishops.ca/pub/lhii/"          ; backend's web page
 
 :devicetype :scanner              ; start of a list of devices....
                                   ; other types:  :stillcam, :vidcam,
                                   ;               :meta, :api
+
+:desc "Linux Drivers for Handheld Scanners" ; name a manufacturer
+:url "http://www.willamowius.de/scanner.html"
+
+; :comment and :url specifiers are optional after :mfg, :model, :desc,
+;  and at the top-level.
 
