@@ -25,7 +25,8 @@ Backends:
  m3096g:	Randolph Bentson (*)
  microtek:	Matthew Marjanovic (*)
  microtek2:	Bernd Schroeder (*)
- mustek:	Andreas Bolsch, David Mosberger and Andreas Czechanowski
+ mustek:	Andreas Bolsch, David Mosberger, Andreas Czechanowski and
+		Henning Meier-Geinitz (*)
  net:		Andreas Beck and David Mosberger
  pnm:		Andreas Beck, Gordon Matzigkeit, and David Mosberger
  pint:		Gordon Matzigkeit
@@ -70,6 +71,7 @@ Feico W. Dillema <dillema@acm.org>
 Franck Schneider <schnefra@hol.fr>
 Gordon Matzigkeit  <gord@gnu.ai.mit.edu>
 Helmut Koeberle <helmut.koeberle@bytec.de>
+Henning Meier-Geinitz <hmg@gmx.de>
 Ingo Schneider <schneidi@informatik.tu-muenchen.de>
 Jeff Freedman <jsf@hevanet.com>
 Karl Anders Øygard <karlo@opera.no>
