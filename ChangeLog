@@ -5,6 +5,16 @@
 	backend/sp15c.desc backend/sp15c.h: Updated backends sp15c
 	(v1.12) and m3096g (v1.11) from Randolph Bentson.
 
+2000-01-25: Chris Pinkham <cpinkham@infi.net>
+
+	* backend/artec.h backend/artec.c backend/artec.desc
+	  installed new version (0.5.6) of artec backend with support
+	  for Artec AM12S and Plustek 19200S models and numerous bugfixes.
+	* doc/sane-artec.man
+	  updated manpage to reflect new list of supported models and
+	  backend status.
+
+
 2000-01-25: Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* frontend/scanimage.c: minor modifications to the new batch mode
 	  If an error occurs in batch mode, the corresponding output file
