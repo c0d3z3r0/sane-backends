@@ -1,3 +1,8 @@
+1999-08-11  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* config.guess config.sub: Updated to latest versions from FSF.
+  	Better support for BeOS, WinNT and others.
+	
 1999-08-09  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* Started CVS branch DEVEL_1_9.
