@@ -1,3 +1,8 @@
+2000-01-02  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* configure.in tools/Makefile.in tools/sane-config.in: New script
+	sane-config to help frontend developers find the sane libraries.
+
 1999-12-29  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in: Add gcc options '-W -Wall -Wpointer-arith
