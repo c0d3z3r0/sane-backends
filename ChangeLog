@@ -1,3 +1,7 @@
+2000-03-23  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+	* updated umax backend to version 1.0 build 19
+	  for details read backend/umax.CHANGES
+
 2000-03-22  Karl Heinz Kremer <khk@khk.net>
       * backend/epson.*: Several fixes for minor problems.
         Fixed function level A4 scanners (line mode instead
