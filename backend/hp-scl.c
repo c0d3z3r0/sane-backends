@@ -42,6 +42,8 @@
    HP Scanner Control Language (SCL).
 */
 
+#define STUBS
+extern int sanei_debug_hp;
 #include <sane/config.h>
 #include <lalloca.h>		/* Must be first */
 
@@ -441,8 +443,8 @@ hp_scsi_flush (HpScsi this)
 
   this->bufp = this->buf;
 
-  DBG(10, "scsi_flush: writing %lu bytes:\n", (unsigned long) len);
-  DBGDUMP(10, data, len);
+  DBG(16, "scsi_flush: writing %lu bytes:\n", (unsigned long) len);
+  DBGDUMP(16, data, len);
 
   *this->bufp++ = 0x0A;
   *this->bufp++ = 0;
@@ -545,8 +547,8 @@ hp_scsi_read (HpScsi this, void * dest, size_t *len)
   {
     RETURN_IF_FAIL( hp_nonscsi_read (this, dest, len, connect) );
   }
-  DBG(10, "scsi_read:  %lu bytes:\n", (unsigned long) *len);
-  DBGDUMP(10, dest, *len);
+  DBG(16, "scsi_read:  %lu bytes:\n", (unsigned long) *len);
+  DBGDUMP(16, dest, *len);
   return SANE_STATUS_GOOD;
 }
 
@@ -605,10 +607,75 @@ hp_get_simulation_map (const char *devname, const HpDeviceInfo *info)
   return map;
 }
 
+
+/* Check the native byte order on the local machine */
+static hp_bool_t
+is_lowbyte_first_byteorder ()
+
+{unsigned short testvar = 1;
+ unsigned char *testptr = (unsigned char *)&testvar;
+
+ if (sizeof (unsigned short) == 2)
+   return (testptr[0] == 1);
+ else if (sizeof (unsigned short) == 4)
+   return ((testptr[0] == 1) || (testptr[2] == 1));
+ else
+   return (   (testptr[0] == 1) || (testptr[2] == 1)
+           || (testptr[4] == 1) || (testptr[6] == 1));
+}
+
+/* The SANE standard defines that 2-byte data must use the full 16 bit range.
+ * Byte order returned by the backend must be native byte order.
+ * Scaling to 16 bit and byte order is achived by hp_scale_to_16bit.
+ * for >8 bits data, take the two data bytes and scale their content
+ * to the full 16 bit range, using
+ *     scaled = unscaled << (newlen - oldlen) +
+ *              unscaled >> (oldlen - (newlen - oldlen)),
+ * with newlen=16 and oldlen the original bit depth.
+ */
+static void
+hp_scale_to_16bit(int count, register unsigned char *data, int depth,
+                  hp_bool_t invert)
+{
+    register unsigned int tmp;
+    register unsigned int mask;
+    register hp_bool_t lowbyte_first = is_lowbyte_first_byteorder ();
+    unsigned int shift1 = 16 - depth;
+    unsigned int shift2 = 2*depth - 16;
+    int k;
+
+    if (count <= 0) return;
+
+    mask = 1;
+    for (k = 1; k < depth; k++) mask |= (1 << k);
+
+    if (lowbyte_first)
+    {
+      while (count--) {
+         tmp = ((((unsigned int)data[0])<<8) | ((unsigned int)data[1])) & mask;
+         tmp = (tmp << shift1) + (tmp >> shift2);
+         if (invert) tmp = ~tmp;
+         *data++ = tmp & 255U;
+         *data++ = (tmp >> 8) & 255U;
+      }
+    }
+    else  /* Highbyte first */
+    {
+      while (count--) {
+         tmp = ((((unsigned int)data[0])<<8) | ((unsigned int)data[1])) & mask;
+         tmp = (tmp << shift1) + (tmp >> shift2);
+         if (invert) tmp = ~tmp;
+         *data++ = (tmp >> 8) & 255U;
+         *data++ = tmp & 255U;
+      }
+    }
+}
+
 SANE_Status
 sanei_hp_scsi_pipeout (HpScsi this, int outfd, size_t count,
                        int mirror, int bytes_per_line,
-                       int bits_per_channel)
+                       int bits_per_channel,
+                       hp_bool_t invert)
 {
   /* We will catch these signals, and rethrow them after cleaning up,
    * anything not in this list, we will ignore. */
@@ -651,7 +718,7 @@ sanei_hp_scsi_pipeout (HpScsi this, int outfd, size_t count,
       void *	id;
       hp_byte_t	cmd[6];
       hp_byte_t	data[HP_PIPEBUF];
-  } 	buf[2], *req;
+  } 	buf[2], *req = NULL;
   int		reqs_completed = 0;
   int		reqs_issued = 0;
   int           num_lines;
@@ -770,6 +837,11 @@ sanei_hp_scsi_pipeout (HpScsi this, int outfd, size_t count,
       if ( map )
         hp_data_map (map, (int)req->len, (unsigned char *)req->data);
 
+      if (bits_per_channel > 8)
+         /* big assumption: byte length of the read data is always even */
+         hp_scale_to_16bit( (int)(req->len/2), (unsigned char *)req->data,
+                 bits_per_channel, invert);
+
       if ( mirror )
          {
 	    DBG(3, "do_read: got %lu bytes, save in memory...\n",
@@ -831,6 +903,11 @@ sanei_hp_scsi_pipeout (HpScsi this, int outfd, size_t count,
 
       if ( map )
         hp_data_map (map, (int)nread, (unsigned char *)read_buf);
+
+      if (bits_per_channel > 8)
+         /* big assumption: byte length of the read data is always even */
+         hp_scale_to_16bit( (int)(req->len/2), (unsigned char *)req->data,
+                 bits_per_channel, invert);
 
       if ( mirror )
       {
