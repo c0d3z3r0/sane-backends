@@ -1,3 +1,9 @@
+1999-12-12
+
+	* backend/microtek.c backend/microtek.h backend/microtek.conf
+	backend/microtek.desc doc/sane-microtek.man: Updated Microtek
+	backend to v0.11.0 from Matthew Marjanovic <maddog@mir.com>.
+
 1999-12-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/microtek2.c backend/microtek2.h: Updated Microtek2
