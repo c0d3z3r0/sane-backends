@@ -85,9 +85,13 @@ typedef enum
     OPT_SPEED,
 
     OPT_RESOLUTION_GROUP,
-    OPT_RESOLUTION,
+#ifdef USE_RESOLUTION_LIST
+    OPT_RESOLUTION_LIST,
+#endif
     OPT_X_RESOLUTION,
+#ifdef USE_SEPARATE_Y_RESOLUTION
     OPT_Y_RESOLUTION,
+#endif
 
     OPT_GEOMETRY_GROUP,
     OPT_TL_X,			/* top-left x */
@@ -184,10 +188,10 @@ typedef struct SHARP_Info
     SANE_Int mud;
     SANE_Int adf_fsu_installed;
     SANE_String_Const scansources[5];
-    int buffers;
-    int bufsize;
+    size_t buffers;
+    size_t bufsize;
     int wanted_bufsize;
-    int queued_reads;
+    size_t queued_reads;
   }
 SHARP_Info;
 
@@ -233,8 +237,8 @@ typedef struct SHARP_Scanner
 
     int    get_params_called;
     SANE_Byte *buffer;    /* for color data re-ordering, required for JX 250 */
-    size_t buf_used;
-    size_t buf_pos;
+    SANE_Int buf_used;
+    SANE_Int buf_pos;
     SANE_Int modes;
     SANE_Int xres;
     SANE_Int yres;
