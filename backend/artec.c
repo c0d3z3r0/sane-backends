@@ -81,7 +81,7 @@
 #define ARTEC_MAJOR     0
 #define ARTEC_MINOR     5
 #define ARTEC_SUB       14
-#define ARTEC_LAST_MOD  "07/26/2000 22:30 EST"
+#define ARTEC_LAST_MOD  "07/28/2000 12:30 EST"
 
 #define MM_PER_INCH	25.4
 
@@ -2585,7 +2585,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       return (SANE_STATUS_GOOD);
     }
 
-  while (fgets (dev_name, sizeof (dev_name), fp))
+  while (sanei_config_read (dev_name, sizeof (dev_name), fp))
     {
       cp = artec_skip_whitespace (dev_name);
 
@@ -2594,8 +2594,6 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
 	continue;
 
       len = strlen (cp);
-      if (cp[len - 1] == '\n')
-	cp[--len] = '\0';
 
       /* ignore empty lines */
       if (!len)
@@ -2810,7 +2808,7 @@ sane_close (SANE_Handle handle)
   if (prev)
     prev->next = s->next;
   else
-    first_handle = s;
+    first_handle = s->next;
 
   free (handle);
 }

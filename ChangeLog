@@ -1,3 +1,9 @@
+2000-07-28  Chris Pinkham <cpinkham@infi.net>
+
+	* backend/aretc.c: Corrected sane_close() bug.  Converted to use
+	  sanei_config_read() instead of fgets().
+	* backend/artec.desc: Changed interface entry to "Parport" vs "Parallel"
+
 2000-07-28  Henning Meier-Geinitz <hmg@gmx.de>
 
 	* ltmain.sh: Added underscore to sed expression for removing
