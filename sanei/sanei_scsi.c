@@ -2109,8 +2109,12 @@ sanei_scsi_find_devices (const char *findvendor, const char *findmodel,
 			 SANE_Status (*attach) (const char *dev))
 {
   size_t findvendor_len = 0, findmodel_len = 0, findtype_len = 0;
-  char vendor[32], model[32], type[32], revision[32];
-  int bus, channel, id, lun, number, i;
+  /* These are static to make sure the param[] struct is computable at
+     load time. */
+  static char vendor[32], model[32], type[32], revision[32];
+  static int bus, channel, id, lun;
+
+  int number, i;
   char line[256], dev_name[128];
   const char *string;
   FILE *proc_fp;
