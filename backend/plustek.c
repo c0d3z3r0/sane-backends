@@ -66,6 +66,13 @@
  * whether to permit this exception to apply to your modifications.
  * If you do not wish that, delete this exception notice.
  */
+#ifdef _AIX
+# include <lalloca.h>		/* MUST come first for AIX! */
+#endif
+
+#include <sane/config.h>
+#include <lalloca.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -78,7 +85,6 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 
-#include <sane/config.h>
 #include <sane/sane.h>
 #include <sane/sanei.h>
 #include <sane/saneopts.h>
@@ -1318,7 +1324,7 @@ SANE_Status sane_start( SANE_Handle handle )
 	cb.ucmd.sInf.ImgDef.dwFlag = (SCANDEF_BuildBwMap | SCANDEF_QualityScan);
 
 /*
- *		cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Inverse;
+ *	cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Inverse;
  */
 	switch( s->val[OPT_EXT_MODE].w ) {
 		case 1: cb.ucmd.sInf.ImgDef.dwFlag |= SCANDEF_Transparency; break;
