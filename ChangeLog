@@ -1,5 +1,10 @@
 2000-02-19  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/sanei_thread.c include/sane/sanei_thread.h: These files
+	declares a _proposed_ internal SANE interface.  It was proposed by
+	Yuri Dario to wrap UNIX functions fork(), kill(), waitpid() and
+	wait(), which are missing or not working on OS/2.
+
 	* frontend/saned.c: OS/2 send socket on param list. Patch from
 	Yuri Dario.
 
