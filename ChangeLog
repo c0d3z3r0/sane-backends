@@ -1,3 +1,9 @@
+2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
+	
+	* backend/sp15.c backend/m3096g.c: Replace fgets with 
+	  sanei_config_read, return V_REV as part of version_code string 
+	  (patch from Randolph Bentson).
+
 2000-07-29  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/artec.c: Changed include statements from #include <sane/...>

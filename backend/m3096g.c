@@ -46,6 +46,13 @@ static const char RCSid[] = "$Header$";
 /* ------------------------------------------------------------------------- */
 /*
  * $Log$
+ * Revision 1.1.2.5  2000/07/29 21:38:12  hmg
+ * 2000-07-29  Henning Meier-Geinitz <hmg@gmx.de>
+ *
+ * 	* backend/sp15.c backend/m3096g.c: Replace fgets with
+ * 	  sanei_config_read, return V_REV as part of version_code string
+ * 	  (patch from Randolph Bentson).
+ *
  * Revision 1.1.2.4  2000/07/25 21:47:33  hmg
  * 2000-07-25  Henning Meier-Geinitz <hmg@gmx.de>
  *
@@ -217,7 +224,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
   DBG (10, "sane_init\n");
 
   if (version_code)
-    *version_code = SANE_VERSION_CODE (V_MAJOR, V_MINOR, 0);
+    *version_code = SANE_VERSION_CODE (V_MAJOR, V_MINOR, V_REV);
   fp = sanei_config_open (M3096G_CONFIG_FILE);
   if (!fp)
     {
@@ -225,7 +232,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       return SANE_STATUS_GOOD;
     }
 
-  while (fgets (dev_name, sizeof (dev_name), fp))
+  while (sanei_config_read (dev_name, sizeof (dev_name), fp))
     {
       if (dev_name[0] == '#')
         continue;
