@@ -492,8 +492,6 @@ attach (const char *devname, Avision_Device **devp)
   char *mfg, *model;
   char *p;
 
-  int i;
-
   DBG(3, "attach\n" );
 
   for (dev = first_dev; dev; dev = dev->next)
