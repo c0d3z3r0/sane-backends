@@ -10,7 +10,7 @@
 :backend "avision"             ; name of backend
 :version "0.2"                 ; version of backend
 :status :beta                  ; :alpha, :beta, :stable, :new
-:url "http://home.t-online.de/~rene.rebe/avision/index.html" ; backend's web page
+:url "http://www.rene.rebe.myokay.net/avision/index.html" ; backend's web page
 ;
 ; Sorry, no manpage yet. Anybody want to write one?
 ;:manpage "sane-avision"              ; name of manpage (if it exists)

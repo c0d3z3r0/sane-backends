@@ -44,7 +44,7 @@
    This file implements a SANE backend for the Avision AV 630CS scanner with
    SCSI-2 command set.
 
-   (feedback to:  mccramer@s.netic.de and rene.rebe@okay.net)
+   (feedback to:  mccramer@s.netic.de and rene.rebe@myokay.net)
 
    Very much thanks to Avision INC for the documentation we got! ;-)
 
