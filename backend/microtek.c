@@ -1963,7 +1963,9 @@ id_microtek(u_int8_t *result, char **model_string)
     }
     if (forcewarn) {
       /* force debugging on, to encourage user to send in a report */
+#ifndef NDEBUG
       DBG_LEVEL = 1;
+#endif
       fprintf(stderr, "\n\n\n");
       fprintf(stderr, "========== Congratulations! ==========\n");
       fprintf(stderr, "Your scanner appears to be supported  \n");
