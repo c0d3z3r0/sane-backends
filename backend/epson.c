@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.13 Date 11-Feb-2000
+   Version 0.1.14 Date 19-Feb-2000
 
    This file is part of the SANE package.
 
@@ -53,8 +53,12 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-02-19   Changed some "int" to "size_t" types
+		Removed "Preview Resolution"
+		Implemented resolution list as WORD_LIST instead of
+		a RANGE (KHK)
    2000-02-11   Default scan source is always "Flatbed", regardless
-		of installed options. Corrected some typos.
+		of installed options. Corrected some typos. (KHK)
    2000-02-03   Gamma curves now coupled with gamma correction menu.
 		Only when "User defined" is selected are the curves
 		selected. (Dave Hill)
@@ -78,7 +82,7 @@
    2000-01-24	Removed C++ style comments '//' (KHK)
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.12 - 2000-02-03"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.14 - 2000-02-19"
 
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
@@ -569,6 +573,8 @@ static const SANE_String_Const qf_list [ ] =
 	, NULL
 	};
 
+static SANE_Word * resolution_list = NULL;
+
 /*
 //
 //
@@ -656,7 +662,7 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 	if( s->hw->connection == SANE_EPSON_SCSI) {
 		return scsi_write( s->fd, buf, buf_size, status);
 	} else if (s->hw->connection == SANE_EPSON_PIO) {
-		int n;
+		size_t n;
 
 		if( buf_size == ( n = sanei_pio_write( s->fd, buf, buf_size)))
 			*status = SANE_STATUS_GOOD;
@@ -665,7 +671,7 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 
 		return n;
 	} else if (s->hw->connection == SANE_EPSON_USB) {
-		int n;
+		size_t n;
 
 		if( buf_size == ( n = write( s->fd, buf, buf_size)))
 			*status = SANE_STATUS_GOOD;
@@ -685,7 +691,7 @@ static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Stat
 */
 
 static int receive ( Epson_Scanner * s, void *buf, size_t buf_size, SANE_Status * status) {
-	int n = 0;
+	size_t n = 0;
 
 	if( s->hw->connection == SANE_EPSON_SCSI) 
 	{
@@ -710,7 +716,7 @@ static int receive ( Epson_Scanner * s, void *buf, size_t buf_size, SANE_Status 
 
 #if 1
 	{
-		int k;
+		size_t k;
 		const unsigned char * s = buf;
 
 		for( k = 0; k < n; k++) {
@@ -1609,6 +1615,21 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 			);
 
 	}
+	
+	/*
+	 * Copy the resolution list to the resolution_list array so that the frontend can
+	 * display the correct values
+	 */
+
+	resolution_list = malloc( (s->hw->res_list_size +1) * sizeof(SANE_Word));
+
+	if (resolution_list == NULL)
+	{
+		DBG( 0, "out of memory\n");
+		return SANE_STATUS_NO_MEM;
+	}
+	*resolution_list = s->hw->res_list_size;
+	memcpy(&resolution_list[1], s->hw->res_list, s->hw->res_list_size * sizeof(SANE_Word));
 
 
 	} /* ESC I */
@@ -2081,7 +2102,6 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 			s->opt[ OPT_COLOR_CORRECTION].cap |= SANE_CAP_INACTIVE;
 		}
 
-
 		/* resolution */
 		s->opt[ OPT_RESOLUTION].name = SANE_NAME_SCAN_RESOLUTION;
 		s->opt[ OPT_RESOLUTION].title = SANE_TITLE_SCAN_RESOLUTION;
@@ -2089,24 +2109,11 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 
 		s->opt[ OPT_RESOLUTION].type = SANE_TYPE_INT;
 		s->opt[ OPT_RESOLUTION].unit = SANE_UNIT_DPI;
-		s->opt[ OPT_RESOLUTION].constraint_type = SANE_CONSTRAINT_RANGE;
-		s->opt[ OPT_RESOLUTION].constraint.range = &s->hw->dpi_range;
+		s->opt[ OPT_RESOLUTION].constraint_type = SANE_CONSTRAINT_WORD_LIST;
+		s->opt[ OPT_RESOLUTION].constraint.word_list = resolution_list;
 		s->val[ OPT_RESOLUTION].w = s->hw->dpi_range.min;
 
 
-		/* preview resolution */
-		s->opt[ OPT_PREVIEW_RESOLUTION].name = "preview-resolution";
-		s->opt[ OPT_PREVIEW_RESOLUTION].title = SANE_TITLE_SCAN_RESOLUTION;
-		s->opt[ OPT_PREVIEW_RESOLUTION].desc = SANE_DESC_SCAN_RESOLUTION;
-
-		s->opt[ OPT_PREVIEW_RESOLUTION].type = SANE_TYPE_INT;
-		s->opt[ OPT_PREVIEW_RESOLUTION].unit = SANE_UNIT_DPI;
-		s->opt[ OPT_PREVIEW_RESOLUTION].constraint_type = SANE_CONSTRAINT_RANGE;
-		s->opt[ OPT_PREVIEW_RESOLUTION].constraint.range = &s->hw->dpi_range;
-		s->val[ OPT_PREVIEW_RESOLUTION].w = s->hw->dpi_range.min;
-
-
-	/* "Advanced" group: */
 	s->opt[ OPT_CCT_GROUP].title	= "Color correction coefficients";
 	s->opt[ OPT_CCT_GROUP].desc	= "";
 	s->opt[ OPT_CCT_GROUP].type	= SANE_TYPE_GROUP;
@@ -2557,7 +2564,6 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 
 		case OPT_NUM_OPTS:
 		case OPT_RESOLUTION:
-		case OPT_PREVIEW_RESOLUTION:
 		case OPT_TL_X:
 		case OPT_TL_Y:
 		case OPT_BR_X:
@@ -2638,7 +2644,6 @@ SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Acti
 			break;
 			
 		case OPT_RESOLUTION:
-		case OPT_PREVIEW_RESOLUTION:
 		{
 			int n, k = 0, f;
 			int min_d = s->hw->res_list[ s->hw->res_list_size - 1];
@@ -2894,16 +2899,12 @@ SANE_Status sane_get_parameters ( SANE_Handle handle, SANE_Parameters * params) 
 
 	memset( &s->params, 0, sizeof( SANE_Parameters));
 
-	if( s->val[ OPT_PREVIEW].w)
-		ndpi = s->val[ OPT_PREVIEW_RESOLUTION].w;
-	else
-		ndpi = s->val[ OPT_RESOLUTION].w;
+	ndpi = s->val[ OPT_RESOLUTION].w;
 
 	s->params.pixels_per_line = SANE_UNFIX( s->val[ OPT_BR_X].w - s->val[ OPT_TL_X].w) / 25.4 * ndpi;
 	s->params.lines = SANE_UNFIX( s->val[ OPT_BR_Y].w - s->val[ OPT_TL_Y].w) / 25.4 * ndpi;
 
 		DBG( 3, "Preview = %d\n", s->val[OPT_PREVIEW].w);
-		DBG( 3, "Preview Resolution = %d\n", s->val[OPT_PREVIEW_RESOLUTION].w);
 		DBG( 3, "Resolution = %d\n", s->val[OPT_RESOLUTION].w);
 
 		DBG( 1, "get para %p %p tlx %f tly %f brx %f bry %f [mm]\n"
@@ -3255,10 +3256,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 #endif
 #endif
 
-	if( s->val[ OPT_PREVIEW].w)
-		ndpi = s->val[ OPT_PREVIEW_RESOLUTION].w;
-	else
-		ndpi = s->val[ OPT_RESOLUTION].w;
+	ndpi = s->val[ OPT_RESOLUTION].w;
 
 	status = set_resolution( s, ndpi, ndpi);
 
