@@ -49,7 +49,7 @@ fi
 dnl Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS(fcntl.h unistd.h libintl.h libc.h sys/dsreq.h sys/select.h \
-    sys/time.h jconfig.h linux/videodev.h \
+    sys/time.h jconfig.h \
     sys/scanio.h scsi.h sys/scsi.h sys/scsicmd.h sys/scsiio.h \
     bsd/dev/scsireg.h scsi/sg.h /usr/src/linux/include/scsi/sg.h io/cam/cam.h \
     camlib.h os2.h sys/socket.h sys/io.h asm/io.h gscdds.h sys/hw.h \
@@ -76,6 +76,8 @@ then
 ],[scsireq_t req],,
    AC_DEFINE(scsireq_t, struct scsireq_t))
 fi
+
+SANE_V4L_VERSION
 
 dnl Checks for libraries.
 
@@ -187,13 +189,13 @@ else
   QCAM=qcam
 fi
 AC_SUBST(QCAM)
-if test "${ac_cv_header_linux_videodev_h}" = "no"
+if test "${sane_v4l_version}" = "v4l"
 then
-  echo "disabling Video4Linux backend"
-  V4L=
-else
   echo "enabling Video4Linux backend"
   V4L=v4l
+else
+  echo "disabling Video4Linux backend"
+  V4L=
 fi
 AC_SUBST(V4L)
 if test "${ac_cv_header_sys_socket_h}" = "no"; then
