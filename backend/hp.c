@@ -43,9 +43,18 @@
    HP Scanner Control Language (SCL).
 */
 
-static char *hp_backend_version = "0.83";
+static char *hp_backend_version = "0.85";
 /* Changes:
 
+   V 0.85, 30-Jan-2000, PK:
+      - correct and enhace data widths > 8 (Ewald de Wit  <ewald@pobox.com>)
+      - enable data width for all scanners
+      - PhotoSmart: exposure "Off" changed to "Default"
+      - PhotoSmart: even if max. datawidth 24 is reported, allow 30 bits.
+      - change keyword -data-width to -depth and use value for bits per sample
+      - change keyword -halftone-type to -halftone-pattern
+      - change keyword -scantype to -source
+      - fix problem with multiple definition of sanei_debug_hp
    V 0.83, 04-Jul-99, PK:
       - reset scanner before downloading parameters (fixes problem
         with sleep mode of scanners)
@@ -57,9 +66,9 @@ static char *hp_backend_version = "0.83";
       - PhotoScanner: allow only scanning at multiple of 300 dpi
         for scanning slides/film strips. This also fixes a problem with the
         preview which uses arbitrary resolutions.
-      - Marian Szebenyi: close pipe (endless loop on Digital UNIX) 
+      - Marian Szebenyi: close pipe (endless loop on Digital UNIX)
 
-   V 0.82, 28-Feb-99, Ewald de Witt <ewald@pobox.com>:
+   V 0.82, 28-Feb-99, Ewald de Wit <ewald@pobox.com>:
       - add options 'exposure time' and 'data width'
 
    V 0.81, 11-Jan-99, PK:
