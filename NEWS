@@ -1,11 +1,11 @@
 -*-Mode: outline-*-
-New after 1.01 (unstable development release 2000-01-30):
+New after 1.01 (unstable development release 2000-02-13):
 * Aliased and hidden backend support.
 * Port to UnixWare 2.x and UnixWare 7.
 * New script 'sane-config' to help frontend developers.
 * Added Ricoh IS50 support.
-* Updated backends: Artec (v0.5.6), CANON (v991108), DC-25 (1.2), HP
-  (v0.85), Microtek (0.11.0), Microtek2 (v0.8), UMAX (v1.0-build-16),
+* Updated backends: Artec (v0.5.11), CANON (v991108), DC-25 (1.2), HP
+  (v0.86), Microtek (0.12.0), Microtek2 (v0.8), UMAX (v1.0-build-16),
   Epson (v0.1.6), Sharp (v0.30), sp15c (1.12) and m3096g (1.11).
 * Automatic document feeder support for scanimage.
 * New backend for Avision AV 630 CS.
