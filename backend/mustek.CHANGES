@@ -1,5 +1,39 @@
 CHANGES for the SANE Mustek backend
 
+2000-06-04
+  * changed (again) Paragon 12000 SP linedistance handling, now 1.02 uses
+    normal LD corrections, all other use none. We'll see, if this works. 
+  * fixed some long lines (>80 chars)
+
+2000-06-03
+  * released backend version 1.0-84
+
+2000-06-03
+  * changed line-distance handling, removed ld.max_value magic (didn't work)
+  * fixed (maybe) Paragon 12000 SP color stripes problems (v 1.11 and others)
+  * simpler linedistance debug output, only for 1-pass Paragon scanners
+
+2000-06-02
+  * removed code in dev_read_start which was never called (suggestion
+    from Jan-Erik Karlsson)
+
+2000-05-21
+  * added double buffering (trying to copy the scsi buffer to the frontend
+    while getting a new one). This probably won't work on all
+    platforms and with all SCSI host adapters but in this case performance
+    shouldn't be worse than before.
+
+2000-05-21
+  * released backend version 1.0-83
+
+2000-05-21
+  * The Mustek Paragon 1200 A3 PRO is now detected. This is only a test
+    release. Be carefull and read the PROBLEMS file if you want to
+    try this scanner.
+
+2000-05-19
+  * released backend version 1.0-82
+
 2000-05-18
   * set debug level for output of unknown Mustek scanner to 0 (suggestion
     from Thorben Kundinger)

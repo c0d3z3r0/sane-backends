@@ -1,3 +1,11 @@
+2000-05-21  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* backend/mustek.*: Update to Mustek backend 1.0-85. Added double
+ 	  buffering. This may improve scan performance a bit. Removed
+	  dead code (in dev_read_start). Changed linedistance correction 
+	  handling. Paragon 12000 SP color mode might work now with all 
+	  firmware versions. Details in backend/mustek.CHANGES.
+
 2000-05-27  Karl Heinz Kremer <khk@khk.net>
 	* backend/epson.[ch] Support for multiple EPSON scanners added
 	  Fixed Perfection 610 color problem

@@ -46,7 +46,7 @@
 
 /* ----------------------------------------------------------------------- */
 /* Mustek backend version                                                  */
-#define BUILD 82
+#define BUILD 85
 /* ----------------------------------------------------------------------- */
 
 #include <sane/config.h>
@@ -114,16 +114,6 @@ static const int color_seq[] =
   {
     1, 2, 0			/* green, blue, red */
   };
-
-/* This List seem to be obsolete, I couldn't find a single scanner
-   which supports Color Lineart or Color Halftone        
-static const SANE_String_Const three_pass_mode_list[] =
-  {
-    "Lineart", "Halftone", "Gray",
-    "Color Lineart", "Color Halftone", "Color",
-    0
-  };
-*/
 
 static const SANE_String_Const paragon_mode_list[] =
   {
@@ -449,30 +439,14 @@ dev_read_start (Mustek_Scanner *s)
   
   if (s->hw->flags & MUSTEK_FLAG_N)
     {
-      if (s->hw->flags & MUSTEK_FLAG_SE)
-	{
-	  u_int8_t readlines[10];
-
-	  if (s->mode & MUSTEK_MODE_COLOR)
-	    lines *= 3;
-	     
-	  memset (readlines, 0, sizeof (readlines));
-	  readlines[0] = MUSTEK_SCSI_READ_DATA;
-	  readlines[7] = (lines >> 8) & 0xff;
-	  readlines[8] = (lines >> 0) & 0xff;
-	  return sanei_ab306_cmd (s->fd, readlines, sizeof (readlines), 0, 0);
-	}
-      else
-	{      		      
-	  u_int8_t readlines[6];
-
-	  memset (readlines, 0, sizeof (readlines));
-	  readlines[0] = MUSTEK_SCSI_READ_SCANNED_DATA;
-	  readlines[2] = (lines >> 16) & 0xff;
-	  readlines[3] = (lines >>  8) & 0xff;
-	  readlines[4] = (lines >>  0) & 0xff;
-	  return sanei_ab306_cmd (s->fd, readlines, sizeof (readlines), 0, 0);
-	}
+      u_int8_t readlines[6];
+      
+      memset (readlines, 0, sizeof (readlines));
+      readlines[0] = MUSTEK_SCSI_READ_SCANNED_DATA;
+      readlines[2] = (lines >> 16) & 0xff;
+      readlines[3] = (lines >>  8) & 0xff;
+      readlines[4] = (lines >>  0) & 0xff;
+      return sanei_ab306_cmd (s->fd, readlines, sizeof (readlines), 0, 0);
     }
   else
     return SANE_STATUS_GOOD;
@@ -561,7 +535,7 @@ sense_handler (int scsi_fd, u_char *result, void *arg)
       if (result[2] & 0x02)
 	{
 	  DBG(3, "sense_handler: ADF is out of documents\n");
-	  return SANE_STATUS_NO_DOCS;	/* ADF out of documents */
+	  return SANE_STATUS_NO_DOCS; /* ADF out of documents */
 	}
       break;
 
@@ -569,7 +543,7 @@ sense_handler (int scsi_fd, u_char *result, void *arg)
       if (result[1] & 0x10)
 	{
 	  DBG(3, "sense_handler: transparency adapter cover open\n");
-	  return SANE_STATUS_COVER_OPEN;	/* open transparency adapter cover */
+	  return SANE_STATUS_COVER_OPEN; /* open transparency adapter cover */
 	}
       break;
 
@@ -743,8 +717,18 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   mustek_scanner = (strncmp (result + 36, "MUSTEK", 6) == 0);
   if (mustek_scanner)
     {
-      DBG(3, "attach: found Mustek scanner (new firmware format)\n");
-      firmware_format = 1;
+      if (result[43] == 'M')
+	{
+	  DBG(3, "attach: found Mustek scanner (pro series firmware "
+	      "format)\n");
+	  firmware_format = 2;
+	  model_name = result + 43;
+	}
+      else
+	{
+	  DBG(3, "attach: found Mustek scanner (new firmware format)\n");
+	  firmware_format = 1;
+	}
     }
   else
     {
@@ -764,7 +748,6 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	}
     }
   
-
   /* get firmware revision as BCD number:             */
   /* General format: x.yz                             */
   /* Newer ScanExpress scanners (ID XC06): Vxyz       */ 
@@ -818,14 +801,15 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   dev->firmware_revision_system = firmware_revision_system;
   
   DBG(3, "attach: scanner id: %.11s\n", model_name);
-  if (strncmp (model_name, "M", 1) == 0)
+  if (strncmp (model_name + 10, "PRO", 3) == 0)
+    DBG(3, "attach: this is probably a Professional series scanner "
+	"(not tested)\n");
+  else if (strncmp (model_name, "M", 1) == 0)
     DBG(3, "attach: this is probably a Paragon series scanner\n");
   else if (strncmp (model_name, " C", 2) == 0)
     DBG(3, "attach: this is probably a ScanExpress series scanner\n");
   else if (strncmp (model_name, "XC", 2) == 0)
     DBG(3, "attach: this is probably a ScanExpress Plus series scanner\n");
-  else if (strncmp (model_name, "FS", 2) == 0)
-    DBG(3, "attach: this is probably a Professional series scanner (not supported)\n");
   else
     DBG(3, "attach: I am not sure what type of scanner this is\n");
   /* Paragon 3-pass series */
@@ -968,14 +952,15 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->y_trans_range.max = SANE_FIX (250.0);
 
       dev->dpi_range.max = SANE_FIX (1200);
-      /* earlier versions of this backend stated: "Revision 1.00 of the
-	 MFS-12000SP firmware is buggy and needs this workaround.  Maybe
-         others need it too, but this one is for sure.  We know for certain
-	 that revision 1.02 or newer has this bug fixed."
-         I can't reproduce this. My MFS-12000SP (id MFS-12000SP) with firmware
-	 1.00 works only without MUSTEK_FLAG_LD_MFS. So this Workaraound is
-	 removed. Maybe only MSF-12000SP (if they exist) are affected. */
-      dev->flags |= MUSTEK_FLAG_LD_NONE;
+      /* Earlier versions of this source code used MUSTEK_FLAG_LD_MFS
+	 for firmware versions < 1.02 and LD_NONE for the rest. This
+	 didn't work for my scanners.  1.00 doesn't need any LD
+	 correction, 1.02 does need normal LD corrections. Bug reports
+	 suggest that 1.11 needs no LD correction.  Maybe this is true
+	 for all 1.x x!=02 scanners. */
+
+      if (fw_revision != 0x102)
+	dev->flags |= MUSTEK_FLAG_LD_NONE;
       dev->sane.model = "MFS-12000SP";
     }
   /* Does it exist? */
@@ -1080,7 +1065,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       /* At least the SE 6000SP with firmware 1.00 limits its
 	 x-resolution to 300 dpi and does *no* interpolation at higher
 	 resolutions. So this has to be done in software. */
-	dev->flags |= MUSTEK_FLAG_ENLARGE_X;
+      dev->flags |= MUSTEK_FLAG_ENLARGE_X;
       dev->max_buffer_size = 1024 * 64;
       dev->sane.model = "ScanExpress 6000SP";
     }
@@ -1168,6 +1153,21 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "ScanExpress 24000SP?";
       warning = SANE_TRUE;      
     }
+  /* Let's detect the Pragon A3 PRO even if we don't have any documentation */
+  else if (strncmp(model_name, "MFS-1200A3PRO", 13) == 0)
+    {
+      /* These values are not tested. */
+      /* use really conservative settings at the moment (10 x 10cm)*/
+      dev->x_range.max = SANE_FIX (100);
+      dev->y_range.max = SANE_FIX (100);
+      dev->dpi_range.max = SANE_FIX (1200);
+      dev->max_buffer_size = 128 * 64;
+      dev->sane.model = "1200 A3 PRO (dangerous -- don't use!)";
+      warning = SANE_TRUE;
+      /* try one of these if it doesn't work */
+      /* dev->flags |= MUSTEK_FLAG_USE_EIGHTS; */
+      /* dev->flags |= MUSTEK_FLAG_DOUBLE_RES; */
+    }
   else
     {
       DBG(0, "attach: this Mustek scanner (ID: %s) is not supported yet\n",
@@ -1181,12 +1181,6 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       return SANE_STATUS_INVAL;
     }
 
-  if (dev->flags & MUSTEK_FLAG_LD_MFS)
-    DBG(4, "attach: using special line-distance algorithm\n");
-  if (dev->flags & MUSTEK_FLAG_LD_NONE)
-    DBG(4, "attach: scanner has automatic line-distance correction\n");
-  if ((dev->flags & MUSTEK_FLAG_LD_N1) || (dev->flags & MUSTEK_FLAG_LD_N2))
-    DBG(4, "attach: scanner has N-type line-distance correction\n");
   if (dev->flags & MUSTEK_FLAG_SE)
     {      
       dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
@@ -1198,6 +1192,16 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	{
 	  dev->flags |= MUSTEK_FLAG_SINGLE_PASS;
 	  DBG(3, "attach: this is a single-pass scanner\n");
+	  if (dev->flags & MUSTEK_FLAG_LD_MFS)
+	    DBG(4, "attach: using special line-distance algorithm\n");
+	  else if (dev->flags & MUSTEK_FLAG_LD_NONE)
+	    DBG(4, "attach: scanner doesn't need line-distance correction\n");
+	  else if (dev->flags & MUSTEK_FLAG_LD_N1)
+	    DBG(4, "attach: scanner has N1 line-distance correction\n");
+	  else if (dev->flags & MUSTEK_FLAG_LD_N2)
+	    DBG(4, "attach: scanner has N2 line-distance correction\n");
+	  else
+	    DBG(4, "attach: scanner has normal line-distance correction\n");
 	}
       else
         {
@@ -1206,6 +1210,10 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
           dev->dpi_range.min = dev->dpi_range.quant;
 	  DBG(3, "attach: this is a three-pass scanner\n");
         }
+      if (result[57] & (1 << 5))
+	{
+	  DBG(3, "attach: this is a Pro series scanner\n");
+	}
       if (result[63] & (1 << 2))
 	{
 	  dev->flags |= MUSTEK_FLAG_ADF;
@@ -1217,7 +1225,8 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 	    }
 	  else
 	    {
-	      DBG(4, "attach: automatic document feeder is out of documents\n");
+	      DBG(4, "attach: automatic document feeder is out of "
+		  "documents\n");
 	    }
 	}
 
@@ -1236,14 +1245,14 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
 
   if (warning == SANE_TRUE)
     {
-      DBG(0, "WARNING: Your scanner was detected by the SANE Mustek backend, but\n");
-      DBG(0, "         it is not fully tested. It may or may not work. Be carefull\n");
-      DBG(0, "         and read the PROBLEMS file in the sane directory. Please set\n");
-      DBG(0, "         the debug level of this backend to maximum\n");
-      DBG(0, "         (export SANE_DEBUG_MUSTEK=255) and send the output of\n");
-      DBG(0, "         scanimage -L to the SANE mailing list sane-devel@mostang.com.\n");
-      DBG(0, "         Please include the exact model name of your scanner and to\n");
-      DBG(0, "         which extend it works.\n");
+      DBG(0, "WARNING: Your scanner was detected by the SANE Mustek backend, "
+	  "but\n  it is not fully tested. It may or may not work. Be "
+	  "carefull and read\n  the PROBLEMS file in the sane directory. "
+	  "Please set the debug level of this\n  backend to maximum "
+	  "(export SANE_DEBUG_MUSTEK=255) and send the output of\n  "
+	  "scanimage -L to the SANE mailing list sane-devel@mostang.com. "
+	  "Please include\n  the exact model name of your scanner and to "
+	  "which extend it works.\n");
     }
 
   DBG(2, "attach: found Mustek scanner %s (%s), %s%s%s%s\n",
@@ -2104,6 +2113,9 @@ line_distance (Mustek_Scanner *s)
 	    s->ld.index[color] = -s->ld.dist[color];
 	  s->ld.lmod3 = -1;
 	}
+      DBG(4, "line_distance: max_value = %d, peak_res = %d, ld.quant = "
+	  "(%d, %d, %d)\n", s->ld.max_value, s->ld.peak_res, s->ld.quant[0],
+	  s->ld.quant[1], s->ld.quant[2]);
     }
   return SANE_STATUS_GOOD;
 }
@@ -2208,8 +2220,8 @@ do_get_window (Mustek_Scanner *s, SANE_Int *bpl, SANE_Int *lines,
       if ((s->hw->flags & MUSTEK_FLAG_ENLARGE_X) &&  (res > half_res))
 	{
 	  *bpl = *pixels = (((s->hw->bpl / 3) * res) / half_res) * 3;
-	  DBG(4, "do_get_window: resolution > x-max; enlarge %d bpl to %d bpl\n",
-	      s->hw->bpl, *bpl);
+	  DBG(4, "do_get_window: resolution > x-max; enlarge %d bpl to "
+	      "%d bpl\n", s->hw->bpl, *bpl);
 	}
       else
 	{
@@ -2227,8 +2239,8 @@ do_get_window (Mustek_Scanner *s, SANE_Int *bpl, SANE_Int *lines,
 	{
 	  *bpl = s->hw->bpl * (SANE_UNFIX (s->val[OPT_RESOLUTION].w) / 
 			       (SANE_UNFIX (s->hw->dpi_range.max) / 2)); 
-	  DBG(4, "do_get_window: resolution > x-max; enlarge %d bpl to %d bpl\n",
-	      s->hw->bpl, *bpl);
+	  DBG(4, "do_get_window: resolution > x-max; enlarge %d bpl to %d "
+	      "bpl\n", s->hw->bpl, *bpl);
 	}
       else
 	{
@@ -2427,8 +2439,8 @@ fix_line_distance_n_2 (Mustek_Scanner *s, int num_lines, int bpl,
 
 	      if (raw >= raw_end)
 		{
-		  DBG (3, "fix_line_distance_n_2: lmod3=%d, index=(%d,%d,%d)\n",
-		       s->ld.lmod3,
+		  DBG (3, "fix_line_distance_n_2: lmod3=%d, "
+		       "index=(%d,%d,%d)\n", s->ld.lmod3,
 		       s->ld.index[0], s->ld.index[1], s->ld.index[2]);
 		  num_lines = s->ld.index[2] - s->ld.ld_line;
 
@@ -2696,7 +2708,8 @@ fix_line_distance_se (Mustek_Scanner *s, int num_lines, int bpl,
 		    {
 		      int half_res = SANE_UNFIX (s->hw->dpi_range.max) / 2;
 		      u_int8_t *raw_start = raw;
-		      for (pixel = 0; pixel < s->params.pixels_per_line; ++pixel)
+		      for (pixel = 0; pixel < s->params.pixels_per_line;
+			   ++pixel)
 			{
 			  *out_ptr[s->ld.color] = *raw;
 			  out_ptr[s->ld.color] += 3;
@@ -2760,7 +2773,7 @@ fix_line_distance_normal (Mustek_Scanner *s, int num_lines, int bpl,
 			  u_int8_t *raw, u_int8_t *out)
 {
   u_int8_t *out_end, *out_ptr, *raw_end = raw + num_lines * bpl;
-  int index[3];			/* index of the next output line for color C */
+  int index[3];	/* index of the next output line for color C */
   int i, color;
 
   /* Initialize the indices with the line distances that were returned
@@ -2793,7 +2806,7 @@ fix_line_distance_normal (Mustek_Scanner *s, int num_lines, int bpl,
 		    {
 		      *out_ptr = *raw++;
 		      out_ptr += 3;
-		    }		      		      		    		   
+		    }
 		  ++index[color];
 		  if (raw >= raw_end)
 		    return;
@@ -3151,21 +3164,17 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	num_lines = fix_line_distance_se (s, num_lines, bpl, data, extra);
       else if (s->hw->flags & MUSTEK_FLAG_LD_MFS) 
 	fix_line_distance_mfs (s, num_lines, bpl, data, extra);
-      else if (s->ld.max_value)
+      else if (s->hw->flags & MUSTEK_FLAG_N)
 	{
-	  if (s->hw->flags & MUSTEK_FLAG_N)
-	    {
-	      if (s->hw->flags & MUSTEK_FLAG_LD_N2)
-		num_lines = fix_line_distance_n_2 (s, num_lines, bpl, data,
-						    extra);
-	      else
-		num_lines = fix_line_distance_n_1 (s, num_lines, bpl, data,
-						    extra);
-	    }  
+	  if (s->hw->flags & MUSTEK_FLAG_LD_N2)
+	    num_lines = fix_line_distance_n_2 (s, num_lines, bpl, data,
+					       extra);
 	  else
-	    fix_line_distance_normal (s, num_lines, bpl, data, extra);
-	}
-      else
+	    num_lines = fix_line_distance_n_1 (s, num_lines, bpl, data,
+					       extra);
+	}  
+      
+      else if (s->hw->flags & MUSTEK_FLAG_LD_NONE)
         {
 	  /* Just shuffle around while copying from *data to *extra */ 
           SANE_Byte *red_ptr, *grn_ptr, *blu_ptr;
@@ -3185,8 +3194,10 @@ output_data (Mustek_Scanner *s, FILE *fp,
 		  *ptr++ = *blu_ptr++;
 		}
 	      red_ptr = ptr_end;
-	    }	      				  		  		  			    	      
+	    }
 	}
+      else
+	fix_line_distance_normal (s, num_lines, bpl, data, extra);
 
       if (s->mode & MUSTEK_MODE_MULTIBIT)
 	{
@@ -3209,7 +3220,8 @@ output_data (Mustek_Scanner *s, FILE *fp,
   else
     {
       DBG(5, "output_data: write %d lpb; %d bpl\n", lines_per_buffer, bpl);
-      /* Scale x-resolution above 1/2 of the maximum resolution for SE scanners */
+      /* Scale x-resolution above 1/2 of the maximum resolution for 
+	 SE scanners */
       if ((s->hw->flags & MUSTEK_FLAG_ENLARGE_X) && 
 	  (s->val[OPT_RESOLUTION].w > (s->hw->dpi_range.max / 2)))
 	{
@@ -3219,8 +3231,8 @@ output_data (Mustek_Scanner *s, FILE *fp,
 	  int res_counter;
 	  int enlarged_x;
 	  
-	  DBG(5, "output_data: enlarge lines from %d bpl to %d bpl\n", s->hw->bpl, 
-	      s->params.bytes_per_line);
+	  DBG(5, "output_data: enlarge lines from %d bpl to %d bpl\n", 
+	      s->hw->bpl, s->params.bytes_per_line);
 
 	  for (y = 0; y < lines_per_buffer; y++)
 	    {
@@ -3297,14 +3309,17 @@ reader_process (Mustek_Scanner *s, int fd)
   struct SIGACTION act;
   SANE_Status status;
   FILE *fp;
-  struct
+  int buffernumber = 0;
+
+  struct                /* two buffers for double buffering */
     {
       void *id;		/* scsi queue id */
       SANE_Byte *data;	/* data buffer */
       int lines;	/* # lines in buffer */
       size_t num_read;	/* # of bytes read (return value) */
       int bank;		/* needed by SE models */
-    } bstat;
+      SANE_Bool ready;  /* ready to send to application? */
+    } bstat[2];
 
   sigemptyset (&sigterm_set);
   sigaddset (&sigterm_set, SIGTERM);
@@ -3342,6 +3357,7 @@ reader_process (Mustek_Scanner *s, int fd)
 	  lines_per_buffer = max_lines;
 	}
     }
+
   if (!lines_per_buffer)
     {
       DBG(1, "reader_process: bpl (%d) > SCSI buffer size (%d)\n",
@@ -3352,23 +3368,25 @@ reader_process (Mustek_Scanner *s, int fd)
   DBG(4, "reader_process: %d lines per buffer, %d bytes per line, "
       "%d bytes total\n",  lines_per_buffer, bpl, lines_per_buffer * bpl);
 
-  bstat.data = malloc (lines_per_buffer * (long) bpl);
-
-  if (!bstat.data)
+  for (buffernumber = 0; buffernumber < 2; buffernumber++)
     {
-      DBG(1, "reader_process: failed to malloc %ld bytes\n",
-	  lines_per_buffer * (long) bpl);
-      return SANE_STATUS_NO_MEM;
-    }
+      bstat[buffernumber].data = malloc (lines_per_buffer * (long) bpl);
+      if (!bstat[buffernumber].data)
+	{
+	  DBG(1, "reader_process: failed to malloc %ld bytes for %d. buffer\n",
+	  lines_per_buffer * (long) bpl, buffernumber + 1);
+	  return SANE_STATUS_NO_MEM;
+	}
+      /* Touch all pages of the buffer to fool the memory management. */ 
+      ptr = bstat[buffernumber].data + lines_per_buffer * (long) bpl - 1;
+      while (ptr >= bstat[buffernumber].data)
+	{
+	  *ptr = 0x00;
+	  ptr -= 256;
+	}   
+      bstat[buffernumber].ready = SANE_FALSE;
+    }  
 
-  /* Touch all pages of the buffer to fool the memory management. */ 
-  ptr = bstat.data + lines_per_buffer * (long) bpl - 1;
-  while (ptr >= bstat.data)
-    {
-      *ptr = 0x00;
-      ptr -= 256;
-    }   
-  
   if (s->hw->flags & MUSTEK_FLAG_SINGLE_PASS)
     {
       /* get temporary buffer for line-distance correction and/or bit
@@ -3424,58 +3442,100 @@ reader_process (Mustek_Scanner *s, int fd)
   if (status != SANE_STATUS_GOOD)
     return status;
 
+  buffernumber = 0;
+
   while (s->line < s->hw->lines)
     {
+      int otherbuffer = 0;
+      if (buffernumber == 0)
+	otherbuffer = 1;
+
       if (s->line + lines_per_buffer >= s->hw->lines)
 	{
 	  /* do the last few lines: */
-	  bstat.lines = s->hw->lines - s->line;
-	  bstat.bank = 0x01;
+	  bstat[buffernumber].lines = s->hw->lines - s->line;
+	  bstat[buffernumber].bank = 0x01;
 	}
       else 
 	{
-	  bstat.lines = lines_per_buffer;
-	  bstat.bank = 0x00;    
+	  bstat[buffernumber].lines = lines_per_buffer;
+	  bstat[buffernumber].bank = 0x00;    
 	}
-      s->line += bstat.lines;
+      s->line += bstat[buffernumber].lines;
+      bstat[buffernumber].ready = SANE_TRUE;
 
-      DBG(4, "reader_process: about to read %d bytes\n",
-	  bstat.lines * bpl);
+      DBG(4, "reader_process: buffer %d: entering read request for %d bytes\n",
+	  buffernumber + 1, bstat[buffernumber].lines * bpl);
 
       sigprocmask (SIG_BLOCK, &sigterm_set, 0); 
-      status = dev_read_req_enter (s, bstat.data, bstat.lines, bpl,
-				   &bstat.num_read, &bstat.id, bstat.bank);
+      status = dev_read_req_enter (s, bstat[buffernumber].data,
+				   bstat[buffernumber].lines, bpl,
+				   &bstat[buffernumber].num_read,
+				   &bstat[buffernumber].id,
+				   bstat[buffernumber].bank);
       sigprocmask (SIG_UNBLOCK, &sigterm_set, 0); 
-      
-      if (status != SANE_STATUS_GOOD)
+
+      if (status == SANE_STATUS_GOOD)
 	{
-	  DBG(1, "reader_process: failed to enter read request, status: %s\n",
-	      sane_strstatus (status));
+	  DBG(5, "reader_process: buffer %d: read request entered\n",
+	      buffernumber + 1);
+	}
+      else
+	{
+	  DBG(1, "reader_process: buffer %d: failed to enter read request, "
+	      "status: %s\n", buffernumber + 1, sane_strstatus (status));
 	  return status;
 	}
 
-      status = dev_req_wait (bstat.id);
-
-      if (status != SANE_STATUS_GOOD)
+      if (bstat[otherbuffer].ready == SANE_TRUE)
 	{
-	  DBG(1, "reader_process: failed to read data, status: %s\n",
-	      sane_strstatus (status));
-	  return status;
+	  /* send all but the first buffer */
+	  DBG(4, "reader_process: buffer %d: sending to output_data\n",
+	      otherbuffer + 1);
+	  output_data (s, fp, bstat[otherbuffer].data,
+		       bstat[otherbuffer].lines, bpl, extra);
 	}
 
-      DBG(4, "reader_process: %d lines of %d total; %lu bytes read\n", 
-	  s->line, s->hw->lines, (unsigned long) bstat.num_read);
+      DBG(4, "reader_process: buffer %d: waiting for request to be ready\n",
+	  buffernumber + 1);
+      status = dev_req_wait (bstat[buffernumber].id);
+      if (status == SANE_STATUS_GOOD)
+	{
+	  DBG(4, "reader_process: buffer %d: ready: %d lines of %d total; "
+	      "%lu bytes\n", buffernumber + 1, s->line, s->hw->lines, 
+	      (unsigned long) bstat[buffernumber].num_read);
+	}
+      else
+	{
+	  DBG(1, "reader_process: failed to read data, status: %s, "
+	      "buffer: %d\n", sane_strstatus (status),
+	      buffernumber + 1);
+	  return status;
+	}
+      if (s->line >= s->hw->lines)
+	{
+	  /* send the last buffer */
+	  DBG(4, "reader_process: buffer %d: sending last buffer to "
+	      "output_data\n", buffernumber + 1);
+	  output_data (s, fp, bstat[buffernumber].data,
+		       bstat[buffernumber].lines, bpl, extra);
+	}
 
-      output_data (s, fp, bstat.data, bstat.lines, bpl, extra);
+      if (buffernumber == 1)
+	buffernumber = 0;
+      else 
+	buffernumber = 1;
 
       /* This is said to fix the scanner hangs that reportedly show on
 	 some MFS-12000SP scanners.  */
       if (s->mode == 0 && (s->hw->flags & MUSTEK_FLAG_LINEART_FIX)) 
 	usleep (200000);
+	
     }
 
   fclose (fp);
-  free (bstat.data);
+  free (bstat[0].data);
+  free (bstat[1].data);
   if (s->ld.buf[0])
     free (s->ld.buf[0]);
   if (extra) 
@@ -3551,8 +3611,8 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
   if (!fp)
     {
       /* default to /dev/scanner instead of insisting on config file */
-      DBG(3, "sane_init: couldn't find config file (%s), trying /dev/scanner directly\n",
-	  MUSTEK_CONFIG_FILE);
+      DBG(3, "sane_init: couldn't find config file (%s), trying "
+	  "/dev/scanner directly\n", MUSTEK_CONFIG_FILE);
       attach ("/dev/scanner", 0, SANE_FALSE);
       return SANE_STATUS_GOOD;
     }
@@ -3566,12 +3626,14 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       cp = (char *) sanei_config_get_string (line, &word);
       if (!word || cp == line)
 	{
-	  DBG(5, "sane_init: config file line %d: ignoring empty line\n", linenumber);
+	  DBG(5, "sane_init: config file line %d: ignoring empty line\n",
+	      linenumber);
 	  continue;
 	}
       if (word[0] == '#')
 	{
-	  DBG(5, "sane_init: config file line %d: ignoring comment line\n", linenumber);
+	  DBG(5, "sane_init: config file line %d: ignoring comment line\n",
+	      linenumber);
 	  free (word);
 	  continue;
 	}
@@ -3591,22 +3653,23 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	      strip_height = strtod (word, &end);
 	      if (end == word)
 		{
-		  DBG(3, "sane-init: config file line %d: strip-height must have a parameter; "
-		      "using 1 inch\n", linenumber);
+		  DBG(3, "sane-init: config file line %d: strip-height "
+		      "must have a parameter; using 1 inch\n", linenumber);
 		  strip_height = 1.0;
 		}
 	      if (errno)
 		{
-		  DBG(3, "sane-init: config file line %d: strip-height `%s' is invalid (%s); "
-		      "using 1 inch\n",  linenumber, word, strerror (errno));
+		  DBG(3, "sane-init: config file line %d: strip-height `%s' "
+		      "is invalid (%s); using 1 inch\n",  linenumber,
+		      word, strerror (errno));
 		  strip_height = 1.0;	
 		}
 	      else
 		{
 		  if (strip_height < 0.1)
 		    strip_height = 0.1;
-		  DBG(3, "sane_init: config file line %d: strip-height set to %g inches\n",
-		      linenumber, strip_height);
+		  DBG(3, "sane_init: config file line %d: strip-height set "
+		      "to %g inches\n", linenumber, strip_height);
 		}
 	      if (word)
 		free (word);
@@ -3617,13 +3680,15 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	      if (new_dev_len > 0)
 		{
 		  new_dev[new_dev_len - 1]->flags |= MUSTEK_FLAG_LD_FIX;
-		  DBG(3, "sane_init: config file line %d: enabling linedistance-fix for %s\n",
-		      linenumber, new_dev[new_dev_len - 1]->sane.name);
+		  DBG(3, "sane_init: config file line %d: enabling "
+		      "linedistance-fix for %s\n", linenumber,
+		      new_dev[new_dev_len - 1]->sane.name);
 		}
 	      else
 		{
-		  DBG(3, "sane_init: config file line %d: option linedistance-fix "
-		      "ignored, was set before any device name\n", linenumber);
+		  DBG(3, "sane_init: config file line %d: option "
+		      "linedistance-fix ignored, was set before any device "
+		      "name\n", linenumber);
 		}
 	      if (word)
 		free (word);
@@ -3634,13 +3699,15 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	      if (new_dev_len > 0)
 		{
 		  new_dev[new_dev_len - 1]->flags |= MUSTEK_FLAG_LINEART_FIX;
-		  DBG(3, "sane_init: config file line %d: enabling lineart-fix for %s\n",
-		      linenumber, new_dev[new_dev_len - 1]->sane.name);
+		  DBG(3, "sane_init: config file line %d: enabling "
+		      "lineart-fix for %s\n", linenumber, 
+		      new_dev[new_dev_len - 1]->sane.name);
 		}
 	      else
 		{
-		  DBG(3, "sane_init: config file line %d: option lineart-fix ignored, "
-		      "was set before any device name\n", linenumber);
+		  DBG(3, "sane_init: config file line %d: option "
+		      "lineart-fix ignored, was set before any device name\n",
+		      linenumber);
 		}
 	      if (word)
 		free (word);
@@ -3659,14 +3726,15 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 
 	      if (end == word)
 		{
-		  DBG(3, "sane-init: config file line %d:: buffersize must have a parameter; "
-		      "using default (%d kb)\n", linenumber, 
+		  DBG(3, "sane-init: config file line %d:: buffersize must "
+		      "have a parameter; using default (%d kb)\n", linenumber, 
 		      new_dev[new_dev_len - 1]->max_buffer_size);
 		}
 	      if (errno)
 		{
-		  DBG(3, "sane-init: config file line %d: buffersize `%s' is invalid (%s); "
-		      "using default (%d kb)\n",  linenumber, word, strerror (errno),
+		  DBG(3, "sane-init: config file line %d: buffersize `%s' "
+		      "is invalid (%s); using default (%d kb)\n",  linenumber,
+		      word, strerror (errno),
 		      new_dev[new_dev_len - 1]->max_buffer_size);
 		}
 	      else
@@ -3675,14 +3743,17 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 		    {
 		      if (buffer_size < 32.0)
 			buffer_size = 32.0;
-		      new_dev[new_dev_len - 1]->max_buffer_size = buffer_size * 1024;
-		      DBG(3, "sane_init: config file line %d: buffersize set to %ld kb for %s\n",
-			  linenumber, buffer_size, new_dev[new_dev_len - 1]->sane.name);
+		      new_dev[new_dev_len - 1]->max_buffer_size =
+			buffer_size * 1024;
+		      DBG(3, "sane_init: config file line %d: buffersize set "
+			  "to %ld kb for %s\n", linenumber, buffer_size,
+			  new_dev[new_dev_len - 1]->sane.name);
 		    }
 		  else
 		    {
-		      DBG(3, "sane_init: config file line %d: option buffersize ignored, "
-			  "was set before any device name\n", linenumber);
+		      DBG(3, "sane_init: config file line %d: option "
+			  "buffersize ignored, was set before any device "
+			  "name\n", linenumber);
 		    }
 		}
 	      if (word)
@@ -3691,8 +3762,8 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 	    }
 	  else
 	    {
-	      DBG(3, "sane_init: config file line %d: ignoring unknown option `%s'\n",
-		  linenumber, cp);
+	      DBG(3, "sane_init: config file line %d: ignoring unknown "
+		  "option `%s'\n", linenumber, cp);
 	      if (word)
 		free (word);
 	      word = 0;
@@ -3701,7 +3772,8 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       else
 	{ 
 	  new_dev_len = 0;
-	  DBG(4, "sane_init: config file line %d: trying to attach `%s'\n", linenumber, line);
+	  DBG(4, "sane_init: config file line %d: trying to attach `%s'\n",
+	      linenumber, line);
 	  sanei_config_attach_matching_devices (line, attach_one_device);
 	  if (word)
 	    free (word);
@@ -3761,8 +3833,8 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 		}
 	      else
 		{
-		  DBG(3, "sane_init: option linedistance-fix ignored, was set before any "
-		      "device name\n");
+		  DBG(3, "sane_init: option linedistance-fix ignored, was "
+		      "set before any device name\n");
 		}
 	      }
 	  else if (strncmp (cp, "lineart-fix", 11) == 0 &&
@@ -3776,8 +3848,8 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 		}
 	      else
 		{
-		  DBG(3, "sane_init: option lineart-fix ignored, was set before any "
-		      "device name\n");
+		  DBG(3, "sane_init: option lineart-fix ignored, was set "
+		      "before any device name\n");
 		}
 	      }
 	  else if (strncmp (cp, "buffersize", 10) == 0 && (isspace (cp[10]) ))
@@ -3799,14 +3871,15 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
 		    {
 		      if (buffer_size < 32.0)
 			buffer_size = 32.0;
-		      new_dev[new_dev_len - 1]->max_buffer_size = buffer_size * 1024;
+		      new_dev[new_dev_len - 1]->max_buffer_size = 
+			buffer_size * 1024;
 		      DBG(3, "sane_init: buffersize set to %g kb for %s\n",
 			  buffer_size, new_dev[new_dev_len - 1]->sane.name);
 		    }
 		  else
 		    {
-		      DBG(3, "sane_init: option buffersize ignored, was set before any "
-			  "device name\n");
+		      DBG(3, "sane_init: option buffersize ignored, was set "
+			  "before any device name\n");
 		    }
 		}
 	    }
