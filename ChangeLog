@@ -1,10 +1,13 @@
 1999-12-12
 
+	* backend/ricoh.h backend/ricoh.c: Add support for Ricoh IS50
+	scanner.  Limit IS50 resolution to 400 dpi.  Reverse IS50 contrast
+	direction.  Patch from Dick Streefland
+	<Dick.Streefland@inter.NL.net>.
+
 	* backend/microtek.c backend/microtek.h backend/microtek.conf
 	backend/microtek.desc doc/sane-microtek.man: Updated Microtek
 	backend to v0.11.0 from Matthew Marjanovic <maddog@mir.com>.
-
-1999-12-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/microtek2.c backend/microtek2.h: Updated Microtek2
 	backend to v0.8 from Bernd Schroeder <bernd@aquila.muc.de>.
