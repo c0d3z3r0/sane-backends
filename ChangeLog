@@ -1,3 +1,8 @@
+2000-07-29  Karl Heinz Kremer <khk@khk.net>
+
+	* backend/epson.c: Changed the include statements for SANE includes
+	  from #include <...> to #include "..."
+
 2000-07-28  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/aretc.c: Corrected sane_close() bug.  Converted to use

@@ -16,7 +16,7 @@
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.32 - 2000-07-26"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.33 - 2000-07-29"
 
 /*
    This file is part of the SANE package.
@@ -58,7 +58,9 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
-   2000-06-26   Fixed problem with Perfection610: The variable
+   2000-07-28   Changed #include <...> to #include "..." for the
+   		sane/... include files.
+   2000-07-26   Fixed problem with Perfection610: The variable
    		s->color_shuffle_line was never correctly initialized
    2000-06-28   When closing the scanner device the data that's	
 		still in the scanner, waiting to be transferred
@@ -159,7 +161,7 @@
 #	include  <lalloca.h>		/* MUST come first for AIX! */
 #endif
 
-#include  <sane/config.h>
+#include  "sane/config.h"
 
 #include  <lalloca.h>
 
@@ -172,9 +174,9 @@
 #include  <unistd.h>
 #include  <errno.h>
 
-#include  <sane/sane.h>
-#include  <sane/saneopts.h>
-#include  <sane/sanei_scsi.h>
+#include  "sane/sane.h"
+#include  "sane/saneopts.h"
+#include  "sane/sanei_scsi.h"
 
 /*
  *  NOTE: try to isolate scsi stuff in own section.
