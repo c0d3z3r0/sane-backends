@@ -1,3 +1,12 @@
+2000-01-20  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* frontend/scanimage.c: Adds a "batch mode" to the software, that
+	can be used in conjunction with an ADF device, so that one can
+	e.g. scan a complete document consting of multiple pages with just
+	one call to scanimage.  This modification was created by Christian
+	Bucher so that his Epson scanner could use the ADF.  Patch from
+	Karl Heinz Kremer.
+	
 2000-01-18  Karl Heinz Kremer <khk@khk.net>
 	* fixed typo in epson.desc and fixed the dates for
 	  two of my earlier submissions in ChangeLog file
