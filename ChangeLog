@@ -1,3 +1,8 @@
+2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+
+	* updated umax backend to version 1.0-build-16
+	  for details take a look at backend/umax.CHANGES
+
 2000-01-31  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/hp-accessor.c backend/hp-accessor.h backend/hp-device.c
