@@ -31,12 +31,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 
 #include <sane/sane.h>
 #include <sane/sanei.h>
 #include <sane/saneopts.h>
+
+#ifndef PATH_MAX
+#define PATH_MAX 1024
+#endif
 
 #ifndef HAVE_ATEXIT
 # define atexit(func)	on_exit(func, 0)	/* works for SunOS, at least */
@@ -1357,7 +1362,7 @@ List of available devices:", prog_name);
 
       do
 	{
-	  char path [ 1024];
+	  char path [PATH_MAX];
 	  sprintf (path, format, n);	/* love --(C++) */
 
 	  if (batch && NULL == freopen (path, "w", stdout) )
@@ -1372,11 +1377,18 @@ List of available devices:", prog_name);
 
 	  switch (status)
 	    {
-	    case SANE_STATUS_EOF:
-	      status = SANE_STATUS_GOOD;
-	      break;
-	    default:
-	      break;
+	      case SANE_STATUS_GOOD:
+	        break;
+	      case SANE_STATUS_EOF:
+	        status = SANE_STATUS_GOOD;
+	        break;
+	      default:
+	        if (batch)
+	          {
+		    fclose(stdout);
+		    unlink(path);
+		  }
+	        break;
 	    }	/* switch */
 	  n++;
 	}
