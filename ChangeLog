@@ -1,3 +1,15 @@
+2000-01-05  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* sanei/sanei_scsi.c include/sane/sanei_scsi.h configure.in
+	linux_sg3_err.h: Updated Linux SCSI Generic (SG) driver as
+	follows:
+	     - new handling of sanei_scsi_max_request_size, if an SG
+	       driver >= 2 is installed;
+	     - SCSI command queueing on SG level for SG drivers >= 2.1.35;
+	     - usage of the new interface in SG version 3, if available
+	     - new configure option --enable-scsibuffersize=N
+	Patch from Abel Deuring <a.deuring@satzbau-gmbh.de>.
+
 2000-01-02  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in tools/Makefile.in tools/sane-config.in: New script
