@@ -1,5 +1,9 @@
 2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
 
+    * doc/sane-hp.man: Updated manual page (scantype --> scan source)
+
+2000-07-09  Peter Kirchgessner <peter@kirchgessner.net>
+
     * backend/hp-handle.c, hp-scl.c, hp-scl.h, hp.c, hp.h, hp-option.c
               hp-option.h: Add wait for front panel button
 
