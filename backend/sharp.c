@@ -1251,7 +1251,7 @@ attach (const char *devnam, SHARP_Device ** devp)
       }
   }
 #else
-  status = sanei_scsi_open (devnam, &fd, &sense_handler, &sense_dat);
+  status = sanei_scsi_open (devnam, &fd, &sense_handler, &sensedat);
   if (status != SANE_STATUS_GOOD)
     {
       DBG (1, "attach: open failed: %s\n", sane_strstatus (status));

@@ -1248,10 +1248,10 @@ SANE_Status
 sanei_scsi_open (const char *dev, int *fdp,
                 SANEI_SCSI_Sense_Handler handler, void *handler_arg)
 {
-  int i = 0;
+  int i = 0, fd, len;
   int wanted_buffersize = SCSIBUFFERSIZE, real_buffersize;
   SANE_Status res;
-  char *cc, *cc1;
+  char *cc, *cc1, buf[32];
 
   cc = getenv("SANE_SG_BUFFERSIZE");
   if (cc)
@@ -1261,6 +1261,40 @@ sanei_scsi_open (const char *dev, int *fdp,
         wanted_buffersize = i;
     }
 
+  /* wanted_buffersize might be too big, if we have the old SG driver.
+     Therefore, check the driver version, and reduce wante_buffersize,
+     if necessary. Otherwise, sanei_scsi_open_extended will fail.
+  */
+  fd = open(dev, O_RDWR);
+  if (fd < 0)
+    {
+      res = SANE_STATUS_INVAL;
+      if (errno == EACCES)
+        res = SANE_STATUS_ACCESS_DENIED;
+      DBG(1, "sanei_scsi_open: open of `%s' failed: %s",
+          dev, strerror(errno));
+      return res;
+    }
+  
+  i = ioctl(fd, SG_GET_VERSION_NUM, &i);
+  close(fd);
+  if (i < 0)
+    {
+      /* we have the old driver */
+      fd = open("proc/sys/kernel/sg-big-buff", O_RDONLY);
+      if (fd > 0 && (len = read (fd, buf, sizeof (buf) - 1)) > 0)
+	{
+	  buf[len] = '\0';
+	  i = atoi (buf);
+	  if (wanted_buffersize > i)
+	    wanted_buffersize = i;
+	  close(fd);
+	}
+      else
+        if (wanted_buffersize > SG_BIG_BUFF)
+          wanted_buffersize = SG_BIG_BUFF;
+    }
+  
   real_buffersize = wanted_buffersize;
   res = sanei_scsi_open_extended(dev, fdp, handler, handler_arg,
                                  &real_buffersize);
