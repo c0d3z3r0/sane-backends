@@ -131,6 +131,10 @@ case $os in
 		os=-sco3.2v2
 		basic_machine=`echo $1 | sed -e 's/86-.*/86-pc/'`
 		;;
+        -7.1.* | sysv4.2uw*)
+                os=-unixware
+                basic_machine=`echo $1 | sed -e 's/86-.*/86-pc/'`
+                ;;
 	-udk*)
 		basic_machine=`echo $1 | sed -e 's/86-.*/86-pc/'`
 		;;
