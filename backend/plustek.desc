@@ -34,7 +34,7 @@
 :interface "Parport (SPP, EPP)"
 :comment "OK"
 
-:model "OpticPro 600P"
+:model "OpticPro 600P/6000P"
 :interface "Parport (SPP, EPP)"
 :comment "OK"
 
