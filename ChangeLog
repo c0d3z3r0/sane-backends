@@ -1,3 +1,7 @@
+2000-02-05  Rene Rebe <rene.rebe@myokay.net>
+	* backedn/avision.? only minor updates and the new home-page
+	  url ...
+	
 2000-02-05  Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* fixed wrong buffer size handling for old Linux SG drivers
 	  in sanei_scsi.c
