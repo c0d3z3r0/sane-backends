@@ -1,5 +1,9 @@
 2000-02-08  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
+	* Added (again) missing file: doc/sane-logo2.jpg
+
+2000-02-08  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+
 	* Added missing umax doc files:
 	  - doc/sane-umax-old-scanners-doc.html
 	  - doc/sane-umax-not-listed-doc.html
