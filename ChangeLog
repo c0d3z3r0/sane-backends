@@ -1,3 +1,7 @@
+2000-02-20  Karl Heinz Kremer <khk@khk.net
+
+	* backend/epson.c: Added some OS/2 compatibility fixes.
+
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* include/sane/sanei_backend.h: Typedef u_int{8,16,32}_t.
