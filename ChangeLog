@@ -1,3 +1,11 @@
+2000-06-13  Karl Heinz Kremer <khk@khk.net>
+	* backend/epson.*: Invert image when scanning negative off the TPU.
+	  Initialize optial_res to 0. Fix sane_close() bug. Make threshold
+	  only active when halftoning is off and scan depth is 1. Make
+	  film type only active when TPU is selected. Scanner based
+	  color correction. More constraints for GUI. Cleanup in option
+	  handling.
+
 2000-05-21  Henning Meier-Geinitz <hmg@gmx.de>
         
 	* backend/mustek.*: Update to Mustek backend 1.0-85. Added double
