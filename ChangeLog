@@ -1,3 +1,8 @@
+2000-07-18  Henning Meier-Geinitz <hmg@gmx.de>
+        
+	* configure.in configure: Fixed --enable-warnings to work as 
+	  advertised.
+
 2000-07-18  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* configure.in configure include/sane/config.h.in lib/Makefile.in
