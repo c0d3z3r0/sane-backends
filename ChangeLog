@@ -4,6 +4,7 @@
 	  the IP address of the remote host before any communication occurs.
 	  Check for a errors before trsuting values that came from remote.
 	  Make sure that strings are 0-terminated.
+	* configure configure.in: New version: 1.0.11.
 
 ******  Release of sane-backends 1.0.10. End of code freeze ******
 
