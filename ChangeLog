@@ -1,4 +1,21 @@
-1999-12-12
+1999-12-20  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* include/sane/config.h.in backend/dc25.desc backend/dc25.c:
+	Updated DC-25 backend to v1.2 from Peter Fales
+	<psfales@lucent.com>.
+	- Updated dc25.desc
+	- Retry capability for missing data or bad checksums in the data
+	  from the camera. This has resulted in a dramatic reduction in
+	  download failures.
+	- Include HAVE_CFMAKERAW in config.h.in and dc25.c.
+
+	* backend/dc210.c: Corrected HAVE_cfmakeraw to HAVE_CFMAKERAW.
+
+	* frontend/xscanimage.c: Change GIMP_EXTENSION to
+	SANE_GIMP_EXTENSION to avoid name conflict with gimp.  Patch from
+	Stanislav Brabec <utx@k332.feld.cvut.cz>.
+
+1999-12-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/ricoh.h backend/ricoh.c: Add support for Ricoh IS50
 	scanner.  Limit IS50 resolution to 400 dpi.  Reverse IS50 contrast
