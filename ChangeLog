@@ -1,3 +1,7 @@
+2000-07-16  Jochen Eisinger <jochen.eisinger@gmx.net>
+
+	* backend/mustek_pp.c: Replaced fgets() with sanei_config_read()
+
 2000-07-16  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* include/sane/sanei_debug.h:  Fix typo.
