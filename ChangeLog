@@ -1,5 +1,7 @@
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* sanei/sanei_pio.c: Removed some warnings.
+
 	* configure.in: New flag --enable-warnings to turn on or off more
 	GCC warnings.  Default should be 'on' for development snapshots,
 	and 'off' for releases.
