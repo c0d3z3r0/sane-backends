@@ -1,3 +1,13 @@
+2000-04-05 Henning Meier-Geinitz <hmg@gmx.de>
+
+	* frontend/xscanimage.c, frontend/preview.c: Fixed a small bug 
+	concerning 3-pass scanners. gdk_input_add() was called three times
+	without a preceding gdk_input_remove().
+
+	* frontend/scanimage.c: Fixed a bug where the scan was cancelled
+	after a test for low mem even if enough memory is available. This
+	probably only affected 3-pass scanners.
+	
 2000-04-02 Henning Meier-Geinitz <hmg@gmx.de>
 
         * backend/mustek.*: Update to Mustek backend 0.78. Fixed several
