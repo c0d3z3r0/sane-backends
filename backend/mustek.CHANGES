@@ -1,5 +1,22 @@
 CHANGES for the SANE Mustek backend
 
+2000-05-18
+  * set debug level for output of unknown Mustek scanner to 0 (suggestion
+    from Thorben Kundinger)
+
+2000-05-12
+  * fixed bug in distinguishing firmware formats
+  * added shrinked image fix to ScanExpress 12000SP models <= v2.0
+
+2000-05-08
+  * fixed remaining sane_cancel problems (in non_blocking mode)
+  * fixed color stripes and segmentation fault for Paragon MFS-12000SP 
+    1.00 (at least for me)
+  * added more debug output to inquiry
+  * added possibility to distinguish old and new firmware formats
+  * added one more debug level (5)
+  * added output of SANE version
+
 2000-05-07
   * released backend version 1.0-81
 

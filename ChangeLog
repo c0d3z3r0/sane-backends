@@ -1,3 +1,15 @@
+2000-05-18  Henning Meier-Geinitz <hmg@gmx.de>
+	
+	* backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
+	  1.0-82. Added shrinked image fix to ScanExpress 12000SP models
+	  <= v2.0. Fixed remaining sane_cancel problems (in non_blocking
+	  mode). Fixed color stripes and segmentation fault for Paragon
+	  MFS-12000SP 1.00 (at least for me). Some minor debug output
+	  additions and changes. Look at backend/mustek.CHANGES for more
+	  details.
+
+	* doc/.cvsignore: Added missing sane-sharp.5
+	
 2000-05-07  Henning Meier-Geinitz <hmg@gmx.de>
 
         * backend/mustek.* doc/sane-mustek.man: Update to Mustek backend
