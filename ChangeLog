@@ -1,4 +1,8 @@
 2000-07-31  Henning Meier-Geinitz <hmg@gmx.de>
+	* backend/mustek.*: Update to Mustek backend 1.0-96. Fixed Problem
+	  with detecting some three-pass scanners.
+	
+2000-07-31  Henning Meier-Geinitz <hmg@gmx.de>
         * doc/sane.tex: Chapter 4 said, that this was standard version
 	  0 (draft). Changed to 1 and removed "(draft)".
 	

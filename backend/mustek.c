@@ -46,7 +46,7 @@
 
 /**************************************************************************/
 /* Mustek backend version                                                 */
-#define BUILD 95
+#define BUILD 96
 /**************************************************************************/
 
 #include "sane/config.h"
@@ -673,10 +673,10 @@ static SANE_Status
 attach (const char *devname, Mustek_Device **devp, int may_wait)
 {
   int mustek_scanner, fw_revision;
-  char result[INQ_LEN];
-  char inquiry_byte_list [50], inquiry_text_list [17];
-  char inquiry_byte [5], inquiry_text [5];
-  const char *model_name = result + 44;
+  u_int8_t result[INQ_LEN];
+  u_int8_t inquiry_byte_list [50], inquiry_text_list [17];
+  u_int8_t inquiry_byte [5], inquiry_text [5];
+  u_int8_t *model_name = result + 44;
   Mustek_Scanner s;
   Mustek_Device *dev, new_dev;
   SANE_Status status;
@@ -687,10 +687,10 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       "Write-Once", "CD-ROM", "Scanner", "Optical Memory", "Medium Changer",
       "Communications"
     };
-  char scsi_vendor[9];
-  char scsi_product[17];
-  char scsi_revision[5];
-  char *pp;
+  u_int8_t scsi_vendor[9];
+  u_int8_t scsi_product[17];
+  u_int8_t scsi_revision[5];
+  u_int8_t *pp;
   SANE_Bool warning = SANE_FALSE;
   int firmware_format = 0;
   int firmware_revision_system = 0;
@@ -747,17 +747,17 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   if (debug_level >= 3)
     {
       /* clear spaces and special chars */
-      strncpy (scsi_vendor, result + 8, 8);
+      strncpy ((char *) scsi_vendor, (char *) result + 8, 8);
       scsi_vendor[8] = '\0';
       pp = scsi_vendor + 7;
       while (pp >= scsi_vendor && (*pp == ' ' || *pp >= 127))
 	*pp-- = '\0';
-      strncpy (scsi_product, result + 16, 16);
+      strncpy ((char *) scsi_product, (char *) result + 16, 16);
       scsi_product[16] = '\0';
       pp = scsi_product + 15;
       while (pp >= scsi_product && (*pp == ' ' || *pp >= 127))
 	*pp-- = '\0';
-      strncpy (scsi_revision, result + 32, 4);
+      strncpy ((char *) scsi_revision, (char *) result + 32, 4);
       scsi_revision[4] = '\0';
       pp = scsi_revision + 3;
       while (pp >= scsi_revision && (*pp == ' ' || *pp >= 127))
@@ -785,10 +785,10 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       inquiry_text_list [0] = '\0';
       for (pp = result; pp < (result + INQ_LEN); pp++)
 	{
-	  sprintf (inquiry_text, "%c", (*pp < 127) && (*pp > 31) ? *pp : '.');
-	  strcat (inquiry_text_list, inquiry_text);
-	  sprintf (inquiry_byte, " %02x", *pp);
-	  strcat (inquiry_byte_list, inquiry_byte);
+	  sprintf ((char *) inquiry_text, "%c", (*pp < 127) && (*pp > 31) ? *pp : '.');
+	  strcat ((char *) inquiry_text_list, (char *) inquiry_text);
+	  sprintf ((char *) inquiry_byte, " %02x", *pp);
+	  strcat ((char *) inquiry_byte_list, (char *) inquiry_byte);
 	  if ((pp - result) % 0x10 == 0x0f)
 	    {
 	      DBG(4, "%s  %s\n", inquiry_byte_list, inquiry_text_list);
@@ -799,7 +799,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
     }
 
   /* first check for new firmware format: */
-  mustek_scanner = (strncmp (result + 36, "MUSTEK", 6) == 0);
+  mustek_scanner = (strncmp ((char *) result + 36, "MUSTEK", 6) == 0);
   if (mustek_scanner)
     {
       if (result[43] == 'M')
@@ -818,7 +818,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   else
     {
       /* check for old format: */
-      mustek_scanner = (strncmp (result + 8, "MUSTEK", 6) == 0);
+      mustek_scanner = (strncmp ((char *) result + 8, "MUSTEK", 6) == 0);
       if (mustek_scanner)
 	{
 	  model_name = result + 16;
@@ -886,19 +886,19 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   dev->firmware_revision_system = firmware_revision_system;
   
   DBG(3, "attach: scanner id: %.11s\n", model_name);
-  if (strncmp (model_name + 10, "PRO", 3) == 0)
+  if (strncmp ((char *) model_name + 10, "PRO", 3) == 0)
     DBG(3, "attach: this is probably a Paragon Pro series scanner\n");
-  else if (strncmp (model_name, "M", 1) == 0)
+  else if (strncmp ((char *) model_name, "M", 1) == 0)
     DBG(3, "attach: this is probably a Paragon series scanner\n");
-  else if (strncmp (model_name, " C", 2) == 0)
+  else if (strncmp ((char *) model_name, " C", 2) == 0)
     DBG(3, "attach: this is probably a ScanExpress series scanner\n");
-  else if (strncmp (model_name, "XC", 2) == 0)
+  else if (strncmp ((char *) model_name, "XC", 2) == 0)
     DBG(3, "attach: this is probably a ScanExpress Plus series scanner\n");
   else
     DBG(3, "attach: I am not sure what type of scanner this is\n");
 
   /* Paragon 3-pass series */
-  if (strncmp (model_name, "MFS-12000CX", 11) == 0)
+  if (strncmp ((char *) model_name, "MFS-12000CX", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon MFS-12000CX v4.00 */
@@ -918,7 +918,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
     }
   /* There are two different versions of the MFS-6000CX, one has the model
      name "MFS-06000CX", the other one is "MSF-06000CZ"   */
-  else if (strncmp (model_name, "MFS-06000CX", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFS-06000CX", 11) == 0)
     {
       /* These values were measured and tested with a Paragon MFS-6000CX
 	 v4.06 */
@@ -938,7 +938,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->flags |= MUSTEK_FLAG_USE_EIGHTS;
       dev->sane.model = "MFS-6000CX";
     }
-  else if (strncmp(model_name, "MSF-06000CZ", 11) == 0)
+  else if (strncmp((char *) model_name, "MSF-06000CZ", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon MFS-6000CX v4.00 */
@@ -963,7 +963,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   /* I haven't seen a single report for this, but it is mentioned in
      the old man page. All reported Paragon 1200SP had a model name 
      "MFS-12000SP" */
-  else if (strncmp (model_name, "MSF-12000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MSF-12000SP", 11) == 0)
     {
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (8.5 * MM_PER_INCH);  
@@ -983,7 +983,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       warning = SANE_TRUE;      
     }
   /* This one does exist */
-  else if (strncmp (model_name, "MSF-08000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MSF-08000SP", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon MFS-8000SP v1.20 */
@@ -1005,7 +1005,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "MFS-8000SP";
     }
   /* This model name exists */
-  else if (strncmp (model_name, "MSF-06000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MSF-06000SP", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon MFS-6000SP v3.12 */
@@ -1025,7 +1025,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
     }
 
   /* This one was reported multiple times */
-  else if (strncmp (model_name, "MFS-12000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFS-12000SP", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon MFS-12000SP v1.02 and v1.00 */
@@ -1052,7 +1052,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "MFS-12000SP";
     }
   /* One report for this one */
-  else if (strncmp (model_name, "MFS-08000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFS-08000SP", 11) == 0)
     {
       /* These values are not tesetd but copied from the MSF-08000SP */
       dev->x_range.min = SANE_FIX (0.0);
@@ -1072,7 +1072,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "MFS-8000SP";
     }
   /* I have never seen one of those */
-  else if (strncmp (model_name, "MFS-06000SP", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFS-06000SP", 11) == 0)
     {
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (8.5 * MM_PER_INCH);  
@@ -1088,7 +1088,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
     }
 
   /* Paragon 1-pass A4 series */
-  else if (strncmp (model_name, "MFC-08000CZ", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFC-08000CZ", 11) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon 800 II SP v1.06. */
@@ -1104,7 +1104,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->dpi_range.max = SANE_FIX (800);
       dev->sane.model = "800S/800 II SP";
     }
-  else if (strncmp (model_name, "MFC-06000CZ", 11) == 0)
+  else if (strncmp ((char *) model_name, "MFC-06000CZ", 11) == 0)
     {
       /* These values were measured and compared to those from the
 	 Windows driver. Tested with a Paragon 600 II CD, a Paragon
@@ -1140,7 +1140,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
     }
 
   /* ScanExpress and ScanMagic series */
-  else if (strncmp(model_name, " C03", 4) == 0)
+  else if (strncmp((char *) model_name, " C03", 4) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a ScannExpress 6000SP 1.00 */
@@ -1163,7 +1163,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "ScanExpress 6000SP";
     }
   /* No report for this one depite of documentation */
-  else if (strncmp(model_name, " C04", 4) == 0)
+  else if (strncmp((char *) model_name, " C04", 4) == 0)
     {
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (216);
@@ -1184,7 +1184,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
   /* There are two different versions of the ScanExpress 12000SP, one has
      the model name " C06", the other one is "XC06". The latter seems to
      be used in current models, especially the ScanExpress 12000SP Plus */
-  else if (strncmp(model_name, " C06", 4) == 0)
+  else if (strncmp((char *) model_name, " C06", 4) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a ScaneExpress 12000SP 2.02 and a ScanMagic
@@ -1207,7 +1207,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->max_buffer_size = 1024 * 64;
       dev->sane.model = "ScanExpress 12000SP";
     }
-  else if (strncmp(model_name, "XC06", 4) == 0)
+  else if (strncmp((char *) model_name, "XC06", 4) == 0)
     {
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (216);
@@ -1229,7 +1229,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       dev->sane.model = "ScanExpress 12000SP (Plus)";
     }
   /* No report for this one depite of documentation */
-  else if (strncmp(model_name, " C12", 4) == 0)
+  else if (strncmp((char *) model_name, " C12", 4) == 0)
     {
       /* These values are not tested. */
       dev->x_range.max = SANE_FIX (216);
@@ -1247,7 +1247,7 @@ attach (const char *devname, Mustek_Device **devp, int may_wait)
       warning = SANE_TRUE;      
     }
   /* No documentation, but it works: Paragon 1200 A3 PRO  */
-  else if (strncmp(model_name, "MFS-1200A3PRO", 13) == 0)
+  else if (strncmp((char *) model_name, "MFS-1200A3PRO", 13) == 0)
     {
       /* These values were measured and compared to those from the Windows
 	 driver. Tested with a Paragon 1200 A3 Pro v1.10 */

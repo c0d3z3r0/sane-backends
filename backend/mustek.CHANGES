@@ -1,5 +1,11 @@
 CHANGES for the SANE Mustek backend
 
+2000-07-30
+  * Fixed bug concerning inquiry of 3-pass scanners. ASCII values > 127
+    weren't interpreted correctly (char instead of unsigned char).
+
+2000-07-30
+  * Released backend version 1.0-95
 
 2000-07-30
   * Removed while {wait ()} loop. Used waitpid() instead. Maybe this cures
