@@ -1,4 +1,4 @@
-.TH sane-mustek 5 "12 March 2000"
+.TH sane-mustek 5 "29 March 2000"
 .IX sane-mustek
 .SH NAME
 sane-mustek - SANE backend for Mustek flatbed scanners
@@ -11,28 +11,27 @@ At present, the following scanners are known to work more or less with
 this backend:
 .PP
 .RS
-MFS-6000CX
+Paragon MFS-6000CX
 .br
-MFS-12000CX
+Paragon MFS-12000CX
 .br
-MFC-600S, MFC-600CD, 600SP, 600 II CD, ScanMagic 600 II SP, Paragon 600 II SP
+Paragon MFC-600S, MFC-600CD, 600SP, 600 II CD, 600 II SP, ScanMagic 600 II SP 
 .br
-MFS-6000SP
+Paragon MFC-800S, 800 II SP
 .br
-MFS-8000SP
+Paragon MFS-6000SP
 .br
-MFC-800S, 800 II SP
+Paragon MFS-8000SP
 .br
-MFS-1200SP, MFS-12000SP, 1200SP, 12000SP, Paragon 12000SP
+Paragon MFS-1200SP, MFS-12000SP
 .br
-ScanExpress 6000 SP
+ScanExpress 6000SP
 .br
-ScanExpress 12000 SP, ScanExpress 12000 SP Plus, Paragon 1200 III SP,
-Paragon 12000 III SP
+ScanExpress 12000SP, 12000SP Plus, Paragon 1200 III SP, 12000 III SP
 .br
 ScanMagic 9636S
 .br
-600 II N
+Paragon 600 II N
 .br
 Trust Imagery 1200 SP
 .br
@@ -65,14 +64,12 @@ file.
 .PP
 If you own a Mustek (or Trust) scanner other than the ones listed
 above that works with this backend, please let us know by sending the
-scanner's exact model name, id, and firmware revision to
+scanner's exact model name (look at the front and back of the scanner)
+and a debug output to
 .IR sane\-devel@mostang.com .
-You can get this information by setting the environment variable
-SANE_DEBUG_MUSTEK to 1 (or higher) and showing the list of available
-scanners with scanimage \-L .  If your scanner is a SCSI device,
-please add the SCSI vendor, id and revision information from your SCSI
-driver or the program find-scanner from the tools directory of your
-SANE distribution.
+You can get the debug output by setting the environment variable
+SANE_DEBUG_MUSTEK to 4 and showing the list of available scanners with
+scanimage \-L . Please send all of it to the mailing list.
 
 .SH "DEVICE NAMES"
 This backend expects device names of the form:
@@ -260,9 +257,20 @@ to "/tmp/config:" would result in directories "tmp/config", ".", and
 .TP
 .B SANE_DEBUG_MUSTEK
 If the library was compiled with debug support enabled, this
-environment variable controls the debug level for this backend.  E.g.,
-a value of 128 requests all debug output to be printed.  Smaller
-levels reduce verbosity.
+environment variable controls the debug level for this backend.  Higher
+debug levels increase the verbosity of the output. 
+
+.nf                                                                            
+Value  Descsription
+0      no output
+1      print fatal errors
+2      print important messages
+3      print non-fatal errors and less important messages
+4      print all available debugging output
+
+Example: 
+export SANE_DEBUG_MUSTEK=4
+
 .SH "SEE ALSO"
 sane\-scsi(5)
 .SH AUTHOR
