@@ -1,3 +1,6 @@
+2000-03-01  Abel Deuring <a.deuring@satzbau-gmbh.de>
+	* doc/sane-scsi.man: fixed an ambiguity and a typo.
+
 2000-02-27  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/v4l*.desc: Changed description from v4l to Video For
