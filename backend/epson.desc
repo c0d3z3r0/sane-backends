@@ -22,13 +22,22 @@
 :mfg "Epson"                      ; name a manufacturer
 :url "http://www.epson.com/"
 :model "GT-5000"                  ; name models for above-specified mfg.
-:comment parallel interface
+:comment "parallel interface"
 :model "GT-6000"
-:comment parallel interface
+:comment "parallel interface"
 :model "Actionscanner II"
-:comment parallel interface
+:comment "parallel interface"
 :model "GT-7000"
 :model "Perfection 1200S"
 :model "FilmScan 200"
-:comment "A better backend is at http://www.vjet.demon.co.uk/scanner/"
+:comment "A better backend for the FilmScan 200 can be found at <A HREF=\"http://www.vjet.demon.co.uk/scanner/\">http://www.vjet.demon.cu.uk/scanner/</A>"
+
+
+
+
+
+
+
+
+
 
