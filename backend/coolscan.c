@@ -1249,7 +1249,8 @@ coolscan_read_data_block (Coolscan_t * s, unsigned int datatype, unsigned int le
   /*wait_scanner(s); */
 
   set_R_datatype_code (sread.cmd, datatype);
-  set_R_datatype_qual_upper (sread.cmd, R_DQ_none);
+  sread.cmd[4]=00;
+  sread.cmd[5]=00;
   set_R_xfer_length (sread.cmd, length);
 
   r = do_scsi_cmd (s->sfd, sread.cmd, sread.size, s->buffer, length);
@@ -2334,6 +2335,59 @@ int RGBIfix(Coolscan_t * scanner,
    return 1;
 };
 
+/* --------------------------------------------------------------- 
+
+  function:   RGBIfix16
+
+  taks:       Correct the infrared channel for 16 bit images
+              (doesn't do anything for now)
+      
+  import:     unsigned char * rgbimat - RGBI - matrix from scanner
+              int size - number of pixels to correct
+	      int *lutr - lookup table for red correction
+	      int *lutg - lookup table for red correction
+	      int *lutb - lookup table for red correction
+	      int *lutr - lookup table for red correction
+
+  export:     unsigned char * orgbimat - RGBI - corrected matrix
+                  
+  written by: Andreas RICK   19.6.1999
+                           
+  ----------------------------------------------------------------*/
+
+int RGBIfix16(Coolscan_t * scanner,
+	      unsigned short* rgbimat,
+	      unsigned short* orgbimat, 	   
+	      int size,
+	      int *lutr,
+	      int *lutg,
+	      int *lutb,
+	      int *luti)
+	    
+{  unsigned short *pr,*pg,*pb,*pi;
+   unsigned short *opr,*opg,*opb,*opi;
+
+   int r,g,b,i;
+   int ii;
+   int x;
+   for(x=0;x<size;x++)
+   {
+        pr=rgbimat+x*4;
+	pg=pr+1; 
+	pb=pg+1;
+	pi=pb+1;	
+        opr=orgbimat+x*4;
+	opg=opr+1; 
+	opb=opg+1;
+	opi=opb+1;
+	(*opr)=(((*pr)&0x00ff)<<8)+(((*pr)&0xff00)>>8); 
+      	(*opg)=(((*pg)&0x00ff)<<8)+(((*pg)&0xff00)>>8); 
+	(*opb)=(((*pb)&0x00ff)<<8)+(((*pb)&0xff00)>>8); 	
+	(*opi)=(((*pi)&0x00ff)<<8)+(((*pi)&0xff00)>>8); 
+   }
+   return 1;
+};
+
 
 /* --------------------------------------------------------------- 
 
@@ -2580,9 +2634,18 @@ reader_process (Coolscan_t * scanner, int pipe_fd)
       }    
       if(scanner->colormode==RGBI) 
       {  /* Correct Infrared Channel */
-	 RGBIfix(scanner,scanner->buffer,scanner->obuffer,
+	if(scanner->bits_per_color>8)
+	{
+	  RGBIfix16(scanner,scanner->buffer,scanner->obuffer,
+		 data_to_read/8,scanner->lutr,
+		 scanner->lutg,scanner->lutb,scanner->luti);
+	}
+	else
+	{
+	  RGBIfix(scanner,scanner->buffer,scanner->obuffer,
 		 data_to_read/4,scanner->lutr,
 		 scanner->lutg,scanner->lutb,scanner->luti);
+	}
       }
       else if((scanner->colormode==GREYSCALE)&&(scanner->LS>=2))
       {  /* Convert to Grey */
@@ -2593,10 +2656,11 @@ reader_process (Coolscan_t * scanner, int pipe_fd)
       { /* or just copy */
 	memcpy (scanner->obuffer, scanner->buffer,data_to_read);
       }     
-      if((scanner->low_byte_first)&&(scanner->bits_per_color>8))
+      if((!scanner->low_byte_first)&&(scanner->bits_per_color>8))
 	{  for(i=0;i<data_to_write;i++) /* inverse byteorder */        
            { h=scanner->obuffer[i];
-             scanner->obuffer[i]=scanner->obuffer[(++i)];
+             scanner->obuffer[i]=scanner->obuffer[i+1];
+	     i++;
   	     scanner->obuffer[i]=h;
 	   }
 	}
@@ -3866,9 +3930,6 @@ sane_get_parameters (SANE_Handle handle, SANE_Parameters * params)
 #ifdef HAS_IRED
        case RGBI:
               params->format =  SANE_FRAME_RGBA; 
-              break; 
-       case IRED:
-              params->format =  SANE_FRAME_IRED;
               break; 
 #endif /* HAS_RGBI */
        case GREYSCALE:
