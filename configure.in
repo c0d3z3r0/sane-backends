@@ -100,7 +100,8 @@ AC_FUNC_ALLOCA
 AC_FUNC_MMAP
 AC_CHECK_FUNCS(atexit ioperm mkdir scsireq_enter sigprocmask \
     strdup strndup strftime strstr strsep strtod snprintf \
-    cfmakeraw tcsendbreak usleep strcasecmp strncasecmp _portaccess)
+    cfmakeraw tcsendbreak usleep strcasecmp strncasecmp _portaccess \
+    getenv isfdtype vsyslog)
 
 dnl initialize libtool
 AC_LIBTOOL_WIN32_DLL

@@ -118,6 +118,9 @@
 /* Define if you have the getcwd function.  */
 #undef HAVE_GETCWD
 
+/* Define if you have the getenv function.  */
+#undef HAVE_GETENV
+
 /* Define if you have the getpagesize function.  */
 #undef HAVE_GETPAGESIZE
 
@@ -126,6 +129,9 @@
 
 /* Define if you have the ioperm function. */
 #undef HAVE_IOPERM
+
+/* Define if you have the isfdtype function.  */
+#undef HAVE_ISFDTYPE
 
 /* Define if you have the mkdir function.  */
 #undef HAVE_MKDIR
@@ -180,6 +186,9 @@
 
 /* Define if you have the valloc function.  */
 #undef HAVE_VALLOC
+
+/* Define if you have the vsyslog function.  */
+#undef HAVE_VSYSLOG
 
 /* Define if you have the snprintf function.  */
 #undef HAVE_SNPRINTF
