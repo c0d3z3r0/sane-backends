@@ -34,7 +34,7 @@ AM_PROG_CC_STDC
 INCLUDES="${INCLUDES} -I/usr/local/include"
 CPPFLAGS="${CPPFLAGS} -D_GNU_SOURCE"
 if test "${ac_cv_prog_gcc}" = "yes"; then
-  CFLAGS="${CFLAGS} -Wall"
+  CFLAGS="${CFLAGS} -Wall -Wstrict-prototypes -Wreturn-type -Wcast-align"
 fi
 
 dnl Checks for header files.
