@@ -95,6 +95,7 @@ typedef struct {
 	unsigned char	set_film_type;				/* EXT */
 	unsigned char	set_exposure_time;			/* F5 */
 	unsigned char	set_bay;				/* F5 */
+	unsigned char	set_threshold;
 } EpsonCmdRec, * EpsonCmd;
 
 enum
@@ -108,10 +109,12 @@ enum
 		, OPT_GAMMA_CORRECTION
 		, OPT_COLOR_CORRECTION
 		, OPT_RESOLUTION
+		, OPT_THRESHOLD
 	, OPT_ADVANCED_GROUP
 		, OPT_MIRROR
 		, OPT_SPEED
 		, OPT_AAS
+		, OPT_ZOOM
 		, OPT_GAMMA_VECTOR
 		, OPT_GAMMA_VECTOR_R
 		, OPT_GAMMA_VECTOR_G
@@ -201,6 +204,7 @@ struct Epson_Scanner {
 	SANE_Byte * buf, * end, * ptr;
 	SANE_Bool canceling;
 	SANE_Word gamma_table [ 4] [ 256];
+	SANE_Int retry_count;
 };
 
 typedef struct Epson_Scanner Epson_Scanner;
