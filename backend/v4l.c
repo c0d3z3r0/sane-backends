@@ -91,7 +91,7 @@
 #endif
 #include <sys/ioctl.h>
 #include <asm/types.h>          /* XXX glibc */
-#include "linux/videodev.h"
+#include <linux/videodev.h>
 
 #define SYNC_TIMEOUT 1
 
@@ -582,7 +582,7 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       return SANE_STATUS_INVAL;
     }
 
-  while (fgets (dev_name, sizeof (dev_name), fp))
+  while (sanei_config_read(dev_name, sizeof (dev_name), fp))
     {
       if (dev_name[0] == '#')           /* ignore line comments */
         continue;
@@ -598,7 +598,12 @@ sane_init (SANE_Int *version_code, SANE_Auth_Callback authorize)
       v4ldev = open ( dev_name,O_RDWR);
       ioctl(v4ldev,VIDIOCGCAP,&capability);
       if (-1 != v4ldev)
-        attach (dev_name, 0);
+        {
+          DBG(1, "sane_init: found videodev on `%s'\n", dev_name);
+          attach (dev_name, 0);
+        }
+      else
+        DBG(1, "sane_init: no videodev on `%s'\n", dev_name);
       close (v4ldev);
     }
   fclose (fp);

@@ -238,7 +238,7 @@ libsane-tamarack.la: ../sanei/sanei_scsi.lo
 libsane-umax.la: ../sanei/sanei_config2.lo
 libsane-umax.la: ../sanei/sanei_constrain_value.lo
 libsane-umax.la: ../sanei/sanei_scsi.lo
-libsane-v4l2.la: ../sanei/sanei_constrain_value.lo
+libsane-v4l.la: ../sanei/sanei_constrain_value.lo
 
 ifneq ($(DLL_PRELOAD),)
 # need to make dll dependent on all sanei files:
