@@ -1,7 +1,5 @@
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
-	* backend/lhii.desc backend/nec.desc: Added info on ex
-
 	* backend/lhii.desc backend/nec.desc backend/musteka4s2.desc
 	backend/plustek.desc backend/sagitta.desc backend/st400.desc
 	backend/v4l.desc backend/v4l2.desc: Added info on existing
