@@ -1224,6 +1224,7 @@ sanei_scsi_open (const char *dev, int *fdp,
 }
 #else
 /* dummy for the proposed new open call */
+SANE_Status
 sanei_scsi_open_extended (const char *dev, int *fdp,
                          SANEI_SCSI_Sense_Handler handler,
                          void *handler_arg, int *buffersize)
