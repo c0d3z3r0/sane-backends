@@ -121,8 +121,7 @@ sanei_debug (int level, const char *fmt, ...)
 }
 
 void
-sanei_debug_max (int level, int max_level, const char *backend,
-                 const char *fmt, ...)
+sanei_debug_max (int level, int max_level, const char *fmt, ...)
 {
   va_list ap;
   va_start (ap, fmt);
