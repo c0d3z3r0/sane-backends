@@ -2448,7 +2448,7 @@ do_authorization (SANE_String_Const ressource)
   linep = &line[0];
   device_found = SANE_FALSE;
 
-  while (fgets (line, MAX_LINE_LEN, fp))
+  while (sanei_config_read (line, MAX_LINE_LEN, fp))
     {
       p = index (linep, SEPARATOR);
       if (p)
@@ -2478,7 +2478,7 @@ do_authorization (SANE_String_Const ressource)
 
   do
     {
-      fgets (line, MAX_LINE_LEN, fp);
+      sanei_config_read (line, MAX_LINE_LEN, fp);
       if (!ferror (fp) && !feof (fp))
 	{
 	  /* neither strsep(3) nor strtok(3) seem to work on my system */
@@ -2932,7 +2932,7 @@ sane_init (SANE_Int * version_code, SANE_Auth_Callback authorize)
       return SANE_STATUS_GOOD;
     }
 
-  while (fgets (dev_name, sizeof (dev_name), fp))
+  while (sanei_config_read (dev_name, sizeof (dev_name), fp))
     {
       cp = (char *) sanei_config_skip_whitespace (dev_name);
       if (!*cp || *cp == '#')	/* ignore line comments & empty lines */
