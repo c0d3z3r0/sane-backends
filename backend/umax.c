@@ -49,7 +49,7 @@
 
 /* --------------------------------------------------------------------------------------------------------- */
 
-#define BUILD 19
+#define BUILD 20
 
 /* --------------------------------------------------------------------------------------------------------- */
 
@@ -556,8 +556,7 @@ static void umax_print_inquiry(Umax_Device *dev)
   /* 0x6e */
   if (dev->inquiry_len<=0x71) {return;}
   DBG(DBG_inquiry,"\n");
-  DBG(DBG_inquiry,"maximum video memory......................: %d KB\n",
-      get_inquiry_max_vidmem(inquiry_block)/1024);
+  DBG(DBG_inquiry,"maximum video memory......................: %d KB\n", dev->inquiry_vidmem/1024);
 
   /* 0x72 */
   DBG(DBG_inquiry,"\n");
@@ -906,6 +905,86 @@ static SANE_Status sense_handler(int scsi_fd, unsigned char *result, void *arg)	
 
   }
  return SANE_STATUS_GOOD;
+}
+
+/* ------------------------------------------------------------ UMAX SET RGB BIND -------------------------- */
+
+static void umax_set_rgb_bind(Umax_Scanner *scanner)
+{
+  if (scanner->val[OPT_RGB_BIND].w == SANE_FALSE)
+  {
+    if (scanner->device->inquiry_analog_gamma)
+    {
+      scanner->opt[OPT_ANALOG_GAMMA].cap   |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_R].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_G].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_B].cap &= ~SANE_CAP_INACTIVE;
+    }
+    if (scanner->device->inquiry_highlight)
+    {
+      scanner->opt[OPT_HIGHLIGHT].cap   |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_R].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_G].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_B].cap &= ~SANE_CAP_INACTIVE;
+    }
+    if (scanner->device->inquiry_shadow)
+    {
+      scanner->opt[OPT_SHADOW].cap   |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_R].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_G].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_B].cap &= ~SANE_CAP_INACTIVE;
+    }
+    if ( (scanner->device->inquiry_exposure_adj) &&
+         (scanner->val[OPT_SELECT_EXPOSURE_TIME].w) )
+    {
+      scanner->opt[OPT_CAL_EXPOS_TIME].cap    |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_R].cap  &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_G].cap  &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_B].cap  &= ~SANE_CAP_INACTIVE;
+
+      scanner->opt[OPT_SCAN_EXPOS_TIME].cap   |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_R].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_G].cap &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_B].cap &= ~SANE_CAP_INACTIVE;
+    }
+  }
+  else
+  {
+    if (scanner->device->inquiry_analog_gamma)
+    {
+      scanner->opt[OPT_ANALOG_GAMMA].cap   &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_R].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_G].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_ANALOG_GAMMA_B].cap |= SANE_CAP_INACTIVE;
+    }
+    if (scanner->device->inquiry_highlight)
+    {
+      scanner->opt[OPT_HIGHLIGHT].cap   &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_R].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_G].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_HIGHLIGHT_B].cap |= SANE_CAP_INACTIVE;
+    }
+    if (scanner->device->inquiry_shadow)
+    {
+      scanner->opt[OPT_SHADOW].cap   &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_R].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_G].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SHADOW_B].cap |= SANE_CAP_INACTIVE;
+    }
+    if ( (scanner->device->inquiry_exposure_adj) &&
+         (scanner->val[OPT_SELECT_EXPOSURE_TIME].w) )
+    {
+      scanner->opt[OPT_CAL_EXPOS_TIME].cap    &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_R].cap  |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_G].cap  |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_CAL_EXPOS_TIME_B].cap  |= SANE_CAP_INACTIVE;
+
+      scanner->opt[OPT_SCAN_EXPOS_TIME].cap   &= ~SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_R].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_G].cap |= SANE_CAP_INACTIVE;
+      scanner->opt[OPT_SCAN_EXPOS_TIME_B].cap |= SANE_CAP_INACTIVE;
+    }
+  }
 }
 
 /* ------------------------------------------------------------ UMAX CALCULATE PIXELS ---------------------- */
@@ -1914,15 +1993,20 @@ static SANE_Status umax_do_calibration(Umax_Device *dev)
       {
         DBG(DBG_warning,"         Calibration is done with selected image geometry and depth!\n");
 
-        width   = dev->scanwidth * dev->relevant_optical_res / dev->x_coordinate_base;
+        width = dev->scanwidth * dev->relevant_optical_res / dev->x_coordinate_base;
+        width = width + dev->calibration_width_offset; 
+
         if (dev->colormode == RGB)
         {
           width = width * 3;
         }
 
         lines   = dev->calib_lines;
-
+#if 0
         if (dev->bits_per_pixel_code == 1)
+#else
+        if (dev->gamma_input_bits_code <= 1)
+#endif
         {
           bytespp = 1; /* 8 bit mode */
         }
@@ -1936,7 +2020,7 @@ static SANE_Status umax_do_calibration(Umax_Device *dev)
         DBG(DBG_warning,"         Calibration is done for each CCD pixel with full depth!\n");
 
         width = dev->maxwidth * dev->relevant_optical_res / dev->x_coordinate_base;
-        width = width + 308; /* Mirage D-16L needs this, don`t know why */
+        width = width + dev->calibration_width_offset; 
 
         if (dev->colormode == RGB)
         {
@@ -2193,6 +2277,11 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
     {
       dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
     }
+    else if (!strncmp(product, "Astra 2200 ", 11))
+    {
+      DBG(DBG_warning,"setting up special options for %s\n", product);
+      DBG(DBG_warning,"- special options are unknown: calibration by driver and 9-16 bpp do not work correct.\n");
+    }
     else if (!strncmp(product, "Astra 2400S ", 12))
     {
       DBG(DBG_warning,"setting up special options for %s\n", product);
@@ -2205,15 +2294,6 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
 
       DBG(DBG_warning," - correcting ADF bit in inquiry\n");
       set_inquiry_sc_adf(dev->buffer, 1);		   /* set second bit that indicates ADF is supported */
-    }
-    else if ( (!strncmp(product, "Vista-S6E ", 10)) ||
-              (!strncmp(product, "UMAX S-6E ", 10)) ||
-              (!strncmp(product, "UMAX S-6EG ", 11)) )
-    {
-#ifdef PREVIEW_FIX_ON
-	dev->RGB_PREVIEW_FIX = 1;
-        DBG(DBG_warning,"activating preview fix\n");
-#endif
     }
     else if (!strncmp(product, "Vista-T630 ", 11))
     {
@@ -2250,23 +2330,45 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
               (!strncmp(product, "SuperVista S-12 ", 16)) )
     {
       DBG(DBG_warning,"setting up special options for %s\n", product);
+#if 0
       DBG(DBG_warning," - do not wait for finishing reposition scanner\n");
       dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
       dev->pause_for_moving = 0;			         /* pause for moving scanhead over full area */
+#endif
     }
     else if (!strncmp(product, "Mirage D-16L ", 13))
     {
       DBG(DBG_warning,"setting up special options for %s\n", product);
+#if 0
       DBG(DBG_warning," - do not wait for finishing reposition scanner\n");
       dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
       dev->pause_for_moving = 0;			         /* pause for moving scanhead over full area */
+#endif
       DBG(DBG_warning," - calibration by driver is done for each CCD pixel\n");
       dev->calibration_area = UMAX_CALIBRATION_AREA_CCD;
+      DBG(DBG_warning," - adding calibration width offset of 308 pixels\n");
+      dev->calibration_width_offset = 308;
+    }
+    else if (!strncmp(product, "PowerLook III ", 13))
+    {
+      DBG(DBG_warning,"setting up special options for %s\n", product);
+#if 0
+      DBG(DBG_warning," - do not wait for finishing reposition scanner\n");
+      dev->pause_after_reposition = -1;			      /* do not wait for finishing repostion scanner */
+      dev->pause_for_moving = 0;			         /* pause for moving scanhead over full area */
+#endif
+      DBG(DBG_warning," - adding calibration width offset of 28 pixels\n");
+      dev->calibration_width_offset = 28;
     }
     else
     {
       DBG(DBG_warning,"using standard options for %s\n", product);
     }
+
+#ifdef PREVIEW_FIX_ON
+    dev->RGB_PREVIEW_FIX = 1;
+    DBG(DBG_warning,"activating preview fix\n");
+#endif
 
 #ifdef SANE_UMAX_DEBUG_S12
     if (!strncmp(product, "UMAX S-12G ", 11))
@@ -3151,6 +3253,7 @@ static void umax_get_inquiry_values(Umax_Device *dev)
   dev->inquiry_GIB           = get_inquiry_gib(inquiry_block);
   dev->inquiry_GOB           = get_inquiry_gob(inquiry_block);
   dev->inquiry_color_order   = get_inquiry_color_order(inquiry_block);
+  dev->inquiry_vidmem        = get_inquiry_max_vidmem(inquiry_block);
 
   /* optical resolution = [0x73] * 100 + [0x94] , 0x94 is not always defined */
   dev->inquiry_optical_res = 100 * get_inquiry_max_opt_res(inquiry_block);
@@ -3346,13 +3449,13 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
     {
       if ((dev->inquiry_lineart_order) && (dev->colormode == LINEART)) /* lineart with LSB first */
       {
-       int i,j;
+       unsigned int i,j;
        int new,old;
 
         for (i=0; i<data_to_read; i++)
         {
-          old=dev->buffer[i];    
-          new=0;
+          old = dev->buffer[i];    
+          new = 0;
           for (j=0; j<8; j++)  /* reverse bit order of 1 byte */
           {
             new = (new << 1) + (old & 1);
@@ -3590,11 +3693,12 @@ static void umax_init(Umax_Device *dev)		     /* umax_init is called once while 
   dev->button_pressed    = 0;							/* reset button pressed flag */
 
   dev->calibration_area  = UMAX_CALIBRATION_AREA_IMAGE;
+  dev->calibration_width_offset = 0;
 
   dev->pause_for_color_calibration = 0;			/* pause between start_scan and do_calibration in ms */
   dev->pause_for_gray_calibration  = 0;			/* pause between start_scan and do_calibration in ms */
   dev->pause_after_calibration     = 0;			 /* pause between do_calibration and read data in ms */
-  dev->pause_after_reposition      = 0;				      /* pause after repostion scanner in ms */
+  dev->pause_after_reposition      = -1;	    /* pause after repostion scanner in ms, -1 = do not wait */
   dev->pause_for_moving            = 0;			         /* pause for moving scanhead over full area */
 
   if (umax_test_little_endian() == SANE_TRUE)
@@ -4943,7 +5047,6 @@ const SANE_Option_Descriptor *sane_get_option_descriptor(SANE_Handle handle, SAN
  return scanner->opt + option;
 }
 
-
 /* ------------------------------------------------------------ SANE CONTROL OPTION ------------------------ */
 
 
@@ -5225,80 +5328,8 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
           {
             *info |= SANE_INFO_RELOAD_OPTIONS;
           }
-          if (scanner->val[option].w == SANE_FALSE)
-          {
-            if (scanner->device->inquiry_analog_gamma)
-	    {
-              scanner->opt[OPT_ANALOG_GAMMA].cap   |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_R].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_G].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_B].cap &= ~SANE_CAP_INACTIVE;
-	    }
-            if (scanner->device->inquiry_highlight)
-	    {
-              scanner->opt[OPT_HIGHLIGHT].cap   |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_R].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_G].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_B].cap &= ~SANE_CAP_INACTIVE;
-	    }
-            if (scanner->device->inquiry_shadow)
-	    {
-              scanner->opt[OPT_SHADOW].cap   |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_R].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_G].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_B].cap &= ~SANE_CAP_INACTIVE;
-	    }
-	    if ( (scanner->device->inquiry_exposure_adj) &&
-                 (scanner->val[OPT_SELECT_EXPOSURE_TIME].w) )
-	    {
-              scanner->opt[OPT_CAL_EXPOS_TIME].cap    |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_R].cap  &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_G].cap  &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_B].cap  &= ~SANE_CAP_INACTIVE;
 
-              scanner->opt[OPT_SCAN_EXPOS_TIME].cap   |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_R].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_G].cap &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_B].cap &= ~SANE_CAP_INACTIVE;
-	    }
-          }
-          else
-          {
-            if (scanner->device->inquiry_analog_gamma)
-	    {
-              scanner->opt[OPT_ANALOG_GAMMA].cap   &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_R].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_G].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_ANALOG_GAMMA_B].cap |= SANE_CAP_INACTIVE;
-            }
-            if (scanner->device->inquiry_highlight)
-	    {
-              scanner->opt[OPT_HIGHLIGHT].cap   &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_R].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_G].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_HIGHLIGHT_B].cap |= SANE_CAP_INACTIVE;
-            }
-            if (scanner->device->inquiry_shadow)
-	    {
-              scanner->opt[OPT_SHADOW].cap   &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_R].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_G].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SHADOW_B].cap |= SANE_CAP_INACTIVE;
-            }
-	    if ( (scanner->device->inquiry_exposure_adj) &&
-                 (scanner->val[OPT_SELECT_EXPOSURE_TIME].w) )
-	    {
-              scanner->opt[OPT_CAL_EXPOS_TIME].cap    &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_R].cap  |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_G].cap  |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_CAL_EXPOS_TIME_B].cap  |= SANE_CAP_INACTIVE;
-
-              scanner->opt[OPT_SCAN_EXPOS_TIME].cap   &= ~SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_R].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_G].cap |= SANE_CAP_INACTIVE;
-              scanner->opt[OPT_SCAN_EXPOS_TIME_B].cap |= SANE_CAP_INACTIVE;
-	    }
-          }
+          umax_set_rgb_bind(scanner);
         }
        return SANE_STATUS_GOOD;
 
@@ -5500,17 +5531,16 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
         scanner->opt[OPT_GAMMA_VECTOR_G].cap     |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_GAMMA_VECTOR_B].cap     |= SANE_CAP_INACTIVE;
 
+        scanner->opt[OPT_CONTRAST].cap           |= SANE_CAP_INACTIVE;
+        scanner->opt[OPT_BRIGHTNESS].cap         |= SANE_CAP_INACTIVE;
+        scanner->opt[OPT_THRESHOLD].cap          |= SANE_CAP_INACTIVE;
+
         scanner->opt[OPT_RGB_BIND].cap           |= SANE_CAP_INACTIVE;
-        scanner->val[OPT_RGB_BIND].w              = SANE_TRUE;
 
         scanner->opt[OPT_ANALOG_GAMMA].cap       |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_ANALOG_GAMMA_R].cap     |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_ANALOG_GAMMA_G].cap     |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_ANALOG_GAMMA_B].cap     |= SANE_CAP_INACTIVE;
-
-        scanner->opt[OPT_CONTRAST].cap           |= SANE_CAP_INACTIVE;
-        scanner->opt[OPT_BRIGHTNESS].cap         |= SANE_CAP_INACTIVE;
-        scanner->opt[OPT_THRESHOLD].cap          |= SANE_CAP_INACTIVE;
 
         scanner->opt[OPT_HIGHLIGHT].cap          |= SANE_CAP_INACTIVE;
         scanner->opt[OPT_HIGHLIGHT_R].cap        |= SANE_CAP_INACTIVE;
@@ -5540,6 +5570,8 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
 
         if (halftoning || strcmp(val, LINEART_STR) == 0 || strcmp(val, COLOR_LINEART_STR) == 0)
         {										    /* one bit modes */
+          scanner->val[OPT_RGB_BIND].w = SANE_TRUE;
+
           if (scanner->device->inquiry_reverse)
           {
             scanner->opt[OPT_NEGATIVE].cap  &= ~SANE_CAP_INACTIVE;
@@ -5647,10 +5679,14 @@ SANE_Status sane_control_option(SANE_Handle handle, SANE_Int option, SANE_Action
           }
 	  else /* grayscale */
 	  {
+            scanner->val[OPT_RGB_BIND].w = SANE_TRUE;
+
             scanner->exposure_time_range.min = SANE_FIX(scanner->device->inquiry_exposure_time_g_min
 	                                               * scanner->device->inquiry_exposure_time_step_unit);
 	  }
 	}
+
+        umax_set_rgb_bind(scanner);
 
         if (scanner->val[OPT_CUSTOM_GAMMA].w)
         {
@@ -5812,7 +5848,16 @@ SANE_Status sane_start(SANE_Handle handle)
   if (scanner->device->sfd < 0)   /* first call, don`t run this routine again on multi frame or multi image scan */
   {
 #ifdef HAVE_SANEI_SCSI_OPEN_EXTENDED
+#if 1
    unsigned int scsi_bufsize = 131072; /* 128KB */
+#else
+   unsigned int scsi_bufsize = scanner->device->inquiry_vidmem;
+
+    if (scsi_bufsize < 32768) /* < 32KB */
+    {
+      scsi_bufsize = 32768; /* ask at least for 32KB */
+    }
+#endif
 
     if (sanei_scsi_open_extended(scanner->device->sane.name, &(scanner->device->sfd), sense_handler,
                                  scanner->device, &scsi_bufsize) != 0)

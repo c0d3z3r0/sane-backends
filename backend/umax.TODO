@@ -1,6 +1,8 @@
 TODO UMAX BACKEND FOR SANE
 ==========================
 
+ * add backend internal callibration support for Astra 2200 and PowerLook III
+
  * change set_window if (dev->do_color_ordering != 0) {..}
    one of the settings makes an error for Astra 6X0S scanners
 
