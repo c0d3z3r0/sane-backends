@@ -187,7 +187,7 @@ AC_SUBST(GTK_LIBS)
 AC_SUBST(GIMP_LIBS)
 CPPFLAGS="${CPPFLAGS} -DPATH_SANE_CONFIG_DIR=\$(configdir) \
 	  -DPATH_SANE_DATA_DIR=\$(datadir) \
-	  -DV_MAJOR=${V_MAJOR} -DV_MINOR=${V_MINOR}"
+	  -DV_MAJOR=${V_MAJOR} -DV_MINOR=${V_MINOR} -DV_REV=${V_REV}"
 
 if test "${ac_cv_header_jconfig_h}" = "no"; then
   echo "disabling DC210 backend (failed to find JPEG library)"
