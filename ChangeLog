@@ -1,3 +1,9 @@
+2000-06-27  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* backend/lhii.desc: added :interface
+	* README.linux: added reference to Linux SCSI documentation (from
+	  Abel Deuring)
+
 2000-06-26  Henning Meier-Geinitz <hmg@gmx.de>
 	
 	* backend/musteka4s2.desc: Added all more scanners and
