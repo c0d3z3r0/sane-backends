@@ -1,3 +1,10 @@
+2000-01-26  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* backend/m3096g-scsi.h backend/m3096g.c backend/m3096g.desc
+	backend/m3096g.h backend/sp15c-scsi.h backend/sp15c.c
+	backend/sp15c.desc backend/sp15c.h: Updated backends sp15c
+	(v1.12) and m3096g (v1.11) from Randolph Bentson.
+
 2000-01-25: Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* frontend/scanimage.c: minor modifications to the new batch mode
 	  If an error occurs in batch mode, the corresponding output file
@@ -25,7 +32,7 @@
 	doc/Makefile.in doc/sane-fujitsu.man: Added backends sp15c (v1.11)
 	and m3096g (v1.10).
 
-	All patches from from Randolph Bentson.
+	All patches from Randolph Bentson.
 
 2000-01-24: Abel Deuring <a.deuring@satzbau-gmbh.de>
 
