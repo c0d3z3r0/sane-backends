@@ -1,3 +1,8 @@
+1999-08-16  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* acinclude.m4 configure.in: Separate GTK_LIBS into LIBS and
+ 	LDFLAGS to get the X programs to link on HP/UX.
+	
 1999-08-12  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* aclocal.m4 configure.in configure: Generate configure and
