@@ -1,4 +1,4 @@
-.TH sane-plustek 5 "08 July 2000"
+.TH sane-plustek 5 "22 July 2000"
 .IX sane-plustek
 .SH NAME
 sane-plustek - SANE backend for Plustek parallel port flatbed scanners
@@ -32,19 +32,25 @@ OpticPro 9630P/FBIV    96003 600x1200 dpi 30bit 128Kb
 .br
 OpticPro 9630PL (14")  96003 600x1200 dpi 30bit 128Kb
 .br
-OpticPro 600P/4831P    96003  300x600 dpi 30bit 32Kb
+OpticPro 600P/6000P    96003  300x600 dpi 30bit  32Kb
 .br
-OpticPro 4830P/FBIII   96003  300x600 dpi 30bit 32Kb
+OpticPro 4831P         96003  300x600 dpi 30bit  32Kb
 .br
-OpticPro 4800P/FBII    96001  300x600 dpi 24bit 32Kb
+OpticPro 4830P/FBIII   96003  300x600 dpi 30bit  32Kb
+.br
+OpticPro 4800P/FBII    96001  300x600 dpi 24bit  32Kb
 .br
 .PP
 
 .SH "OTHER PLUSTEK SCANNERS"
 
 This driver only supports the parallelport scanners from Plustek.
-It is not planned to support the USB devices (OP 1212U, U12, UT12)
-or the SCSI scanner OpticPro 19200S.
+It is not planned to support the USB devices (OP 1212U, U12, UT12).
+
+The SCSI scanner OpticPro 19200S is a rebadged Artec AM12S scanner
+and is supported by the
+.B Artec
+backend.
 
 ASIC 98003 based models (OpticPro P8, P12 and PT12) are currently
 not supported.
