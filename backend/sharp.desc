@@ -9,8 +9,8 @@
 :mfg "SHARP"                    ; name a manufacturer
 :url "http://sharp-world.com/"
 :model "JX-610"                 ; name models for above-specified mfg.
-:comment
+:comment ""
 :model "JX-250"                 ; name models for above-specified mfg.
-:comment
+:comment ""
 :model "JX-330"                 ; name models for above-specified mfg.
 :comment "backend is not yet tested with a JX 330!"
