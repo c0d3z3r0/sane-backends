@@ -1,3 +1,10 @@
+2000-01-26  Karl Heinz Kremer <khk@khk.net>
+	* backend/epson.[ch] Bugfix for resolution selection via menu
+	  Fixed coredump when no scanner found
+	  merged Christian Bucher's newest version
+
+	* AUTHORS ChangeLog
+
 2000-01-26  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/m3096g-scsi.h backend/m3096g.c backend/m3096g.desc
@@ -27,6 +34,7 @@
 	* backend/sharp.c: Fix of possible segfault in sane_init
 	* backend/sharp.conf: contains now a complete sample configuration
 
+>>>>>>> 1.1.1.1.2.40
 2000-01-25  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* frontend/scanimage.c: Return SANE_STATUS_NO_MEM if advance()
