@@ -241,6 +241,7 @@ struct Epson_Scanner {
 	SANE_Bool eof;
 	SANE_Byte * buf, * end, * ptr;
 	SANE_Bool canceling;
+	SANE_Bool invert_image;
 	SANE_Word gamma_table [ 4] [ 256];
 	SANE_Int retry_count;
 	SANE_Byte *line_buffer[LINES_SHUFFLE_MAX];	

@@ -12,10 +12,11 @@
    Copyright (C) 1998-1999 Kling & Hautzinger GmbH
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
+   Copyright (C) 2000 Mike Porter <mike@udel.edu> (mjp)
 
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.27 - 2000-05-21"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.29 - 2000-06-13"
 
 /*
    This file is part of the SANE package.
@@ -57,6 +58,22 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-06-13   Invert image when scanning negative with TPU,
+                Show film type only when TPU is selected
+   2000-06-13   Initialize optical_res to 0 (Dave Hill)
+   2000-06-07   Fix in sane_close() - found by Henning Meier-Geinitz 
+   2000-06-01	Threshhold should only be active when scan depth
+		is 1 and halftoning is off.  (mjp)
+   2000-05-28	Turned on scanner based color correction.
+                Dependancies between many options are now
+                being enforced.  For instance, auto area seg
+                (AAS) should only be on when scan depth == 1.
+                Added some routines to active and deactivate
+                options.  Routines report if option changed.
+                Help prevent extraneous option reloads.  Split
+                sane_control_option in getvalue and setvalue.
+                Further split up setvalue into several different
+                routines. (mjp)                         
    2000-05-21   In sane_close use close_scanner instead of just the 
 		SCSI close function.
    2000-05-20   ... finally fixed the problem with the 610
@@ -240,7 +257,7 @@ static int scsi_write ( int fd, const void * buf, size_t buf_size, SANE_Status *
 #define  EPSON_CONFIG_FILE	"epson.conf"
 
 #ifndef  PATH_MAX
-#	define  PATH_MAX	1024
+#	define  PATH_MAX	(1024)
 #endif
 
 #define  walloc(x)	( x *) malloc( sizeof( x) )
@@ -460,6 +477,9 @@ static SANE_String_Const source_list [ ] =
 	, NULL
 	};
 
+#define FILM_TYPE_POSITIVE	(0)
+#define FILM_TYPE_NEGATIVE	(1)
+
 static const SANE_String_Const film_list [ ] =
 	{ "Positive Film"
 	, "Negative Film"
@@ -470,8 +490,11 @@ static const SANE_String_Const film_list [ ] =
  * TODO: add some missing const.
  */
 
+#define HALFTONE_NONE 0x01
+#define HALFTONE_TET 0x03
+
 static int halftone_params [ ] =
-	{ 0x01
+	{ HALFTONE_NONE
 	, 0x00
 	, 0x10
 	, 0x20
@@ -479,7 +502,7 @@ static int halftone_params [ ] =
 	, 0x90
 	, 0xa0
 	, 0xb0
-	, 0x03
+	, HALFTONE_TET
 	, 0xc0
 	, 0xd0
 	};
@@ -540,16 +563,25 @@ static const SANE_String_Const dropout_list [ ] =
 
 static int color_params [ ] =
 	{ 0x00
-/*	, 0x01	*/
+	, 0x01
 	, 0x10
 	, 0x20
 	, 0x40
 	, 0x80
 	};
 
+static SANE_Bool color_userdefined [] =
+	{ SANE_FALSE
+	, SANE_TRUE
+	, SANE_FALSE
+	, SANE_FALSE
+	, SANE_FALSE
+	, SANE_FALSE
+	};
+
 static const SANE_String_Const color_list [ ] =
 	{ "No Correction"
-/*	, "User defined"	*/
+	, "User defined"
 	, "Impact-dot printers"
 	, "Thermal printers"
 	, "Ink-jet printers"
@@ -735,7 +767,6 @@ static SANE_Status get_identity2_information(SANE_Handle handle);
 static int send ( Epson_Scanner * s, const void *buf, size_t buf_size, SANE_Status * status);
 static ssize_t receive ( Epson_Scanner * s, void *buf, ssize_t buf_size, SANE_Status * status);
 static SANE_Status color_shuffle(SANE_Handle handle, int *new_length);
-
 
 /*
  *
@@ -1012,6 +1043,7 @@ static SANE_Status set_color_correction_coefficients ( Epson_Scanner * s) {
 	const int length = 9;
 	signed char cct [ 9];
 
+	DBG( 1, "set_color_correction_coefficients: starting.\n" );
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
@@ -1032,8 +1064,13 @@ static SANE_Status set_color_correction_coefficients ( Epson_Scanner * s) {
 	cct[ 7] = s->val[ OPT_CCT_8].w;
 	cct[ 8] = s->val[ OPT_CCT_9].w;
 
+	DBG( 1, "set_color_correction_coefficients: %d,%d,%d %d,%d,%d %d,%d,%d.\n",
+		cct[0], cct[1], cct[2], cct[3],
+		cct[4], cct[5], cct[6], cct[7], cct[8] );
+
 	send( s, cct, length, &status);
 	status = expect_ack( s);
+	DBG( 1, "set_color_correction_coefficients: ending=%d.\n", status );
 
 	return status;
 }
@@ -1051,6 +1088,7 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 	u_char gamma [ 257];
 	int n;
 
+	DBG( 1, "set_gamma_table: starting.\n" );
 	if( ! cmd)
 		return SANE_STATUS_UNSUPPORTED;
 
@@ -1058,29 +1096,28 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 	params[ 1] = cmd;
 
 /*
+	Print the gamma tables before sending them to the scanner.
+*/
+
+	if (DBG_LEVEL > 0) {
+		int	c, i, j;
+
+		fprintf(stderr, "set_gamma_table()\n");
+		for (c=0; c<4; c++) {
+			for (i=0; i<256; i+= 16) {
+				fprintf(stderr, "Gamma Table[%d][%d] ", c, i);
+				for (j=0; j<16; j++) {
+					fprintf(stderr, " %02x", s->gamma_table[c][i+j]);
+				}
+				fprintf(stderr, "\n");
+			}
+		}
+	}
+
+
+/*
  * TODO: &status in send make no sense like that.
  */
-
-#if 0
-{
-  /* print the gamma tables before sending them to the scanner */
-  int	c, i, j;
-
-  fprintf(stderr, "set_gamma_table()\n");
-  for (c=0; c<4; c++) 
-  {
-    for (i=0; i<256; i+= 16)
-    {
-	fprintf(stderr, "Gamma Table[%d][%d] ", c, i);
-	for (j=0; j<16; j++)
-	{
-		fprintf(stderr, " %02x", s->gamma_table[c][i+j]);
-	}
-	fprintf(stderr, "\n");
-    }
-  }
-}
-#endif
 
 	send( s, params, 2, &status);
 	if( SANE_STATUS_GOOD != ( status = expect_ack( s) ) )
@@ -1136,6 +1173,7 @@ static SANE_Status set_gamma_table ( Epson_Scanner * s) {
 
 	send( s, gamma, length, &status);
 	status = expect_ack( s);
+	DBG( 1, "set_gamma_table: complete = %d.\n", status );
 
 	return status;
 }
@@ -1482,6 +1520,10 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 	s->hw->sane.type = "flatbed scanner";
 	s->hw->sane.vendor = "Epson";
 	s->hw->sane.model = NULL;
+	s->hw->optical_res = 0;		/* just to have it initialized */
+	s->hw->color_shuffle = SANE_FALSE;
+	s->hw->extension = SANE_FALSE;
+	s->hw->use_extension = SANE_FALSE;
 	
 	s->hw->cmd = &epson_cmd[EPSON_LEVEL_DEFAULT];	/* use default function level */
         s->hw->connection = SANE_EPSON_NODEV;		/* no device configured yet */
@@ -2180,8 +2222,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 			s->opt[ OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_B].cap &= ~SANE_CAP_INACTIVE;
-		}
-		else {
+		} else {
 			s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
@@ -2212,8 +2253,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_COLOR_CORRECTION].cap |= SANE_CAP_ADVANCED;
 		s->opt[ OPT_COLOR_CORRECTION].constraint_type = SANE_CONSTRAINT_STRING_LIST;
 		s->opt[ OPT_COLOR_CORRECTION].constraint.string_list = color_list;
-/*		s->val[ OPT_COLOR_CORRECTION].w = 5; */		/* scanner default: CRT monitors */
-		s->val[ OPT_COLOR_CORRECTION].w = 4;		/* scanner default: CRT monitors */
+		s->val[ OPT_COLOR_CORRECTION].w = 5;	/* scanner default: CRT monitors */
 
 		if( ! s->hw->cmd->set_color_correction) {
 			s->opt[ OPT_COLOR_CORRECTION].cap |= SANE_CAP_INACTIVE;
@@ -2247,7 +2287,7 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 
 
 	s->opt[ OPT_CCT_GROUP].title	= "Color correction coefficients";
-	s->opt[ OPT_CCT_GROUP].desc	= "";
+	s->opt[ OPT_CCT_GROUP].desc	= "Matrix multiplication of RGB";
 	s->opt[ OPT_CCT_GROUP].type	= SANE_TYPE_GROUP;
 	s->opt[ OPT_CCT_GROUP].cap	= SANE_CAP_ADVANCED;
 
@@ -2263,25 +2303,25 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_CCT_8].name  = "cct-8";
 		s->opt[ OPT_CCT_9].name  = "cct-9";
 
-		s->opt[ OPT_CCT_1].title = "d1";
-		s->opt[ OPT_CCT_2].title = "d2";
-		s->opt[ OPT_CCT_3].title = "d3";
-		s->opt[ OPT_CCT_4].title = "d4";
-		s->opt[ OPT_CCT_5].title = "d5";
-		s->opt[ OPT_CCT_6].title = "d6";
-		s->opt[ OPT_CCT_7].title = "d7";
-		s->opt[ OPT_CCT_8].title = "d8";
-		s->opt[ OPT_CCT_9].title = "d9";
+		s->opt[ OPT_CCT_1].title = "Green";
+		s->opt[ OPT_CCT_2].title = "Shift green to red";
+		s->opt[ OPT_CCT_3].title = "Shift green to blue";
+		s->opt[ OPT_CCT_4].title = "Shift red to green";
+		s->opt[ OPT_CCT_5].title = "Red";
+		s->opt[ OPT_CCT_6].title = "Shift red to blue";
+		s->opt[ OPT_CCT_7].title = "Shift blue to green";
+		s->opt[ OPT_CCT_8].title = "Shift blue to red";
+		s->opt[ OPT_CCT_9].title = "Blue";
 
-		s->opt[ OPT_CCT_1].desc  = "";
-		s->opt[ OPT_CCT_2].desc  = "";
-		s->opt[ OPT_CCT_3].desc  = "";
-		s->opt[ OPT_CCT_4].desc  = "";
-		s->opt[ OPT_CCT_5].desc  = "";
-		s->opt[ OPT_CCT_6].desc  = "";
-		s->opt[ OPT_CCT_7].desc  = "";
-		s->opt[ OPT_CCT_8].desc  = "";
-		s->opt[ OPT_CCT_9].desc  = "";
+		s->opt[ OPT_CCT_1].desc  = "Controls green level";
+		s->opt[ OPT_CCT_2].desc  = "Adds to red based on green level";
+		s->opt[ OPT_CCT_3].desc  = "Adds to blue based on green level";
+		s->opt[ OPT_CCT_4].desc  = "Adds to green based on red level";
+		s->opt[ OPT_CCT_5].desc  = "Controls red level";
+		s->opt[ OPT_CCT_6].desc  = "Adds to blue based on red level";
+		s->opt[ OPT_CCT_7].desc  = "Adds to green based on blue level";
+		s->opt[ OPT_CCT_8].desc  = "Adds to red based on blue level";
+		s->opt[ OPT_CCT_9].desc  = "Control blue level";
 
 		s->opt[ OPT_CCT_1].type = SANE_TYPE_INT;
 		s->opt[ OPT_CCT_2].type = SANE_TYPE_INT;
@@ -2333,17 +2373,17 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 		s->opt[ OPT_CCT_8].constraint.range = &s8_range;
 		s->opt[ OPT_CCT_9].constraint.range = &s8_range;
 
-		s->val[ OPT_CCT_1].w = 0;
+		s->val[ OPT_CCT_1].w = 32;
 		s->val[ OPT_CCT_2].w = 0;
 		s->val[ OPT_CCT_3].w = 0;
 		s->val[ OPT_CCT_4].w = 0;
-		s->val[ OPT_CCT_5].w = 0;
+		s->val[ OPT_CCT_5].w = 32;
 		s->val[ OPT_CCT_6].w = 0;
 		s->val[ OPT_CCT_7].w = 0;
 		s->val[ OPT_CCT_8].w = 0;
-		s->val[ OPT_CCT_9].w = 0;
+		s->val[ OPT_CCT_9].w = 32;
 
-/*		if( ! s->hw->cmd->set_color_correction_coefficients) */
+		if( ! s->hw->cmd->set_color_correction_coefficients)
 		{
 			s->opt[ OPT_CCT_1].cap |= SANE_CAP_INACTIVE;
 			s->opt[ OPT_CCT_2].cap |= SANE_CAP_INACTIVE;
@@ -2543,9 +2583,13 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 
 		s->val[ OPT_FILM_TYPE].w	= 0;
 
+		s->opt[ OPT_FILM_TYPE].cap |= SANE_CAP_INACTIVE;		/* default is inactive */
+
+#if 0
 		if( ( ! s->hw->TPU) && ( ! s->hw->cmd->set_bay) ) {		/* Hack: Using set_bay to indicate. */
 			s->opt[ OPT_FILM_TYPE].cap |= SANE_CAP_INACTIVE;
 		}
+#endif
 
 
 		/* forward feed / eject */
@@ -2697,10 +2741,10 @@ void sane_close ( SANE_Handle handle) {
 	if (prev)
 		prev->next = s->next;
 	else
-		first_handle = s;
+		first_handle = s->next;
 
 	if (s->fd != -1)
-		close(scanner(s));
+		close_scanner(s);
 
 	free(s);
 }
@@ -2710,13 +2754,16 @@ void sane_close ( SANE_Handle handle) {
  *
  */
 
-const SANE_Option_Descriptor * sane_get_option_descriptor ( SANE_Handle handle, SANE_Int option) {
+const SANE_Option_Descriptor *
+sane_get_option_descriptor ( SANE_Handle handle, SANE_Int option)
+
+{
 	Epson_Scanner *s = (Epson_Scanner *) handle;
 
 	if( option < 0 || option >= NUM_OPTIONS)
 		return NULL;
 
-	return s->opt + option;
+	return( s->opt + option );
 }
 
 /*
@@ -2724,14 +2771,15 @@ const SANE_Option_Descriptor * sane_get_option_descriptor ( SANE_Handle handle, 
  *
  */
 
-static const SANE_String_Const * search_string_list ( const SANE_String_Const * list, SANE_String value) {
-	while( *list != NULL && strcmp( value, *list) != 0)
+static const SANE_String_Const *
+search_string_list (const SANE_String_Const * list, SANE_String value)
+
+{
+	while( *list != NULL && strcmp( value, *list) != 0) {
 		++list;
+	}
 
-	if( *list == NULL)
-		return NULL;
-
-	return list;
+	return( (*list == NULL) ? NULL : list );
 }
 
 /*
@@ -2739,364 +2787,533 @@ static const SANE_String_Const * search_string_list ( const SANE_String_Const * 
  *
  */
 
-SANE_Status sane_control_option ( SANE_Handle handle, SANE_Int option, SANE_Action action, void * value, SANE_Int * info) {
-	Epson_Scanner * s = ( Epson_Scanner *) handle;
-	SANE_Status status;
-	const SANE_String_Const * optval;
+/*
+    Activate, deactivate an option.  Subroutines so we can add
+    debugging info if we want.  The change flag is set to TRUE
+    if we changed an option.  If we did not change an option,
+    then the value of the changed flag is not modified.
+*/
 
-	if( option < 0 || option >= NUM_OPTIONS)
-		return SANE_STATUS_INVAL;
+static void sane_activate( Epson_Scanner * s, SANE_Int option,
+	SANE_Bool * change )
 
-	if( info != NULL)
-		*info = 0;
+{
+	if (!SANE_OPTION_IS_ACTIVE( s->opt[ option ].cap )) {
+		s->opt[ option ].cap &= ~SANE_CAP_INACTIVE;
+		*change = SANE_TRUE;
+	}
+}
 
-	switch (action) {
+static void sane_deactivate( Epson_Scanner * s, SANE_Int option,
+	SANE_Bool * change )
+{
+	if (SANE_OPTION_IS_ACTIVE(s->opt[ option ].cap)) {
+		s->opt[ option ].cap |= SANE_CAP_INACTIVE;
+		*change = SANE_TRUE;
+	}
+}
 
-	case SANE_ACTION_GET_VALUE:
+static void sane_optstate( SANE_Bool state, Epson_Scanner * s,
+	SANE_Int option, SANE_Bool * change )
 
-		switch (option) {
+{
+	if (state) {
+		sane_activate( s, option, change );
+	} else {
+		sane_deactivate( s, option, change );
+	}
+}
 
-		/* word-array options: */
+/**
+    End of sane_activate, sane_deactivate, sane_optstate.
+**/
 
-		case OPT_GAMMA_VECTOR:
-		case OPT_GAMMA_VECTOR_R:
-		case OPT_GAMMA_VECTOR_G:
-		case OPT_GAMMA_VECTOR_B:
-			memcpy( value, s->val[ option].wa, s->opt[ option].size);
-			break;
+static SANE_Status getvalue( SANE_Handle handle,
+	SANE_Int option,
+	void * value)
 
-		case OPT_NUM_OPTS:
-		case OPT_RESOLUTION:
-		case OPT_TL_X:
-		case OPT_TL_Y:
-		case OPT_BR_X:
-		case OPT_BR_Y:
-		case OPT_MIRROR:
-		case OPT_SPEED:
-		case OPT_PREVIEW_SPEED:
-		case OPT_AAS:
-		case OPT_PREVIEW:
-		case OPT_BRIGHTNESS:
-		case OPT_SHARPNESS:
-		case OPT_AUTO_EJECT:
-		case OPT_CCT_1:
-		case OPT_CCT_2:
-		case OPT_CCT_3:
-		case OPT_CCT_4:
-		case OPT_CCT_5:
-		case OPT_CCT_6:
-		case OPT_CCT_7:
-		case OPT_CCT_8:
-		case OPT_CCT_9:
-		case OPT_THRESHOLD:
-		case OPT_ZOOM:
-			*( ( SANE_Word *) value) = s->val[ option].w;
-			break;
+{
+	Epson_Scanner          * s    = (Epson_Scanner *) handle;
+	SANE_Option_Descriptor * sopt = &(s->opt[ option ]);
+	Option_Value           * sval = &(s->val[ option ]);
 
-		case OPT_MODE:
-		case OPT_HALFTONE:
-		case OPT_DROPOUT:
-		case OPT_QUICK_FORMAT:
-		case OPT_SOURCE:
-		case OPT_FILM_TYPE:
-		case OPT_GAMMA_CORRECTION:
-		case OPT_COLOR_CORRECTION:
-		case OPT_BAY:
-			strcpy( ( char *) value, s->opt[ option].constraint.string_list[ s->val[ option].w]);
-			break;
+	switch (option) {
+	case OPT_GAMMA_VECTOR:
+	case OPT_GAMMA_VECTOR_R:
+	case OPT_GAMMA_VECTOR_G:
+	case OPT_GAMMA_VECTOR_B:
+		memcpy( value, sval->wa, sopt->size );
+		break;
+
+	case OPT_NUM_OPTS:
+	case OPT_RESOLUTION:
+	case OPT_TL_X:
+	case OPT_TL_Y:
+	case OPT_BR_X:
+	case OPT_BR_Y:
+	case OPT_MIRROR:
+	case OPT_SPEED:
+	case OPT_PREVIEW_SPEED:
+	case OPT_AAS:
+	case OPT_PREVIEW:
+	case OPT_BRIGHTNESS:
+	case OPT_SHARPNESS:
+	case OPT_AUTO_EJECT:
+	case OPT_CCT_1:
+	case OPT_CCT_2:
+	case OPT_CCT_3:
+	case OPT_CCT_4:
+	case OPT_CCT_5:
+	case OPT_CCT_6:
+	case OPT_CCT_7:
+	case OPT_CCT_8:
+	case OPT_CCT_9:
+	case OPT_THRESHOLD:
+	case OPT_ZOOM:
+		*((SANE_Word *) value) = sval->w;
+		break;
+
+	case OPT_MODE:
+	case OPT_HALFTONE:
+	case OPT_DROPOUT:
+	case OPT_QUICK_FORMAT:
+	case OPT_SOURCE:
+	case OPT_FILM_TYPE:
+	case OPT_GAMMA_CORRECTION:
+	case OPT_COLOR_CORRECTION:
+	case OPT_BAY:
+		strcpy( (char *) value, sopt->constraint.string_list[sval->w]);
+		break;
 #if 0
-		case OPT_MODEL:
-			strcpy( value, s->val[ option].s);
-			break;
+	case OPT_MODEL:
+		strcpy( value, sval->s);
+		break;
 #endif
 
 
-		default:
-			return SANE_STATUS_INVAL;
+	default:
+		return SANE_STATUS_INVAL;
 
-		}
+	}
 
-		break;
-	case SANE_ACTION_SET_VALUE:
-		status = sanei_constrain_value( s->opt + option, value, info);
+	return SANE_STATUS_GOOD;
+}
 
-		if( status != SANE_STATUS_GOOD)
-			return status;
 
-		optval = NULL;
+/**
+    End of getvalue.
+**/
 
-		if( s->opt[ option].constraint_type == SANE_CONSTRAINT_STRING_LIST) {
-			optval = search_string_list( s->opt[ option].constraint.string_list, ( char *) value);
-
-			if( optval == NULL)
-				return SANE_STATUS_INVAL;
-		}
-
-		switch (option) {
-
-		/* side-effect-free word-array options: */
-
-		case OPT_GAMMA_VECTOR:
-		case OPT_GAMMA_VECTOR_R:
-		case OPT_GAMMA_VECTOR_G:
-		case OPT_GAMMA_VECTOR_B:
-			memcpy( s->val[ option].wa, value, s->opt[ option].size);
-			break;
-
-		case OPT_EJECT:
-/*			return eject( s); */
-			eject( s);
-			break;
-			
-		case OPT_RESOLUTION:
-		{
-			int n, k = 0, f;
-			int min_d = s->hw->res_list[ s->hw->res_list_size - 1];
-			int v = *(SANE_Word *) value;
-			int best = v;
-			int * last = ( OPT_RESOLUTION == option) ? &s->hw->last_res : &s->hw->last_res_preview;
-
-			for( n = 0; n < s->hw->res_list_size; n++) {
-				int d = abs( v - s->hw->res_list[ n]);
-
-				if( d < min_d) {
-					min_d = d;
-					k = n;
-					best = s->hw->res_list[ n];
-			  	}
-			}
+static void handle_depth_halftone( Epson_Scanner * s, SANE_Bool * reload)
 
 /*
- * problem: does not reach all values cause of scroll bar resolution.
- *
- */
-			if( (v != best) && *last) {
-				for( f = 0; f < s->hw->res_list_size; f++)
-					if( *last == s->hw->res_list[ f])
-						break;
+    This routine handles common options between OPT_MODE and
+    OPT_HALFTONE.  These options are TET (a HALFTONE mode), AAS
+    - auto area segmentation, and threshold.  Apparently AAS
+    is some method to differentiate between text and photos.
+    Or something like that.
 
-				if( f != k && f != k - 1 && f != k + 1) {
+    AAS is available when the scan color depth is 1 and the
+    halftone method is not TET.
 
-					if( k > f)
-						best = s->hw->res_list[ f + 1];
-								
-					if( k < f)
-						best = s->hw->res_list[ f - 1];
-				}
-			}
+    Threshold is available when halftone is NONE, and depth is 1.
+*/
 
-			*last = best;
-			s->val[ option].w = ( SANE_Word) best;
+{
+	int hti = s->val[ OPT_HALFTONE ].w;
+	int mdi = s->val[ OPT_MODE ].w;
+	SANE_Bool aas	= SANE_FALSE;
+	SANE_Bool thresh= SANE_FALSE;
 
-			DBG(3, "Selected resolution %d dpi\n", best);
+	if (!s->hw->cmd->control_auto_area_segmentation) return;
 
-			break;
+	if (mode_params[ mdi ].depth == 1) {
+		if (halftone_params[ hti ] != HALFTONE_TET) {
+			aas = SANE_TRUE;
 		}
+		if (halftone_params[ hti ] == HALFTONE_NONE) {
+			thresh = SANE_TRUE;
+		}
+	}
+	sane_optstate( aas, s, OPT_AAS, reload );
+	sane_optstate( thresh, s, OPT_THRESHOLD, reload );
+}
 
-		case OPT_CCT_1:
-		case OPT_CCT_2:
-		case OPT_CCT_3:
-		case OPT_CCT_4:
-		case OPT_CCT_5:
-		case OPT_CCT_6:
-		case OPT_CCT_7:
-		case OPT_CCT_8:
-		case OPT_CCT_9:
-			s->val[ option].w = *( ( SANE_Word *) value);
-			break;
+/**
+    End of handle_depth_halftone.
+**/
 
-		case OPT_TL_X:
-		case OPT_TL_Y:
-		case OPT_BR_X:
-		case OPT_BR_Y:
+static void handle_resolution( Epson_Scanner * s,
+	SANE_Int option, void * value )
 
-			s->val[ option].w = *( ( SANE_Word *) value);
+{
+	int n, k = 0, f;
+	int min_d = s->hw->res_list[ s->hw->res_list_size - 1];
+	SANE_Int v = *(SANE_Word *) value;
+	SANE_Int best = v;
+	int * last = ( OPT_RESOLUTION == option) ?
+				&s->hw->last_res :
+				&s->hw->last_res_preview;
 
-			DBG( 1, "set = %f\n", SANE_UNFIX( s->val[ option].w));
+/*
+    We don't assume the list is sorted.  Search the list of
+    resolutions, looking for the value closest to the one we want.
+*/
 
-			if( NULL != info)
-				*info |= SANE_INFO_RELOAD_PARAMS;
+	for( n = 0; n < s->hw->res_list_size; n++) {
+		int d = abs( v - s->hw->res_list[ n]);
 
-			break;
+		if( d < min_d) {
+			min_d = d;
+			k = n;
+			best = s->hw->res_list[ n];
+		}
+	}
+
+/*
+    Problem: does not reach all values cause of scroll bar resolution.
+
+    If the requested resolution is not actually available, search
+    search the list of resolutions to see if the last resolution we
+    used is in the list.  If the last resolution is in the list, and
+    it is not near the to the closest possible value to the user's
+    request, then use the one next to the last one - taking into
+    account the direction the user appears to be going.  Or something
+    like that.  I did not write this code.
+*/
+
+	if( (v != best) && *last) {
+		for( f = 0; f < s->hw->res_list_size; f++)
+			if( *last == s->hw->res_list[ f])
+				break;
+
+		if( f != k && f != k - 1 && f != k + 1) {
+			if( k > f) {
+				best = s->hw->res_list[ f + 1];
+			} else if ( k < f) {
+				best = s->hw->res_list[ f - 1];
+			}
+		}
+	}
+
+	*last = best;
+	s->val[ option ].w = (SANE_Word) best;
+
+	DBG(3, "Selected resolution %d dpi\n", best);
+}
+
+/**
+    End of handle_resolution.
+**/
+
+static void handle_source( Epson_Scanner * s, SANE_Int optindex,
+	char * value )
+
+/*
+    Handles setting the source (flatbed, transparency adapter (TPU),
+    or auto document feeder (ADF)).
+*/
+
+{
+	int force_max = SANE_FALSE;
+	SANE_Bool dummy;
+
+	if (s->val[ OPT_SOURCE ].w == optindex) return;
+	s->val[ OPT_SOURCE ].w = optindex;
+
+	if(  s->val[ OPT_TL_X ].w == s->hw->x_range->min
+	  && s->val[ OPT_TL_Y ].w == s->hw->y_range->min
+	  && s->val[ OPT_BR_X ].w == s->hw->x_range->max
+	  && s->val[ OPT_BR_Y ].w == s->hw->y_range->max
+	  ) {
+	    force_max = SANE_TRUE;
+	}
+	if( ! strcmp( ADF_STR, value) ) {
+		s->hw->x_range = &s->hw->adf_x_range;
+		s->hw->y_range = &s->hw->adf_y_range;
+		s->hw->use_extension = SANE_TRUE;
+		/* disable film type option */
+		s->opt[ OPT_FILM_TYPE].cap &= ~SANE_CAP_INACTIVE;
+	} else if( ! strcmp( TPU_STR, value) ) {
+		s->hw->x_range = &s->hw->tpu_x_range;
+		s->hw->y_range = &s->hw->tpu_y_range;
+		s->hw->use_extension = SANE_TRUE;
+		/* enable film type option */
+		s->opt[ OPT_FILM_TYPE].cap |= SANE_CAP_INACTIVE;
+	} else {
+		s->hw->x_range = &s->hw->fbf_x_range;
+		s->hw->y_range = &s->hw->fbf_y_range;
+		s->hw->use_extension = SANE_FALSE;
+		/* disable film type option */
+		s->opt[ OPT_FILM_TYPE].cap &= ~SANE_CAP_INACTIVE;
+	}
+
+	qf_params[ XtNumber(qf_params)-1 ].tl_x = s->hw->x_range->min;
+	qf_params[ XtNumber(qf_params)-1 ].tl_y = s->hw->y_range->min;
+	qf_params[ XtNumber(qf_params)-1 ].br_x = s->hw->x_range->max;
+	qf_params[ XtNumber(qf_params)-1 ].br_y = s->hw->y_range->max;
+
+	s->opt[ OPT_BR_X ].constraint.range = s->hw->x_range;
+	s->opt[ OPT_BR_Y ].constraint.range = s->hw->y_range;
+
+	if( s->val[ OPT_TL_X].w < s->hw->x_range->min || force_max)
+		s->val[ OPT_TL_X].w = s->hw->x_range->min;
+
+	if( s->val[ OPT_TL_Y].w < s->hw->y_range->min || force_max)
+		s->val[ OPT_TL_Y].w = s->hw->y_range->min;
+
+	if( s->val[ OPT_BR_X].w > s->hw->x_range->max || force_max)
+		s->val[ OPT_BR_X].w = s->hw->x_range->max;
+
+	if( s->val[ OPT_BR_Y].w > s->hw->y_range->max || force_max)
+		s->val[ OPT_BR_Y].w = s->hw->y_range->max;
+
+	sane_optstate( s->hw->TPU && s->hw->use_extension,
+		s, OPT_FILM_TYPE, &dummy );
+	sane_optstate( s->hw->ADF && s->hw->use_extension,
+		s, OPT_AUTO_EJECT, &dummy );
+	sane_optstate( s->hw->ADF && s->hw->use_extension,
+		s, OPT_EJECT, &dummy );
+
+#if 0
+BAY is part  of the filmscan device.  We are not sure
+if we are really going to support this device in this
+code.  Is there an online manual for it?
+
+	sane_optstate( s->hw->ADF && s->hw->use_extension,
+		s, OPT_BAY, &reload );
+#endif
+}
+
+/**
+    End of handle_source.
+**/
+
+static SANE_Status setvalue( SANE_Handle handle,
+	SANE_Int option,
+	void * value,
+	SANE_Int * info)
+
+{
+	Epson_Scanner          * s    = ( Epson_Scanner *) handle;
+	SANE_Option_Descriptor * sopt = &(s->opt[ option ]);
+	Option_Value           * sval = &(s->val[ option ]);
+
+	SANE_Status status;
+	const SANE_String_Const * optval;
+	int optindex;
+	SANE_Bool reload = SANE_FALSE;	
+
+	status = sanei_constrain_value( sopt, value, info);
+
+	if( status != SANE_STATUS_GOOD) return status;
+
+	optval = NULL;
+	optindex = 0;
+
+	if( sopt->constraint_type == SANE_CONSTRAINT_STRING_LIST) {
+		optval = search_string_list( sopt->constraint.string_list,
+					     (char *) value);
+
+		if( optval == NULL) return SANE_STATUS_INVAL;
+		optindex = optval - sopt->constraint.string_list;
+	}
+
+	switch (option) {
+	case OPT_GAMMA_VECTOR:
+	case OPT_GAMMA_VECTOR_R:
+	case OPT_GAMMA_VECTOR_G:
+	case OPT_GAMMA_VECTOR_B:
+		memcpy( sval->wa, value, sopt->size);	/* Word arrays */
+		break;
+
+	case OPT_CCT_1:
+	case OPT_CCT_2:
+	case OPT_CCT_3:
+	case OPT_CCT_4:
+	case OPT_CCT_5:
+	case OPT_CCT_6:
+	case OPT_CCT_7:
+	case OPT_CCT_8:
+	case OPT_CCT_9:
+		sval->w = *((SANE_Word *) value);	/* Simple values */
+		break;
+
+	case OPT_DROPOUT:
+	case OPT_FILM_TYPE:
+	case OPT_BAY:
+		sval->w = optindex;			/* Simple lists */
+		break;
+
+	case OPT_EJECT:
+/*		return eject( s ); */
+		eject( s );
+		break;
+			
+	case OPT_RESOLUTION:
+		handle_resolution( s, option, value );
+		break;
+
+	case OPT_TL_X:
+	case OPT_TL_Y:
+	case OPT_BR_X:
+	case OPT_BR_Y:
+		sval->w = *((SANE_Word *) value);
+		DBG( 1, "set = %f\n", SANE_UNFIX( sval->w));
+		if (NULL != info) *info |= SANE_INFO_RELOAD_PARAMS;
+		break;
 
 	case OPT_SOURCE:
+		handle_source( s, optindex, (char *) value );
+		reload = SANE_TRUE;
+		break;
+
+	case OPT_MODE:
 	{
-		int force_max = SANE_FALSE;
+		SANE_Bool ic = mode_params[ optindex ].color; /* IsColor? */
+		SANE_Bool iccu = 	/* Is color correction a user type? */
+			color_userdefined[ s->val[ OPT_COLOR_CORRECTION ].w ];
 
-		DBG( 1, "source = %s\n", ( char *) value);
+		sval->w = optindex;
 
-		if(  s->val[ OPT_TL_X].w == s->hw->x_range->min
-		  && s->val[ OPT_TL_Y].w == s->hw->y_range->min
-		  && s->val[ OPT_BR_X].w == s->hw->x_range->max
-		  && s->val[ OPT_BR_Y].w == s->hw->y_range->max
-		  )
-		force_max = SANE_TRUE;
-		if( ! strcmp( ADF_STR,( char *) value) ) {
-			s->hw->x_range = &s->hw->adf_x_range;
-			s->hw->y_range = &s->hw->adf_y_range;
-			s->hw->use_extension = SANE_TRUE;
-		} else if( ! strcmp( TPU_STR,( char *) value) ) {
-			s->hw->x_range = &s->hw->tpu_x_range;
-			s->hw->y_range = &s->hw->tpu_y_range;
-			s->hw->use_extension = SANE_TRUE;
-		} else {
-			s->hw->x_range = &s->hw->fbf_x_range;
-			s->hw->y_range = &s->hw->fbf_y_range;
-			s->hw->use_extension = SANE_FALSE;
+		if (s->hw->cmd->set_halftoning != 0) {
+			sane_optstate( mode_params[ optindex ].depth == 1,
+				s, OPT_HALFTONE, &reload );
 		}
 
-		qf_params[ XtNumber( qf_params) - 1].tl_x = s->hw->x_range->min;
-		qf_params[ XtNumber( qf_params) - 1].tl_y = s->hw->y_range->min;
-		qf_params[ XtNumber( qf_params) - 1].br_x = s->hw->x_range->max;
-		qf_params[ XtNumber( qf_params) - 1].br_y = s->hw->y_range->max;
+		sane_optstate( !ic, s, OPT_DROPOUT, &reload );
+		if (s->hw->cmd->set_color_correction) {
+		    sane_optstate( ic, s, OPT_COLOR_CORRECTION, &reload );
+		}
+		if (s->hw->cmd->set_color_correction_coefficients) {
+			sane_optstate( ic && iccu, s, OPT_CCT_1, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_2, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_3, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_4, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_5, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_6, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_7, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_8, &reload );
+			sane_optstate( ic && iccu, s, OPT_CCT_9, &reload );
+		}
 
-		s->opt[ OPT_BR_X].constraint.range = s->hw->x_range;
-		s->opt[ OPT_BR_Y].constraint.range = s->hw->y_range;
+		handle_depth_halftone( s, &reload );
+		break;
+	}
 
-		if( s->val[ OPT_TL_X].w < s->hw->x_range->min || force_max)
-			s->val[ OPT_TL_X].w = s->hw->x_range->min;
+	case OPT_HALFTONE:
+		sval->w = optindex;
+		handle_depth_halftone( s, &reload );
+		break;
 
-		if( s->val[ OPT_TL_Y].w < s->hw->y_range->min || force_max)
-			s->val[ OPT_TL_Y].w = s->hw->y_range->min;
+		sval->w = optindex;
+		break;
 
-		if( s->val[ OPT_BR_X].w > s->hw->x_range->max || force_max)
-			s->val[ OPT_BR_X].w = s->hw->x_range->max;
+	case OPT_COLOR_CORRECTION:
+	{
+		SANE_Bool f = color_userdefined[ optindex ];
 
-		if( s->val[ OPT_BR_Y].w > s->hw->y_range->max || force_max)
-			s->val[ OPT_BR_Y].w = s->hw->y_range->max;
-
-		if( NULL != info)
-			*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-
-		s->val[ option].w = optval - s->opt[ option].constraint.string_list;
+		sval->w = optindex;
+		sane_optstate( f, s, OPT_CCT_1, &reload );
+		sane_optstate( f, s, OPT_CCT_2, &reload );
+		sane_optstate( f, s, OPT_CCT_3, &reload );
+		sane_optstate( f, s, OPT_CCT_4, &reload );
+		sane_optstate( f, s, OPT_CCT_5, &reload );
+		sane_optstate( f, s, OPT_CCT_6, &reload );
+		sane_optstate( f, s, OPT_CCT_7, &reload );
+		sane_optstate( f, s, OPT_CCT_8, &reload );
+		sane_optstate( f, s, OPT_CCT_9, &reload );
 
 		break;
 	}
-	case OPT_MODE:
-		s->val[ option].w = optval - s->opt[ option].constraint.string_list;
 
-		if (s->hw->cmd->set_halftoning != 0) {
-			if( mode_params[ optval - mode_list].depth != 1) {
-				s->opt[ OPT_HALFTONE].cap |= SANE_CAP_INACTIVE;
-			} else {
-				s->opt[ OPT_HALFTONE].cap &= ~SANE_CAP_INACTIVE;
-			}
-		}
+	case OPT_GAMMA_CORRECTION:
+	{
+		SANE_Bool f = gamma_userdefined[ optindex ];
 
-		if( mode_params[ optval - mode_list].color)
-			s->opt[ OPT_DROPOUT].cap |= SANE_CAP_INACTIVE;
-		else
-			s->opt[OPT_DROPOUT].cap &= ~SANE_CAP_INACTIVE;
-
-		if( s->hw->cmd->control_auto_area_segmentation) {
-			if(  halftone_params[ s->val[ OPT_HALFTONE].w] == 0x03		/* THT */
-			  && mode_params[ s->val[ OPT_MODE].w].depth == 1
-			  )
-				s->opt[ OPT_AAS].cap |= SANE_CAP_INACTIVE;
-			else
-				s->opt[ OPT_AAS].cap &= ~SANE_CAP_INACTIVE;
-		}
-
-		if( NULL != info)
-			*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
+		sval->w = optindex;
+		sane_optstate( f, s, OPT_GAMMA_VECTOR, &reload );
+		sane_optstate( f, s, OPT_GAMMA_VECTOR_R, &reload );
+		sane_optstate( f, s, OPT_GAMMA_VECTOR_G, &reload );
+		sane_optstate( f, s, OPT_GAMMA_VECTOR_B, &reload );
+		sane_optstate( !f, s, OPT_BRIGHTNESS, &reload ); /* Note... */
 
 		break;
-	case OPT_HALFTONE:
-		if (s->hw->cmd->set_halftoning != 0) 
-		{
-			s->val[ option].w = optval - s->opt[ option].constraint.string_list;
+	}
 
-			if( s->hw->cmd->control_auto_area_segmentation) {
-				if(  halftone_params[ s->val[ OPT_HALFTONE].w] == 0x03		/* THT */
-				  && mode_params[ s->val[ OPT_MODE].w].depth == 1
-				  )
-					s->opt[ OPT_AAS].cap |= SANE_CAP_INACTIVE;
-				else
-					s->opt[ OPT_AAS].cap &= ~SANE_CAP_INACTIVE;
-			}
-
-			if( NULL != info)
-				*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-		}
-
+	case OPT_MIRROR:
+	case OPT_SPEED:
+	case OPT_PREVIEW_SPEED:
+	case OPT_AAS:
+	case OPT_PREVIEW:							/* needed? */
+	case OPT_BRIGHTNESS:
+	case OPT_SHARPNESS:
+	case OPT_AUTO_EJECT:
+	case OPT_THRESHOLD:
+	case OPT_ZOOM:
+		sval->w = *(( SANE_Word *) value);
 		break;
-
-		case OPT_DROPOUT:
-		case OPT_FILM_TYPE:
-		case OPT_COLOR_CORRECTION:
-		case OPT_BAY:
-			s->val[ option].w = optval - s->opt[ option].constraint.string_list;
-			break;
-
-		case OPT_GAMMA_CORRECTION:
-			s->val[ option].w = optval - s->opt[ option].constraint.string_list;
-
-/*
- * If "User defined", then enable custom gamma tables.
- */
-			if ( gamma_userdefined[s->val[ option].w] == SANE_TRUE )
-			{
-				s->opt[ OPT_GAMMA_VECTOR].cap &= ~SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_R].cap &= ~SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_G].cap &= ~SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_B].cap &= ~SANE_CAP_INACTIVE;
-			}
-			else {
-				s->opt[ OPT_GAMMA_VECTOR].cap |= SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_R].cap |= SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_G].cap |= SANE_CAP_INACTIVE;
-				s->opt[ OPT_GAMMA_VECTOR_B].cap |= SANE_CAP_INACTIVE;
-			}
-			if( NULL != info)
-				*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-			break;
-
-		case OPT_MIRROR:
-		case OPT_SPEED:
-		case OPT_PREVIEW_SPEED:
-		case OPT_AAS:
-		case OPT_PREVIEW:							/* needed? */
-		case OPT_BRIGHTNESS:
-		case OPT_SHARPNESS:
-		case OPT_AUTO_EJECT:
-		case OPT_THRESHOLD:
-		case OPT_ZOOM:
-			s->val[ option].w = *( ( SANE_Word *) value);
-			break;
 
 	case OPT_QUICK_FORMAT:
-		s->val[ option].w = optval - s->opt[ option].constraint.string_list;
+		sval->w = optindex;
 
-		s->val[ OPT_TL_X].w = qf_params[ s->val[ option].w].tl_x;
-		s->val[ OPT_TL_Y].w = qf_params[ s->val[ option].w].tl_y;
-		s->val[ OPT_BR_X].w = qf_params[ s->val[ option].w].br_x;
-		s->val[ OPT_BR_Y].w = qf_params[ s->val[ option].w].br_y;
+		s->val[ OPT_TL_X ].w = qf_params[ sval->w ].tl_x;
+		s->val[ OPT_TL_Y ].w = qf_params[ sval->w ].tl_y;
+		s->val[ OPT_BR_X ].w = qf_params[ sval->w ].br_x;
+		s->val[ OPT_BR_Y ].w = qf_params[ sval->w ].br_y;
 
-		if( s->val[ OPT_TL_X].w < s->hw->x_range->min)
-			s->val[ OPT_TL_X].w = s->hw->x_range->min;
+		if( s->val[ OPT_TL_X ].w < s->hw->x_range->min)
+			s->val[ OPT_TL_X ].w = s->hw->x_range->min;
 
-		if( s->val[ OPT_TL_Y].w < s->hw->y_range->min)
-			s->val[ OPT_TL_Y].w = s->hw->y_range->min;
+		if( s->val[ OPT_TL_Y ].w < s->hw->y_range->min)
+			s->val[ OPT_TL_Y ].w = s->hw->y_range->min;
 
-		if( s->val[ OPT_BR_X].w > s->hw->x_range->max)
-			s->val[ OPT_BR_X].w = s->hw->x_range->max;
+		if( s->val[ OPT_BR_X ].w > s->hw->x_range->max)
+			s->val[ OPT_BR_X ].w = s->hw->x_range->max;
 
-		if( s->val[ OPT_BR_Y].w > s->hw->y_range->max)
-			s->val[ OPT_BR_Y].w = s->hw->y_range->max;
+		if( s->val[ OPT_BR_Y ].w > s->hw->y_range->max)
+			s->val[ OPT_BR_Y ].w = s->hw->y_range->max;
 
-		if( NULL != info)
-			*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
-
+		reload = SANE_TRUE;
 		break;
+
 	default:
 		return SANE_STATUS_INVAL;
 	}
-      break;
-    default:
-      return SANE_STATUS_INVAL;
-    }
 
-  return SANE_STATUS_GOOD;
+	if (reload && info != NULL) {
+		*info |= SANE_INFO_RELOAD_OPTIONS | SANE_INFO_RELOAD_PARAMS;
+	}
+
+	return SANE_STATUS_GOOD;
+}
+
+/**
+    End of setvalue.
+**/
+
+SANE_Status sane_control_option ( SANE_Handle handle,
+	SANE_Int option,
+	SANE_Action action,
+	void * value, SANE_Int * info)
+
+{
+	if( option < 0 || option >= NUM_OPTIONS)
+		return SANE_STATUS_INVAL;
+
+	if( info != NULL) *info = 0;
+
+	switch (action) {
+		case SANE_ACTION_GET_VALUE:
+			return( getvalue( handle, option, value ) );
+
+		case SANE_ACTION_SET_VALUE:
+			return( setvalue( handle, option, value, info ) );
+		default:
+      			return SANE_STATUS_INVAL;
+	}
+
+	return SANE_STATUS_GOOD;
 }
 
 /*
@@ -3389,7 +3606,11 @@ SANE_Status sane_start ( SANE_Handle handle) {
 		}
 	}
 
+	s->invert_image = SANE_FALSE;	/* default to not inverting the image */
+
 	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_FILM_TYPE].cap) ) {
+
+		s->invert_image = (s->val[ OPT_FILM_TYPE].w == FILM_TYPE_NEGATIVE);
 
 		status = set_film_type( s, film_params[ s->val[ OPT_FILM_TYPE].w]);
 
@@ -3444,6 +3665,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			}
 		}
 
+		DBG( 1, "sane_start: set_gamma( s, 0x%x ).\n", val);
 		status = set_gamma( s, val);
 
 		if( SANE_STATUS_GOOD != status) {
@@ -3477,6 +3699,7 @@ SANE_Status sane_start ( SANE_Handle handle) {
 	if( SANE_OPTION_IS_ACTIVE( s->opt[ OPT_COLOR_CORRECTION].cap) ) {
 		int val = color_params[ s->val[ OPT_COLOR_CORRECTION].w];
 
+		DBG( 1, "sane_start: set_color_correction( s, 0x%x )\n", val );
 		status = set_color_correction( s, val);
 
 		if( SANE_STATUS_GOOD != status) {
@@ -3484,7 +3707,6 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			return status;
 		}
 	}
-#if 0
 	if( 1 == s->val[ OPT_COLOR_CORRECTION].w) {	/* user defined. */
 		status = set_color_correction_coefficients( s);
 
@@ -3493,7 +3715,6 @@ SANE_Status sane_start ( SANE_Handle handle) {
 			return status;
 		}
 	}
-#endif
 #endif
 
 	if (s->hw->cmd->set_threshold != 0 && SANE_OPTION_IS_ACTIVE( s->opt[ OPT_THRESHOLD].cap))
@@ -4179,11 +4400,24 @@ START_READ:
 
 		*length = 3 * max_length;
 
-		while( max_length-- != 0) {
-			*data++ = s->ptr[ 0];
-			*data++ = s->ptr[ s->params.pixels_per_line];
-			*data++ = s->ptr[ 2 * s->params.pixels_per_line];
-			++s->ptr;
+		if (s->invert_image == SANE_TRUE)
+		{
+			while( max_length-- != 0) {
+				/* invert the three values */
+				*data++ = (u_char) ~(s->ptr[ 0]);
+				*data++ = (u_char) ~(s->ptr[ s->params.pixels_per_line]);
+				*data++ = (u_char) ~(s->ptr[ 2 * s->params.pixels_per_line]);
+				++s->ptr;
+			}
+		}
+		else
+		{
+			while( max_length-- != 0) {
+				*data++ = s->ptr[ 0];
+				*data++ = s->ptr[ s->params.pixels_per_line];
+				*data++ = s->ptr[ 2 * s->params.pixels_per_line];
+				++s->ptr;
+			}
 		}
 	} else {
 
@@ -4193,10 +4427,31 @@ START_READ:
 		*length = max_length;
 
 		if( 1 == s->params.depth) {
-			while( max_length-- != 0)
-				*data++ = ~*s->ptr++;
+			if (s->invert_image == SANE_TRUE)
+			{
+				while( max_length-- != 0)
+					*data++ = *s->ptr++;
+			}
+			else
+			{
+				while( max_length-- != 0)
+					*data++ = ~*s->ptr++;
+			}
 		} else {
-			memcpy( data, s->ptr, max_length);
+
+			if (s->invert_image == SANE_TRUE)
+			{
+				int i;
+
+				for (i = 0 ; i < max_length; i++)
+				{
+					data[i] = (u_char) ~(s->ptr[i]);
+				}
+			}
+			else
+			{
+				memcpy( data, s->ptr, max_length);
+			}
 			s->ptr += max_length;
 		}
 	}

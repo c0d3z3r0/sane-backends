@@ -10,8 +10,8 @@
 ;
 
 :backend "epson"                  ; name of backend
-:version "0.1.20"                  ; version of backend
-:status :alpha                    ; :alpha, :beta, :stable, :new
+:version "0.1.29"                 ; version of backend
+:status :beta                     ; :alpha, :beta, :stable, :new
 :manpage "sane-epson"             ; name of manpage (if it exists)
 :url "http://www.khk.net/"        ; backend's web page
 
@@ -29,10 +29,14 @@
 :comment "parallel interface"
 :model "ES-300C"
 :comment "parallel interface - US version of GT-6000"
+:model "GT-5500"
+:comment "SCSI interface"
 :model "GT-6500"
 :comment "parallel interface"
 :model "ES-600C"
 :comment "parallel interface - US version of GT-6500"
+:model "ES-1200C"
+:comment "parallel interface - US version of GT-9000"
 :model "GT-7000"
 :model "Perfection 636S"
 :comment "SCSI interface - US version of GT-7000"
@@ -44,15 +48,8 @@
 :model "Perfection 1200U"
 :comment "USB Interface"
 :model "Expression 636"
+:comment "SCSI and USB interface"
+:model "Expression 800"
+:comment "SCSI interface"
 :model "FilmScan 200"
 :comment "A better backend for the FilmScan 200 can be found at <A HREF=\"http://www.vjet.demon.co.uk/scanner/\">http://www.vjet.demon.cu.uk/scanner/</A>"
-
-
-
-
-
-
-
-
-
-
