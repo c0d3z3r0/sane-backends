@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.12 Date 03-Feb-2000
+   Version 0.1.13 Date 11-Feb-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,8 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-02-11   Default scan source is always "Flatbed", regardless
+		of installed options. Corrected some typos.
    2000-02-03   Gamma curves now coupled with gamma correction menu.
 		Only when "User defined" is selected are the curves
 		selected. (Dave Hill)
@@ -1624,13 +1626,13 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 */
 #if 0
 	if( SANE_TRUE == dev->extension) 
+#endif
 	/*
 	 * because we are also using the device name from this command, 
 	 * we have to run this block even if the scanner does not report
 	 * an extension. The extensions are only reported if the ADF or
 	 * the TPU are actually detected. 
 	 */
-#endif
 	{
 		u_char * buf;
 		EpsonHdr head;
@@ -2367,9 +2369,8 @@ static SANE_Status init_options ( Epson_Scanner * s) {
 
 		if( ! s->hw->extension) {
 			s->opt[ OPT_SOURCE].cap |= SANE_CAP_INACTIVE;
-			s->val[ OPT_SOURCE].w	= 0;
-		} else
-			s->val[ OPT_SOURCE].w	= 1;
+		}
+		s->val[ OPT_SOURCE].w	= 0;	/* always use Flatbed as default */
 
 
 		/* film type */
@@ -3375,10 +3376,12 @@ SANE_Status sane_start ( SANE_Handle handle) {
 /*       DBG(10, "SANE_START: %d: %c\n", i, buf[i-1]); */
 /*     } */
     DBG( 5, "SANE_START: color: %d\n", (int) buf[1]);
-    DBG( 5, "SANE_START: resolution (x, y): (%d, %d)\n", (int) (buf[4]<<8|buf[3]), (int) (buf[6]<<8|buf[5]));
+    DBG( 5, "SANE_START: resolution (x, y): (%d, %d)\n", 
+        (int) (buf[4]<<8|buf[3]), (int) (buf[6]<<8|buf[5]));
     DBG( 5, "SANE_START: area[dots] (x-offset, y-offset), (x-range, y-range): (%d, %d), (%d, %d)\n",
-		(int) (buf[9]<<8|buf[8]), (int) (buf[11]<<8|buf[10]), (int) (buf[13]<<8|buf[12]), (int) (buf[15]<<8|buf[14]));
-    DBG( 5, "SANE_START: data foramat: %d\n", (int) buf[17]);
+	(int) (buf[9]<<8|buf[8]), (int) (buf[11]<<8|buf[10]), 
+        (int) (buf[13]<<8|buf[12]), (int) (buf[15]<<8|buf[14]));
+    DBG( 5, "SANE_START: data format: %d\n", (int) buf[17]);
     DBG( 5, "SANE_START: halftone: %d\n", (int) buf[19]);
     DBG( 5, "SANE_START: brightness: %d\n", (int) buf[21]);
     DBG( 5, "SANE_START: gamma: %d\n", (int) buf[23]);
@@ -3466,8 +3469,7 @@ static SANE_Status read_data_block ( Epson_Scanner * s, EpsonDataRec * result) {
 
 		DBG( 1, "fatal error\n");
 
-/* TODO: check extended status here if ext bit set. */
-
+		/* check extended status if the option bit in status is set */
 		if( result->status & STATUS_OPTION) {
 			status = check_ext_status( s);
 		} else
@@ -3486,7 +3488,7 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 	Epson_Scanner * s = ( Epson_Scanner *) handle;
 	SANE_Status status;
 
-	DBG( 5, "sane_read: beginn\n");
+	DBG( 5, "sane_read: begin\n");
 
 	if( s->ptr == s->end) {
 		EpsonDataRec result;
@@ -3503,7 +3505,7 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 			return SANE_STATUS_EOF;
 		}
 
-		DBG( 5, "sane_read: beginn scan1\n");
+		DBG( 5, "sane_read: begin scan1\n");
 
 		if( SANE_STATUS_GOOD != ( status = read_data_block( s, &result)))
 			return status;
@@ -3580,7 +3582,7 @@ SANE_Status sane_read ( SANE_Handle handle, SANE_Byte * data, SANE_Int max_lengt
 		s->end = s->buf + buf_len;
 		s->ptr = s->buf;
 
-		DBG( 5, "sane_read: beginn scan2\n");
+		DBG( 5, "sane_read: begin scan2\n");
 	}
 
 
