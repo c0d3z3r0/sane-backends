@@ -1,3 +1,8 @@
+2000-02-26  Chris Pinkham <cpinkham@infi.net>
+
+	* backend/artec.desc: updated statuses, added link to a webpage for
+	AS6E parallel models, added manpage info.
+
 2000-02-06  Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* Sharp man page updated; man page added to doc/Makefile.in
 
