@@ -1,5 +1,12 @@
 2000-08-06  Henning Meier-Geinitz <hmg@gmx.de>
         
+	* backend/plustek.c: Removed "const" from function header. This fixes
+	  a compilation problem on aix/cc.
+	* configure configure.in: Additional warnings are now disabled by
+ 	  default for the 1.0.3 realease.
+
+2000-08-06  Henning Meier-Geinitz <hmg@gmx.de>
+        
 	* backend/hp4200.desc: Added description file for HP 4200 USB
 	  scanner.
 

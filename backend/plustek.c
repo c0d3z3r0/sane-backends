@@ -260,7 +260,7 @@ static SANE_Status drvclose(Plustek_Scanner * s)
 /*.............................................................................
  * according to the mode and source we return the corresponding mode list
  */
-static const pModeParam getModeList( Plustek_Scanner *handle )
+static pModeParam getModeList( Plustek_Scanner *handle )
 {
 	pModeParam mp;
 
