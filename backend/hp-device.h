@@ -42,38 +42,48 @@
    HP Scanner Control Language (SCL).
 */
 
-#ifndef HP_SCSI_INCLUDED
-#define HP_SCSI_INCLUDED
+#ifndef HP_DEVICE_INCLUDED
+#define HP_DEVICE_INCLUDED
+#include "hp.h"
 
-#define HP_SCSI_MAX_WRITE	(2048)
-SANE_Status sanei_hp_nonscsi_new (HpScsi * newp, const char * devname,
-                                  HpConnect connect);
-SANE_Status sanei_hp_scsi_new	(HpScsi * newp, const char * devname);
-void	    sanei_hp_scsi_destroy	(HpScsi this);
+enum hp_device_compat_e {
+    HP_COMPAT_PLUS 	= 1 << 0, /* Hp ScanJet Plus */
+    HP_COMPAT_2C	= 1 << 1,
+    HP_COMPAT_2P	= 1 << 2,
+    HP_COMPAT_2CX	= 1 << 3,
+    HP_COMPAT_4C	= 1 << 4, /* also for 3C, 6100C */
+    HP_COMPAT_3P	= 1 << 5,
+    HP_COMPAT_4P	= 1 << 6,
+    HP_COMPAT_5P	= 1 << 7,
+    HP_COMPAT_5100C	= 1 << 8, /* also 4100 C */
+    HP_COMPAT_PS	= 1 << 9, /* Hp PhotoSmart Photo Scanner */
+    HP_COMPAT_6200C	= 1 << 10,
+    HP_COMPAT_5200C	= 1 << 11,
+    HP_COMPAT_6300C	= 1 << 12
+};
 
-hp_byte_t * sanei_hp_scsi_inq        (HpScsi this);
-const char *sanei_hp_scsi_model	     (HpScsi this);
-const char *sanei_hp_scsi_vendor     (HpScsi this);
-const char *sanei_hp_scsi_devicename (HpScsi this);
+struct hp_device_s
+{
+    HpData	data;
+    HpOptSet	options;
+    SANE_Device	sanedev;
+    enum hp_device_compat_e compat;
+};
 
-SANE_Status sanei_hp_scsi_pipeout    (HpScsi this, int outfd, size_t count,
-                                      int mirror, int bytes_per_line,
-                                      int bits_per_channel, hp_bool_t invert);
+SANE_Status	sanei_hp_device_new (HpDevice * new, const char * devname);
 
-SANE_Status sanei_hp_scl_calibrate   (HpScsi scsi);
-SANE_Status sanei_hp_scl_startScan   (HpScsi scsi, HpScl scl);
-SANE_Status sanei_hp_scl_reset       (HpScsi scsi);
-SANE_Status sanei_hp_scl_clearErrors (HpScsi scsi);
-SANE_Status sanei_hp_scl_errcheck    (HpScsi scsi);
+const SANE_Device * sanei_hp_device_sanedevice (HpDevice this);
 
-SANE_Status sanei_hp_scl_upload_binary (HpScsi scsi, HpScl scl,
-                                        size_t *lengthhp, char **bufhp);
-SANE_Status sanei_hp_scl_set    (HpScsi scsi, HpScl scl, int val);
-SANE_Status sanei_hp_scl_inquire(HpScsi scsi, HpScl scl,
-                                 int * valp, int * minp, int * maxp);
-SANE_Status sanei_hp_scl_upload (HpScsi scsi, HpScl scl,
-                                 void * buf, size_t sz);
-SANE_Status sanei_hp_scl_download (HpScsi scsi, HpScl scl,
-                                   const void * buf, size_t sz);
+void            sanei_hp_device_simulate_clear (const char *devname);
+SANE_Status     sanei_hp_device_simulate_set (const char *devname, HpScl scl,
+                                              int flag);
+SANE_Status     sanei_hp_device_support_get (const char *devname, HpScl scl,
+                                             int *minval, int *maxval);
+SANE_Status     sanei_hp_device_support_probe (HpScsi scsi);
+SANE_Status     sanei_hp_device_probe (enum hp_device_compat_e *compat,
+                                       HpScsi scsi);
+hp_bool_t	sanei_hp_device_compat (HpDevice this,
+                                        enum hp_device_compat_e c);
 
-#endif /* HP_SCSI_INCLUDED */
+
+#endif /*  HP_DEVICE_INCLUDED */

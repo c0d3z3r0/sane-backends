@@ -42,38 +42,109 @@
    HP Scanner Control Language (SCL).
 */
 
-#ifndef HP_SCSI_INCLUDED
-#define HP_SCSI_INCLUDED
+#define STUBS
+extern int sanei_debug_hp;
+#include <sane/config.h>
 
-#define HP_SCSI_MAX_WRITE	(2048)
-SANE_Status sanei_hp_nonscsi_new (HpScsi * newp, const char * devname,
-                                  HpConnect connect);
-SANE_Status sanei_hp_scsi_new	(HpScsi * newp, const char * devname);
-void	    sanei_hp_scsi_destroy	(HpScsi this);
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
 
-hp_byte_t * sanei_hp_scsi_inq        (HpScsi this);
-const char *sanei_hp_scsi_model	     (HpScsi this);
-const char *sanei_hp_scsi_vendor     (HpScsi this);
-const char *sanei_hp_scsi_devicename (HpScsi this);
+#include "hp.h"
 
-SANE_Status sanei_hp_scsi_pipeout    (HpScsi this, int outfd, size_t count,
-                                      int mirror, int bytes_per_line,
-                                      int bits_per_channel, hp_bool_t invert);
+typedef struct hp_alloc_s  Alloc;
 
-SANE_Status sanei_hp_scl_calibrate   (HpScsi scsi);
-SANE_Status sanei_hp_scl_startScan   (HpScsi scsi, HpScl scl);
-SANE_Status sanei_hp_scl_reset       (HpScsi scsi);
-SANE_Status sanei_hp_scl_clearErrors (HpScsi scsi);
-SANE_Status sanei_hp_scl_errcheck    (HpScsi scsi);
+struct hp_alloc_s
+{
+    Alloc *	prev;
+    Alloc *	next;
+    hp_byte_t	buf[1];
+};
 
-SANE_Status sanei_hp_scl_upload_binary (HpScsi scsi, HpScl scl,
-                                        size_t *lengthhp, char **bufhp);
-SANE_Status sanei_hp_scl_set    (HpScsi scsi, HpScl scl, int val);
-SANE_Status sanei_hp_scl_inquire(HpScsi scsi, HpScl scl,
-                                 int * valp, int * minp, int * maxp);
-SANE_Status sanei_hp_scl_upload (HpScsi scsi, HpScl scl,
-                                 void * buf, size_t sz);
-SANE_Status sanei_hp_scl_download (HpScsi scsi, HpScl scl,
-                                   const void * buf, size_t sz);
+static Alloc  head[] = {{ head, head }};
 
-#endif /* HP_SCSI_INCLUDED */
+#define DATA_OFFSET	  (head->buf - (hp_byte_t *)head)
+#define VOID_TO_ALLOCP(p) ((Alloc *)((hp_byte_t *)(p) - DATA_OFFSET))
+#define ALLOCSIZE(sz) 	  (sz + DATA_OFFSET)
+
+
+void *
+sanei_hp_alloc (size_t sz)
+{
+  Alloc * new = malloc(ALLOCSIZE(sz));
+
+  if (!new)
+      return 0;
+  (new->next = head->next)->prev = new;
+  (new->prev = head)->next = new;
+  return new->buf;
+}
+
+void *
+sanei_hp_allocz (size_t sz)
+{
+  void * new = sanei_hp_alloc(sz);
+
+  if (!new)
+      return 0;
+  memset(new, 0, sz);
+  return new;
+}
+
+void *
+sanei_hp_memdup (const void * src, size_t sz)
+{
+  char * new = sanei_hp_alloc(sz);
+  if (!new)
+      return 0;
+  return memcpy(new, src, sz);
+}
+
+char *
+sanei_hp_strdup (const char * str)
+{
+  return sanei_hp_memdup(str, strlen(str) + 1);
+}
+
+void *
+sanei_hp_realloc (void * ptr, size_t sz)
+{
+  if (ptr)
+    {
+      Alloc * old = VOID_TO_ALLOCP(ptr);
+      Alloc  copy = *old;
+      Alloc * new = realloc(old, ALLOCSIZE(sz));
+      if (!new)
+	  return 0;
+      if (new != old)
+	  (new->prev = copy.prev)->next = (new->next = copy.next)->prev = new;
+      return new->buf;
+    }
+  else
+      return sanei_hp_alloc(sz);
+}
+
+void
+sanei_hp_free (void * ptr)
+{
+  Alloc * old = VOID_TO_ALLOCP(ptr);
+
+  assert(old && old != head);
+  (old->next->prev = old->prev)->next = old->next;
+  old->next = old->prev = 0;	/* so we can puke on multiple free's */
+  free(old);
+}
+
+void
+sanei_hp_free_all (void)
+{
+  Alloc * ptr;
+  Alloc * next;
+
+  for (ptr = head->next; ptr != head; ptr = next)
+    {
+      next = ptr->next;
+      free(ptr);
+    }
+  head->next = head->prev = head;
+}

@@ -1,4 +1,4 @@
-.TH sane-hp 5 "04-July 1999"
+.TH sane-hp 5 "30-January 2000"
 .IX sane-hp
 .SH NAME
 sane-hp - SANE backend for HP ScanJet scanners
@@ -24,29 +24,40 @@ ScanJet IIp    C1790A          SCSI
 .br
 ScanJet 3C     C2520A 3503     SCSI
 .br
-ScanJet 4C     C2520A          SCSI
-.br
-ScanJet 5100C  C5190A          parallel port
-.br
-ScanJet 5200C  C7190A 3846     parallel port
-.br
-ScanJet 6100C  C2520A 3644     SCSI
-.br
-ScanJet 6200C  C6270A 3828     SCSI
-.br
-ScanJet 6250C  C6270A 3828     SCSI
-.br
 ScanJet 3P     C2570A 3406     SCSI
+.br
+ScanJet 4C     C2520A          SCSI
 .br
 ScanJet 4P     C1130A 3540     SCSI
 .br
+ScanJet 4100C  C6290A          USB
+.br
 ScanJet 5P     C5110A          SCSI
+.br
+ScanJet 5100C  C5190A          parallel port
+.br
+ScanJet 5200C  C7190A 3846     parallel port/USB
+.br
+ScanJet 6100C  C2520A 3644     SCSI
+.br
+ScanJet 6200C  C6270A 3828     SCSI/USB
+.br
+ScanJet 6250C  C6270A 3828     SCSI/USB
+.br
+ScanJet 6300C  C7670A          SCSI/USB
+.br
+ScanJet 6350C  C7670A          SCSI/USB
 .br
 PhotoSmart     C5100A R029,R030,R032    SCSI
 .RE
 .PP
-Support for models 5100C/5200C requires the ppSCSI driver available at
-http://www.torque.net/parport/ppscsi.html.
+Support for models 5100C/5200C connected to the parallel port requires
+the ppSCSI driver available at http://www.torque.net/parport/ppscsi.html
+(under development)
+.PP
+Support for models 5200C/6200C/6250C/6300C/6350C connected to the USB requires
+an USB driver available at http://www.jump.net/~dnelson/linux/usb
+(under development)
 .PP
 If you own a ScanJet scanner other than the ones listed above, please
 let us know if your model works with this backend.  To do this, send a
@@ -190,23 +201,6 @@ Beside the ScanJet Plus which came with its own parallel interface card,
 currently only the HP ScanJet 5100C/5200C are supported.
 These scanners are using an internal parallel-to-SCSI converter which
 is supported by the ppSCSI-driver (see above).
-.B USB scanner support
-Currently USB scanners are not supported.
-If someone wants to add USB scanner support, search the source code
-for
-.B HP_CONNECT_USB .
-This will lead you to 4 routines in hp-scl.c to open, read, write and
-close those devices. The option
-.B connect-usb
-must be specified in the
-.B hp.conf
-file to activate the routines.
-If there is a kernel driver that would make a scanner on an USB
-port available as a special device, it could be possible that accessing
-the scanner by
-.B connect-device
-will work.
-
 
 .SH "SEE ALSO"
 sane\-scsi(5)

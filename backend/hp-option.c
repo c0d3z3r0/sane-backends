@@ -52,6 +52,8 @@
 /*
 #define HP_EXPERIMENTAL
 */
+#define STUBS
+extern int sanei_debug_hp;
 #include <sane/config.h>
 #include <lalloca.h>
 
@@ -140,10 +142,11 @@ struct hp_option_descriptor_s
     hp_bool_t	(*enable)   (HpOption this, HpOptSet optset, HpData data,
                              const HpDeviceInfo *info);
 
-    hp_bool_t		has_global_effect:1;
-    hp_bool_t		affects_scan_params:1;
-    hp_bool_t		program_immediate:1;
-    hp_bool_t		may_change:1;
+    hp_bool_t		has_global_effect;
+    hp_bool_t		affects_scan_params;
+    hp_bool_t		program_immediate;
+    hp_bool_t           suppress_for_scan;
+    hp_bool_t		may_change;
 
 
     /* This stuff should really be in a subclasses: */
@@ -159,14 +162,14 @@ struct hp_data_info_s
 };
 
 static const struct hp_option_descriptor_s
-    NUM_OPTIONS[1], SCAN_MODE[1], SCAN_RESOLUTION[1],
+    NUM_OPTIONS[1], PREVIEW_MODE[1], SCAN_MODE[1], SCAN_RESOLUTION[1],
 
     CUSTOM_GAMMA[1], GAMMA_VECTOR_8x8[1],
 #ifdef ENABLE_7x12_TONEMAPS
     GAMMA_VECTOR_7x12[1],
     RGB_TONEMAP[1], GAMMA_VECTOR_R[1], GAMMA_VECTOR_G[1], GAMMA_VECTOR_B[1],
 #endif
-    HALFTONE_TYPE[1], MEDIA[1], DATA_WIDTH[1], SCAN_TYPE[1],
+    HALFTONE_PATTERN[1], MEDIA[1], BIT_DEPTH[1], SCAN_SOURCE[1],
 #ifdef FAKE_COLORSEP_MATRIXES
     SEPMATRIX[1],
 #endif
@@ -384,10 +387,13 @@ static SANE_Status
 hp_option_download (HpOption this, HpData data, HpScsi scsi)
 {
   HpScl scl = this->descriptor->scl_command;
+  int value;
 
   if (IS_SCL_CONTROL(scl))
-      return sanei_hp_scl_set(scsi, scl,
-                              sanei_hp_accessor_getint(this->data_acsr, data));
+  {
+      value = sanei_hp_accessor_getint(this->data_acsr, data);
+      return sanei_hp_scl_set(scsi, scl, value);
+  }
   else if (IS_SCL_DATA_TYPE(scl))
       return sanei_hp_scl_download(scsi, scl,
 			     sanei_hp_accessor_data(this->data_acsr, data),
@@ -425,8 +431,13 @@ hp_option_program (HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
       this->descriptor->name, (long)this->descriptor->enable,
       (long)this->descriptor->program);
 
-  if (this->descriptor->program_immediate)
-      return SANE_STATUS_GOOD;
+  /* Replaced by flag suppress_for_scan
+   * if (this->descriptor->program_immediate)
+   * {
+   *    DBG(10, "hp_option_program: is program_immediate. Dont program now.\n");
+   *    return SANE_STATUS_GOOD;
+   * }
+   */
 
   if (!this->descriptor->program)
       return SANE_STATUS_GOOD;
@@ -478,6 +489,8 @@ hp_option_imm_set (HpOptSet optset, HpOption this, HpData data,
 
   if (!SANE_OPTION_IS_SETTABLE(optd->cap))
       return SANE_STATUS_INVAL;
+
+  DBG(10,"hp_option_imm_set: %s\n", this->descriptor->name);
 
   if ( this->descriptor->type == SANE_TYPE_BUTTON )
     {
@@ -808,6 +821,18 @@ _probe_bool (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
 }
 
 static SANE_Status
+_probe_preview (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
+{
+  int		val	= 0;
+
+  if (!(this->data_acsr = sanei_hp_accessor_bool_new(data)))
+      return SANE_STATUS_NO_MEM;
+  sanei_hp_accessor_setint(this->data_acsr, data, val);
+  _set_size(this, data, sizeof(SANE_Bool));
+  return SANE_STATUS_GOOD;
+}
+
+static SANE_Status
 _probe_change_doc (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
 
 {SANE_Status status;
@@ -929,19 +954,34 @@ _probe_choice (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
   int		minval, maxval, val;
   HpChoice	choices;
   const HpDeviceInfo *info;
+  enum hp_device_compat_e compat;
 
   RETURN_IF_FAIL( sanei_hp_scl_inquire(scsi, scl, &val, &minval, &maxval) );
   DBG(3, "choice_option_probe: '%s': val, min, max = %d, %d, %d\n",
       this->descriptor->name, val, minval, maxval);
 
   info = sanei_hp_device_info_get ( sanei_hp_scsi_devicename  (scsi) );
+
+  /* Some PhotoSmart scanner report support for only 24 bit. */
+  /* But they also support 30 bit. Dont rely on the inqure in this case */
+  if (   (scl == SCL_DATA_WIDTH) && (maxval == 24)
+      && (sanei_hp_device_probe (&compat, scsi) == SANE_STATUS_GOOD)
+      && (compat & HP_COMPAT_PS))
+  {
+    DBG(1, "choice_option_probe: set max. datawidth to 30 for photosmart");
+    maxval = 30;
+  }
+
   choices = _make_choice_list(this->descriptor->choices, minval, maxval);
   if (choices && !choices->name) /* FIXME: hack */
       return SANE_STATUS_NO_MEM;
   if (!choices)
       return SANE_STATUS_UNSUPPORTED;
 
-  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+  this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                      this->descriptor->may_change);
+
+  if (!(this->data_acsr))
       return SANE_STATUS_NO_MEM;
   sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -981,7 +1021,8 @@ _probe_each_choice (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
   if (!choices)
       return SANE_STATUS_UNSUPPORTED;
 
-  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                            this->descriptor->may_change )))
       return SANE_STATUS_NO_MEM;
   sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -998,7 +1039,7 @@ static SANE_Status
 _probe_ps_exposure_time (_HpOption this, HpScsi scsi, HpOptSet optset,
                          HpData data)
 {
-    int           minval = 0, maxval = 9, val = 3;
+    int           minval = 0, maxval = 9, val = 0;
     HpChoice      choices;
     const HpDeviceInfo *info;
 
@@ -1008,7 +1049,8 @@ _probe_ps_exposure_time (_HpOption this, HpScsi scsi, HpOptSet optset,
 
     info = sanei_hp_device_info_get ( sanei_hp_scsi_devicename  (scsi) );
 
-    if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+    if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                              this->descriptor->may_change )))
        return SANE_STATUS_NO_MEM;
     sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -1071,7 +1113,8 @@ _probe_scan_type (_HpOption this, HpScsi scsi, HpOptSet optset,
 
   info = sanei_hp_device_info_get ( sanei_hp_scsi_devicename  (scsi) );
 
-  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                            this->descriptor->may_change )))
      return SANE_STATUS_NO_MEM;
   sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -1107,7 +1150,8 @@ _probe_mirror_horiz (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
   if (!choices)
       return SANE_STATUS_UNSUPPORTED;
 
-  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                            this->descriptor->may_change )))
       return SANE_STATUS_NO_MEM;
   sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -1132,9 +1176,9 @@ _probe_mirror_vert (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
   info = sanei_hp_device_info_get ( sanei_hp_scsi_devicename  (scsi) );
 
   max_data_width = 24;
-  if (hp_optset_isEnabled (optset, data, SANE_NAME_DATA_WIDTH, info))
+  if (hp_optset_isEnabled (optset, data, SANE_NAME_BIT_DEPTH, info))
   {
-    HpOption dwidth = hp_optset_get(optset, DATA_WIDTH);
+    HpOption dwidth = hp_optset_get(optset, BIT_DEPTH);
     if (dwidth)
       max_data_width = hp_option_getint (dwidth, data);
   }
@@ -1155,7 +1199,8 @@ _probe_mirror_vert (_HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
   if (!choices)
       return SANE_STATUS_UNSUPPORTED;
 
-  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices)))
+  if (!(this->data_acsr = sanei_hp_accessor_choice_new(data, choices,
+                            this->descriptor->may_change )))
       return SANE_STATUS_NO_MEM;
   sanei_hp_accessor_setint(this->data_acsr, data, val);
 
@@ -1546,6 +1591,12 @@ _simulate_contrast (HpOption this, HpData data, HpScsi scsi)
  */
 static SANE_Status
 _program_generic (HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
+{
+  return hp_option_download(this, data, scsi);
+}
+
+static SANE_Status
+_program_datawidth (HpOption this, HpScsi scsi, HpOptSet optset, HpData data)
 {
   return hp_option_download(this, data, scsi);
 }
@@ -2316,7 +2367,7 @@ _enable_halftonevec (HpOption this, HpOptSet optset, HpData data,
 {
   if (sanei_hp_optset_scanmode(optset, data) == HP_SCANMODE_HALFTONE)
     {
-      HpOption 		dither	= hp_optset_get(optset, HALFTONE_TYPE);
+      HpOption 		dither	= hp_optset_get(optset, HALFTONE_PATTERN);
 
       return dither && hp_option_getint(dither, data) == HP_DITHER_CUSTOM;
     }
@@ -2327,7 +2378,7 @@ static hp_bool_t
 _enable_datawidth (HpOption this, HpOptSet optset, HpData data,
                    const HpDeviceInfo *info)
 {
-  return sanei_hp_optset_scanmode (optset, data) == HP_SCANMODE_COLOR;
+ return (sanei_hp_optset_scanmode (optset, data) == HP_SCANMODE_COLOR);
 }
 
 static hp_bool_t
@@ -2415,6 +2466,13 @@ static const struct hp_option_descriptor_s SCAN_MODE_GROUP[1] = {{
     OPTION_GROUP("Scan Mode")
 }};
 
+/* Preview stuff */
+static const struct hp_option_descriptor_s PREVIEW_MODE[1] = {{
+    SCANNER_OPTION(PREVIEW, BOOL, NONE),
+    NO_REQUIRES,
+    _probe_preview
+}};
+
 static const struct hp_choice_s _scanmode_choices[] = {
     { HP_SCANMODE_LINEART, "Lineart" },
     { HP_SCANMODE_HALFTONE, "Halftone" },
@@ -2426,19 +2484,19 @@ static const struct hp_option_descriptor_s SCAN_MODE[1] = {{
     SCANNER_OPTION(SCAN_MODE, STRING, NONE),
     NO_REQUIRES,
     _probe_each_choice, _program_scanmode, 0,
-    1, 1, 0, 0, SCL_OUTPUT_DATA_TYPE, 0, 0, 0, _scanmode_choices
+    1, 1, 1, 0, 0, SCL_OUTPUT_DATA_TYPE, 0, 0, 0, _scanmode_choices
 }};
 static const struct hp_option_descriptor_s SCAN_RESOLUTION[1] = {{
     SCANNER_OPTION(SCAN_RESOLUTION, INT, DPI),
     NO_REQUIRES,
     _probe_resolution, _program_resolution, 0,
-    0, 1, 0, 1, SCL_X_RESOLUTION
+    0, 1, 0, 0, 1, SCL_X_RESOLUTION
 }};
 static const struct hp_option_descriptor_s DEVPIX_RESOLUTION[1] = {{
     INTERNAL_OPTION(DEVPIX_RESOLUTION, INT, DPI),
     NO_REQUIRES,
     _probe_devpix, 0, 0,
-    0, 0, 0, 1, SCL_DEVPIX_RESOLUTION
+    0, 0, 0, 0, 1, SCL_DEVPIX_RESOLUTION
 }};
 
 static const struct hp_option_descriptor_s ENHANCEMENT_GROUP[1] = {{
@@ -2448,19 +2506,19 @@ static const struct hp_option_descriptor_s BRIGHTNESS[1] = {{
     SCANNER_OPTION(BRIGHTNESS, INT, NONE),
     NO_REQUIRES,
     _probe_int_brightness, _program_generic_simulate, _enable_brightness,
-    0, 0, 0, 0, SCL_BRIGHTNESS, -127, 127, 0
+    0, 0, 0, 0, 0, SCL_BRIGHTNESS, -127, 127, 0
 }};
 static const struct hp_option_descriptor_s CONTRAST[1] = {{
     SCANNER_OPTION(CONTRAST, INT, NONE),
     NO_REQUIRES,
     _probe_int_brightness, _program_generic_simulate, _enable_brightness,
-    0, 0, 0, 0, SCL_CONTRAST, -127, 127, 0
+    0, 0, 0, 0, 0, SCL_CONTRAST, -127, 127, 0
 }};
 static const struct hp_option_descriptor_s AUTO_THRESHOLD[1] = {{
     SCANNER_OPTION(AUTO_THRESHOLD, BOOL, NONE),
     NO_REQUIRES,
     _probe_bool, _program_generic, _enable_autoback,
-    0, 0, 0, 0, SCL_AUTO_BKGRND
+    0, 0, 0, 0, 0, SCL_AUTO_BKGRND
 }};
 
 static const struct hp_option_descriptor_s ADVANCED_GROUP[1] = {{
@@ -2471,42 +2529,47 @@ static const struct hp_option_descriptor_s CUSTOM_GAMMA[1] = {{
     SCANNER_OPTION(CUSTOM_GAMMA, BOOL, NONE),
     NO_REQUIRES,
     _probe_custom_gamma, _program_tonemap, _enable_custom_gamma,
-    1, 0, 0, 0, SCL_TONE_MAP
+    1, 0, 0, 0, 0, SCL_TONE_MAP
 }};
 static const struct hp_option_descriptor_s GAMMA_VECTOR_8x8[1] = {{
     SCANNER_OPTION(GAMMA_VECTOR, FIXED, NONE),
     NO_REQUIRES,
     _probe_gamma_vector, 0, _enable_mono_map,
-    0, 0, 0, 0, SCL_8x8TONE_MAP
+    0, 0, 0, 0, 0, SCL_8x8TONE_MAP
 }};
 
 #ifdef ENABLE_7x12_TONEMAPS
 static const struct hp_option_descriptor_s GAMMA_VECTOR_7x12[1] = {{
     SCANNER_OPTION(GAMMA_VECTOR, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C
+             |HP_COMPAT_5200C|HP_COMPAT_6300C),
     _probe_gamma_vector, 0, _enable_mono_map,
-    0, 0, 0, 0, SCL_BW7x12TONE_MAP
+    0, 0, 0, 0, 0, SCL_BW7x12TONE_MAP
 }};
 
 static const struct hp_option_descriptor_s RGB_TONEMAP[1] = {{
     INTERNAL_OPTION(RGB_TONEMAP, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C
+             |HP_COMPAT_5200C|HP_COMPAT_6300C),
     _probe_gamma_vector, 0, 0,
-    0, 0, 0, 0, SCL_7x12TONE_MAP
+    0, 0, 0, 0, 0, SCL_7x12TONE_MAP
 }};
 static const struct hp_option_descriptor_s GAMMA_VECTOR_R[1] = {{
     SCANNER_OPTION(GAMMA_VECTOR_R, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C
+             |HP_COMPAT_5200C|HP_COMPAT_6300C),
     _probe_gamma_vector, 0, _enable_rgb_maps
 }};
 static const struct hp_option_descriptor_s GAMMA_VECTOR_G[1] = {{
     SCANNER_OPTION(GAMMA_VECTOR_G, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C
+             |HP_COMPAT_5200C|HP_COMPAT_6300C),
     _probe_gamma_vector, 0, _enable_rgb_maps
 }};
 static const struct hp_option_descriptor_s GAMMA_VECTOR_B[1] = {{
     SCANNER_OPTION(GAMMA_VECTOR_B, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_PS | HP_COMPAT_6200C
+             |HP_COMPAT_5200C|HP_COMPAT_6300C),
     _probe_gamma_vector, 0, _enable_rgb_maps
 }};
 #endif
@@ -2520,11 +2583,11 @@ static const struct hp_choice_s _halftone_choices[] = {
     { HP_DITHER_CUSTOM, 	"Custom" },
     { 0, 0 }
 };
-static const struct hp_option_descriptor_s HALFTONE_TYPE[1] = {{
-    SCANNER_OPTION(HALFTONE_TYPE, STRING, NONE),
+static const struct hp_option_descriptor_s HALFTONE_PATTERN[1] = {{
+    SCANNER_OPTION(HALFTONE_PATTERN, STRING, NONE),
     NO_REQUIRES,
     _probe_each_choice, _program_dither, _enable_halftone,
-    1, 0, 0, 0, SCL_BW_DITHER, 0, 0, 0, _halftone_choices
+    1, 0, 0, 0, 0, SCL_BW_DITHER, 0, 0, 0, _halftone_choices
 }};
 /* FIXME: Halftone dimension? */
 
@@ -2532,29 +2595,29 @@ static const struct hp_option_descriptor_s HALFTONE_TYPE[1] = {{
 static const struct hp_option_descriptor_s HALFTONE_PATTERN_16x16[1] = {{
     SCANNER_OPTION(HALFTONE_PATTERN, FIXED, NONE),
     REQUIRES(HP_COMPAT_5P | HP_COMPAT_4P | HP_COMPAT_4C | HP_COMPAT_5100C
-             | HP_COMPAT_6200C),
+              | HP_COMPAT_6200C | HP_COMPAT_5200C | HP_COMPAT_6300C),
     _probe_horiz_dither, 0, _enable_halftonevec,
-    0, 0, 0, 0, SCL_BW16x16DITHER
+    0, 0, 0, 0, 0, SCL_BW16x16DITHER
 }};
 static const struct hp_option_descriptor_s HORIZONTAL_DITHER_16x16[1] = {{
     INTERNAL_OPTION(HORIZONTAL_DITHER, FIXED, NONE),
     REQUIRES(HP_COMPAT_5P | HP_COMPAT_4P | HP_COMPAT_4C | HP_COMPAT_5100C
-             | HP_COMPAT_6200C),
+              | HP_COMPAT_6200C | HP_COMPAT_5200C | HP_COMPAT_6300C),
     _probe_horiz_dither, 0, 0,
-    0, 0, 0, 0, SCL_BW16x16DITHER
+    0, 0, 0, 0, 0, SCL_BW16x16DITHER
 }};
 #endif
 static const struct hp_option_descriptor_s HALFTONE_PATTERN_8x8[1] = {{
     SCANNER_OPTION(HALFTONE_PATTERN, FIXED, NONE),
     NO_REQUIRES,
     _probe_horiz_dither, 0, _enable_halftonevec,
-    0, 0, 0, 0, SCL_BW8x8DITHER
+    0, 0, 0, 0, 0, SCL_BW8x8DITHER
 }};
 static const struct hp_option_descriptor_s HORIZONTAL_DITHER_8x8[1] = {{
     INTERNAL_OPTION(HORIZONTAL_DITHER, FIXED, NONE),
     NO_REQUIRES,
     _probe_horiz_dither, 0, 0,
-    0, 0, 0, 0, SCL_BW8x8DITHER
+    0, 0, 0, 0, 0, SCL_BW8x8DITHER
 }};
 
 static const struct hp_choice_s _matrix_choices[] = {
@@ -2575,57 +2638,41 @@ static const struct hp_choice_s _matrix_choices[] = {
 
 static const struct hp_option_descriptor_s MATRIX_TYPE[1] = {{
     SCANNER_OPTION(MATRIX_TYPE, STRING, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX |
-	     HP_COMPAT_4C | HP_COMPAT_4P | HP_COMPAT_5P | HP_COMPAT_PS |
-             HP_COMPAT_5100C | HP_COMPAT_6200C),
-#endif
     _probe_each_choice, _program_matrix, _enable_choice,
-    1, 0, 0, 0, SCL_MATRIX, 0, 0, 0, _matrix_choices
+    1, 0, 0, 0, 0, SCL_MATRIX, 0, 0, 0, _matrix_choices
 }};
 
 static const struct hp_option_descriptor_s MATRIX_RGB[1] = {{
     SCANNER_OPTION(MATRIX_RGB, FIXED, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX |
-	     HP_COMPAT_4C | HP_COMPAT_4P | HP_COMPAT_5P | HP_COMPAT_PS |
-             HP_COMPAT_5100C | HP_COMPAT_6200C),
-#endif
     _probe_matrix, 0, _enable_rgb_matrix,
-    0, 0, 0, 0, SCL_8x9MATRIX_COEFF
+    0, 0, 0, 0, 0, SCL_8x9MATRIX_COEFF
 }};
 #ifdef FAKE_COLORSEP_MATRIXES
 static const struct hp_option_descriptor_s SEPMATRIX[1] = {{
     INTERNAL_OPTION(SEPMATRIX, FIXED, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX |
-	     HP_COMPAT_4C | HP_COMPAT_4P | HP_COMPAT_5P | HP_COMPAT_PS |
-             HP_COMPAT_5100C | HP_COMPAT_6200C),
-#endif
     _probe_vector, 0, 0,
-    0, 0, 0, 0, SCL_8x9MATRIX_COEFF
+    0, 0, 0, 0, 0, SCL_8x9MATRIX_COEFF
 }};
 #endif
 #ifdef ENABLE_10BIT_MATRIXES
 static const struct hp_option_descriptor_s MATRIX_RGB10[1] = {{
     SCANNER_OPTION(MATRIX_RGB, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_6200C
+             | HP_COMPAT_5200C | HP_COMPAT_6300C),
     _probe_matrix, 0, _enable_rgb_matrix,
-    0, 0, 0, 0, SCL_10x9MATRIX_COEFF
+    0, 0, 0, 0, 0, SCL_10x9MATRIX_COEFF
 }};
 #endif
 #ifdef NotYetSupported
 static const struct hp_option_descriptor_s BWMATRIX_GRAY10[1] = {{
     SCANNER_OPTION(MATRIX_GRAY, FIXED, NONE),
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_6200C),
+    REQUIRES(HP_COMPAT_5P | HP_COMPAT_5100C | HP_COMPAT_6200C
+             | HP_COMPAT_5200C | HP_COMPAT_6300C),
     _probe_matrix, 0, _enable_gray_matrix,
-    0, 0, 0, 0, SCL_10x3MATRIX_COEFF
+    0, 0, 0, 0, 0, SCL_10x3MATRIX_COEFF
 }};
 #endif
 
@@ -2639,14 +2686,9 @@ static const struct hp_choice_s _scan_speed_choices[] = {
 };
 static const struct hp_option_descriptor_s SCAN_SPEED[1] = {{
     SCANNER_OPTION(SCAN_SPEED, STRING, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_5P | HP_COMPAT_4C | HP_COMPAT_PS | HP_COMPAT_5100C
-             | HP_COMPAT_6200C),
-#endif
     _probe_each_choice, _program_generic, 0,
-    0, 0, 0, 0, SCL_SPEED, 0, 0, 0, _scan_speed_choices
+    0, 0, 0, 0, 1, SCL_SPEED, 0, 0, 0, _scan_speed_choices
 }};
 
 static const struct hp_choice_s _smoothing_choices[] = {
@@ -2659,14 +2701,9 @@ static const struct hp_choice_s _smoothing_choices[] = {
 };
 static const struct hp_option_descriptor_s SMOOTHING[1] = {{
     SCANNER_OPTION(SMOOTHING, STRING, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX | HP_COMPAT_4C | HP_COMPAT_4P
-             | HP_COMPAT_PS),
-#endif
     _probe_each_choice, _program_generic, 0,
-    0, 0, 0, 0, SCL_FILTER, 0, 0, 0, _smoothing_choices
+    0, 0, 0, 0, 0, SCL_FILTER, 0, 0, 0, _smoothing_choices
 }};
 
 static const struct hp_choice_s _media_choices[] = {
@@ -2677,29 +2714,26 @@ static const struct hp_choice_s _media_choices[] = {
 };
 static const struct hp_option_descriptor_s MEDIA[1] = {{
     SCANNER_OPTION(MEDIA, STRING, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES( HP_COMPAT_PS ),
-#endif
     _probe_choice, _program_media, 0,
-    1, 1, 1, 0, SCL_MEDIA, 0, 0, 0, _media_choices
+    1, 1, 1, 1, 0, SCL_MEDIA, 0, 0, 0, _media_choices
 }};
 
 static const struct hp_choice_s _data_widths[] = {
-    {24, "24"}, {30, "30"}, {36, "36"}, {42, "42"}, {48, "48"}, {0, 0}
+    {1, "1"}, {24, "8"}, {30, "10"}, {36, "12"}, {42, "14"}, {48, "16"},
+    {0, 0}
 };
 
-static const struct hp_option_descriptor_s DATA_WIDTH[1] = {{
-    SCANNER_OPTION(DATA_WIDTH, STRING, NONE),
-    REQUIRES (HP_COMPAT_PS),
-    _probe_choice, _program_generic, _enable_datawidth,
-    1, 1, 0, 0, SCL_DATA_WIDTH, 0, 0, 0, _data_widths
+static const struct hp_option_descriptor_s BIT_DEPTH[1] = {{
+    SCANNER_OPTION(BIT_DEPTH, STRING, NONE),
+    NO_REQUIRES,
+    _probe_choice, _program_datawidth, _enable_datawidth,
+    1, 1, 1, 0, 1, SCL_DATA_WIDTH, 0, 0, 0, _data_widths
 }};
 
 /* The 100% setting may cause problems within the scanner */
 static const struct hp_choice_s _ps_exposure_times[] = {
-    /* {0, "100%"}, */ { 0, "Off" }, {1, "125%"}, {2, "150%"},
+    /* {0, "100%"}, */ { 0, "Default" }, {1, "125%"}, {2, "150%"},
     {3, "175%"}, {4, "200%"}, {5, "225%"},
     {6, "250%"}, {7, "275%"}, {8, "300%"},
     {9, "Negative"}, {0, 0}
@@ -2710,7 +2744,7 @@ static const struct hp_option_descriptor_s PS_EXPOSURE_TIME[1] = {{
     SCANNER_OPTION(PS_EXPOSURE_TIME, STRING, NONE),
     REQUIRES( HP_COMPAT_PS ),
     _probe_ps_exposure_time, _program_ps_exposure_time, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, _ps_exposure_times
+    0, 0, 0, 0, 0, 0, 0, 0, 0, _ps_exposure_times
 }};
 
 /* Normal, ADF or XPA scanning. Because scanning from ADF can change */
@@ -2721,11 +2755,11 @@ static const struct hp_choice_s _scan_types[] = {
     { 0, "Normal" }, {1, "ADF"}, {2, "XPA"}, {0, 0}
 };
 
-static const struct hp_option_descriptor_s SCAN_TYPE[1] = {{
-    SCANNER_OPTION(SCAN_TYPE, STRING, NONE),
+static const struct hp_option_descriptor_s SCAN_SOURCE[1] = {{
+    SCANNER_OPTION(SCAN_SOURCE, STRING, NONE),
     NO_REQUIRES,
     _probe_scan_type, _program_scan_type, 0,
-    1, 1, 0, 0, SCL_START_SCAN, 0, 0, 0, _scan_types
+    1, 1, 0, 0, 0, SCL_START_SCAN, 0, 0, 0, _scan_types
 }};
 
 /* Unload after is only necessary for PhotoScanner */
@@ -2733,31 +2767,21 @@ static const struct hp_option_descriptor_s UNLOAD_AFTER_SCAN[1] = {{
     SCANNER_OPTION(UNLOAD_AFTER_SCAN, BOOL, NONE),
     REQUIRES(HP_COMPAT_PS),
     _probe_bool, _program_unload_after_scan, 0,
-    0, 0, 0, 0, SCL_UNLOAD
+    0, 0, 0, 1, 0, SCL_UNLOAD
 }};
 
 static const struct hp_option_descriptor_s CHANGE_DOC[1] = {{
     SCANNER_OPTION(CHANGE_DOC, BUTTON, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX | HP_COMPAT_4C | HP_COMPAT_4P
-             | HP_COMPAT_5P | HP_COMPAT_6200C),
-#endif
     _probe_change_doc, _program_change_doc, 0,
-    1, 1, 1, 0, SCL_CHANGE_DOC
+    1, 1, 1, 1, 0, SCL_CHANGE_DOC
 }};
 
 static const struct hp_option_descriptor_s UNLOAD[1] = {{
     SCANNER_OPTION(UNLOAD, BUTTON, NONE),
-#ifdef HP_PROBE_SCL_COMMAND
     NO_REQUIRES,
-#else
-    REQUIRES(HP_COMPAT_2C | HP_COMPAT_2CX | HP_COMPAT_4C | HP_COMPAT_4P
-             | HP_COMPAT_5P | HP_COMPAT_PS | HP_COMPAT_5100C | HP_COMPAT_6200C),
-#endif
     _probe_bool, _program_unload, 0,
-    0, 0, 1, 0, SCL_UNLOAD
+    0, 0, 1, 1, 0, SCL_UNLOAD
 }};
 
 /* There is no inquire ID-for the calibrate command. */
@@ -2767,7 +2791,7 @@ static const struct hp_option_descriptor_s CALIBRATE[1] = {{
     REQUIRES(HP_COMPAT_2CX | HP_COMPAT_4C | HP_COMPAT_4P | HP_COMPAT_5P
              | HP_COMPAT_PS | HP_COMPAT_5100C | HP_COMPAT_6200C),
     _probe_calibrate, _program_calibrate, _enable_calibrate,
-    0, 0, 1, 0, SCL_CALIBRATE
+    0, 0, 1, 1, 0, SCL_CALIBRATE
 }};
 
 static const struct hp_option_descriptor_s GEOMETRY_GROUP[1] = {{
@@ -2777,25 +2801,25 @@ static const struct hp_option_descriptor_s SCAN_TL_X[1] = {{
     SCANNER_OPTION(SCAN_TL_X, FIXED, MM),
     NO_REQUIRES,
     _probe_geometry, _program_generic, 0,
-    0, 1, 0, 1, SCL_X_POS
+    0, 1, 0, 0, 1, SCL_X_POS
 }};
 static const struct hp_option_descriptor_s SCAN_TL_Y[1] = {{
     SCANNER_OPTION(SCAN_TL_Y, FIXED, MM),
     NO_REQUIRES,
     _probe_geometry, _program_generic, 0,
-    0, 1, 0, 1, SCL_Y_POS
+    0, 1, 0, 0, 1, SCL_Y_POS
 }};
 static const struct hp_option_descriptor_s SCAN_BR_X[1] = {{
     SCANNER_OPTION(SCAN_BR_X, FIXED, MM),
     NO_REQUIRES,
     _probe_geometry, _program_generic, 0,
-    0, 1, 0, 1, SCL_X_EXTENT
+    0, 1, 0, 0, 1, SCL_X_EXTENT
 }};
 static const struct hp_option_descriptor_s SCAN_BR_Y[1] = {{
     SCANNER_OPTION(SCAN_BR_Y, FIXED, MM),
     NO_REQUIRES,
     _probe_geometry, _program_generic, 0,
-    0, 1, 0, 1, SCL_Y_EXTENT
+    0, 1, 0, 0, 1, SCL_Y_EXTENT
 }};
 
 static const struct hp_choice_s _mirror_horiz_choices[] = {
@@ -2808,7 +2832,7 @@ static const struct hp_option_descriptor_s MIRROR_HORIZ[1] = {{
     SCANNER_OPTION(MIRROR_HORIZ, STRING, NONE),
     NO_REQUIRES,
     _probe_mirror_horiz, _program_mirror_horiz, 0,
-    0, 0, 0, 0, SCL_MIRROR_IMAGE, 0, 0, 0, _mirror_horiz_choices
+    0, 0, 0, 0, 0, SCL_MIRROR_IMAGE, 0, 0, 0, _mirror_horiz_choices
 }};
 
 static const struct hp_choice_s _mirror_vert_choices[] = {
@@ -2821,7 +2845,7 @@ static const struct hp_option_descriptor_s MIRROR_VERT[1] = {{
     SCANNER_OPTION(MIRROR_VERT, STRING, NONE),
     NO_REQUIRES,
     _probe_mirror_vert, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, _mirror_vert_choices
+    0, 0, 0, 0, 0, 0, 0, 0, 0, _mirror_vert_choices
 }};
 
 #ifdef HP_EXPERIMENTAL
@@ -2846,25 +2870,25 @@ static const struct hp_option_descriptor_s PROBE_10470[1] = {{
     SCANNER_OPTION(10470, STRING, NONE),
     NO_REQUIRES,
     _probe_each_choice, _program_generic, 0,
-    0, 0, 0, 0, SCL_10470, 0, 0, 0, _range_choices
+    0, 0, 0, 0, 0, SCL_10470, 0, 0, 0, _range_choices
 }};
 static const struct hp_option_descriptor_s PROBE_10485[1] = {{
     SCANNER_OPTION(10485, STRING, NONE),
     NO_REQUIRES,
     _probe_each_choice, _program_generic, 0,
-    0, 0, 0, 0, SCL_10485, 0, 0, 0, _range_choices
+    0, 0, 0, 0, 0, SCL_10485, 0, 0, 0, _range_choices
 }};
 static const struct hp_option_descriptor_s PROBE_10952[1] = {{
     SCANNER_OPTION(10952, STRING, NONE),
     NO_REQUIRES,
     _probe_each_choice, _program_generic, 0,
-    0, 0, 0, 0, SCL_10952, 0, 0, 0, _range_choices
+    0, 0, 0, 0, 0, SCL_10952, 0, 0, 0, _range_choices
 }};
 static const struct hp_option_descriptor_s PROBE_10967[1] = {{
     SCANNER_OPTION(10967, INT, NONE),
     NO_REQUIRES,
     _probe_int, _program_generic, 0,
-    0, 0, 0, 0, SCL_10967
+    0, 0, 0, 0, 0, SCL_10967
 }};
 
 #endif
@@ -2873,6 +2897,7 @@ static HpOptionDescriptor hp_options[] = {
     NUM_OPTIONS,
 
     SCAN_MODE_GROUP,
+    PREVIEW_MODE,
     SCAN_MODE, SCAN_RESOLUTION, DEVPIX_RESOLUTION,
 
     ENHANCEMENT_GROUP,
@@ -2895,14 +2920,14 @@ static HpOptionDescriptor hp_options[] = {
 #endif
     MATRIX_RGB,
 
-    HALFTONE_TYPE,
+    HALFTONE_PATTERN,
 #ifdef ENABLE_16X16_DITHERS
     HALFTONE_PATTERN_16x16, HORIZONTAL_DITHER_16x16,
 #endif
     HALFTONE_PATTERN_8x8, HORIZONTAL_DITHER_8x8,
 
-    SCAN_SPEED, SMOOTHING, MEDIA, PS_EXPOSURE_TIME, DATA_WIDTH,
-    SCAN_TYPE, UNLOAD_AFTER_SCAN,
+    SCAN_SPEED, SMOOTHING, MEDIA, PS_EXPOSURE_TIME, BIT_DEPTH,
+    SCAN_SOURCE, UNLOAD_AFTER_SCAN,
     CHANGE_DOC, UNLOAD, CALIBRATE,
 
     GEOMETRY_GROUP,
@@ -3019,7 +3044,7 @@ sanei_hp_optset_scan_type (HpOptSet this, HpData data)
   HpScl    scl = SCL_START_SCAN;
   int      scantype;
 
-  mode = hp_optset_get(this, SCAN_TYPE);
+  mode = hp_optset_get(this, SCAN_SOURCE);
   if (mode)
   {
     scantype = hp_option_getint(mode, data);
@@ -3150,6 +3175,7 @@ hp_optset_isEnabled (HpOptSet this, HpData data, const char *name,
   return (*optpt->descriptor->enable)(optpt, this, data, info);
 }
 
+/* This function is only called from sanei_hp_handle_startScan() */
 SANE_Status
 sanei_hp_optset_download (HpOptSet this, HpData data, HpScsi scsi)
 {
@@ -3165,19 +3191,57 @@ sanei_hp_optset_download (HpOptSet this, HpData data, HpScsi scsi)
 
   for (i = 0; i < this->num_opts; i++)
   {
-      RETURN_IF_FAIL( hp_option_program(this->options[i], scsi, this, data) );
-
-      if ( sanei_hp_scl_errcheck (scsi) != SANE_STATUS_GOOD )
+      if ( (this->options[i])->descriptor->suppress_for_scan )
       {
-        errcount++;
-        DBG(3, "Option %s generated scanner error\n",
-            this->options[i]->descriptor->name);
+        DBG(3,"sanei_hp_optset_download: %s suppressed for scan\n",
+            (this->options[i])->descriptor->name);
+      }
+      else
+      {
+        RETURN_IF_FAIL( hp_option_program(this->options[i], scsi, this, data) );
 
-        RETURN_IF_FAIL(sanei_hp_scl_clearErrors (scsi));
+        if ( sanei_hp_scl_errcheck (scsi) != SANE_STATUS_GOOD )
+        {
+          errcount++;
+          DBG(3, "Option %s generated scanner error\n",
+              this->options[i]->descriptor->name);
+
+          RETURN_IF_FAIL(sanei_hp_scl_clearErrors (scsi));
+        }
       }
   }
-
   DBG(3, "Downloading parameters finished.\n");
+
+  /* Check preview */
+  {HpOption option;
+   int is_preview, data_width;
+   const HpDeviceInfo *info;
+
+   option = hp_optset_getByName (this, SANE_NAME_PREVIEW);
+   if ( option )
+   {
+     is_preview = hp_option_getint (option, data);
+     if ( is_preview )
+     {
+       DBG(3, "sanei_hp_optset_download: Set up preview options\n");
+
+       info = sanei_hp_device_info_get ( sanei_hp_scsi_devicename  (scsi) );
+
+       if (hp_optset_isEnabled (this, data, SANE_NAME_BIT_DEPTH, info))
+       {
+         option = hp_optset_get(this, BIT_DEPTH);
+         if (option)
+         {
+           data_width = hp_option_getint (option, data);
+           if (data_width > 24)
+           {
+             sanei_hp_scl_set(scsi, SCL_DATA_WIDTH, 24);
+           }
+         }
+       }
+     }
+   }
+  }
 
   return SANE_STATUS_GOOD;
 }
@@ -3199,6 +3263,7 @@ sanei_hp_optset_new(HpOptSet * newp, HpScsi scsi, HpDevice dev)
     {
       HpOptionDescriptor desc = *ptr;
 
+      DBG(8, "sanei_hp_optset_new: %s\n", desc->name);
       if (desc->requires && !sanei_hp_device_compat(dev, desc->requires))
 	  continue;
       if (desc->type != SANE_TYPE_GROUP

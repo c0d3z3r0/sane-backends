@@ -51,12 +51,6 @@
  *
  * FIXME: this should become standard
  */
-#ifndef SANE_NAME_HALFTONE_TYPE
-# define SANE_NAME_HALFTONE_TYPE "halftone-type"
-# define SANE_TITLE_HALFTONE_TYPE "Dither Pattern"
-# define SANE_DESC_HALFTONE_TYPE "Set the halftoning (dither) pattern."
-#endif
-
 #ifndef SANE_NAME_AUTO_THRESHOLD
 # define SANE_NAME_AUTO_THRESHOLD "auto-threshold"
 # define SANE_TITLE_AUTO_THRESHOLD "Auto Threshold"
@@ -74,13 +68,6 @@
 # define SANE_NAME_UNLOAD_AFTER_SCAN "unload-after-scan"
 # define SANE_TITLE_UNLOAD_AFTER_SCAN "Unload media after scan"
 # define SANE_DESC_UNLOAD_AFTER_SCAN "Unloads the media after a scan."
-#endif
-
-#ifndef SANE_NAME_SCAN_TYPE
-# define SANE_NAME_SCAN_TYPE "scantype"
-# define SANE_TITLE_SCAN_TYPE "Type of scanning"
-# define SANE_DESC_SCAN_TYPE "Indicate normal, ADF (automatic document feed)\
- or XPA (transparency adapter) scanning"
 #endif
 
 #ifndef SANE_NAME_CHANGE_DOC
@@ -112,15 +99,8 @@
 # define SANE_TITLE_PS_EXPOSURE_TIME "Exposure time"
 # define SANE_DESC_PS_EXPOSURE_TIME "A longer exposure time lets the scanner\
  collect more light. Suggested use is 175% for prints,\
- 150% for normal slides; 300% for dark slides and \"Negatives\" for\
- negative film"
-#endif
-
-#ifndef SANE_NAME_DATA_WIDTH
-# define SANE_NAME_DATA_WIDTH "data-width"
-# define SANE_TITLE_DATA_WIDTH "Data width"
-# define SANE_DESC_DATA_WIDTH "Precision of the analog to digital conversion,\
- in bits"
+ 150% for normal slides and \"Negatives\" for\
+ negative film. For dark (underexposed) images you can increase this value."
 #endif
 
 #ifndef SANE_NAME_MATRIX_TYPE
