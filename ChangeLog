@@ -1,9 +1,10 @@
 2000-02-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* backend/musteka4s2.desc backend/plustek.desc
-	backend/sagitta.desc backend/v4l.desc backend/v4l2.desc: Added
-	info on existing backends.  Placed version number in () to
-	indicate that these backend are distributed separately.
+	backend/sagitta.desc backend/st400.desc backend/v4l.desc
+	backend/v4l2.desc: Added info on existing backends.  Placed
+	version number in () to indicate that these backend are
+	distributed separately.
 
 	* backend/sharp.desc backend/pint.desc backend/canon.desc: Fixed
 	typo and updated with more information.
