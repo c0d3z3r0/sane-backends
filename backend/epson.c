@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.10 Date 01-Feb-2000
+   Version 0.1.11 Date 02-Feb-2000
 
    This file is part of the SANE package.
 
@@ -53,6 +53,10 @@
    If you do not wish that, delete this exception notice.  */
 
 /*
+   2000-02-02   "Brown Paper Bag Release" Put the USB fix finally
+		into the CVS repository.
+   2000-02-01   Fixed problem with USB scanner not being recognized
+		because of hte changes to attach a few days ago. (KHK)
    2000-01-29   fixed core dump with xscanimage by moving the gamma
 		curves to the standard interface (no longer advanced)
    		Removed pragma pack() from source code to make it 
@@ -68,7 +72,7 @@
    2000-01-24	Removed C++ style comments '//' (KHK)
 */
 
-#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.9 - 2000-01-29"
+#define	SANE_EPSON_VERSION	"SANE Epson Backend v0.1.11 - 2000-02-02"
 
 #ifdef  _AIX
 #	include  <lalloca.h>		/* MUST come first for AIX! */
@@ -1192,13 +1196,22 @@ static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd,
 
 	buf = ( u_char *) head;
 
-	if( s->hw->connection == SANE_EPSON_SCSI) {
+	if( s->hw->connection == SANE_EPSON_SCSI) 
+	{
 		receive( s, buf, 4, status);
 		buf += 4;
-	} else {
+	}
+	else if (s->hw->connection == SANE_EPSON_USB)
+        {
+                int     bytes_read;
+                bytes_read = receive( s, buf, 4, status);
+                buf += bytes_read;
+	} 
+	else 
+	{
 		receive( s, buf, 1, status);
 		buf += 1;
-	}		/* !!! do we need one for usb as well ? */
+	}
 
 	if( SANE_STATUS_GOOD != *status)
 		return ( EpsonHdr) 0;
@@ -1226,7 +1239,11 @@ static EpsonHdr command ( Epson_Scanner * s, const u_char * cmd,
 	    {
 		/* nope */
 	    } 
-	    else 	/* !!! is this also the usb case ? */
+	    else if (s->hw->connection == SANE_EPSON_USB)
+            {
+                /* we've already read the complete data */
+            } 
+	    else
             {
 		receive (s, buf, 3, status);
 /*		buf += 3; */
