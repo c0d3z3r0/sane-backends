@@ -88,7 +88,7 @@
 
 :model "OpticPro 19200S"
 :interface "SCSI"
-:comment "Not supported."
+:comment "rebadged Artec AM12S (supported by Artec Backend)"
 
 :model "OpticPro 1212U/U12/UT12"
 :interface "USB"
