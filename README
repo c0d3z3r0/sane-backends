@@ -124,7 +124,7 @@ below:
     Fujitsu                sane-fujitsu(5)
     HP                     sane-hp(5)
     Microtek               sane-microtek(5)
-    Mikrotek SCSI-2        sane-microtek2(5)
+    Microtek SCSI-2        sane-microtek2(5)
     Mustek                 sane-mustek(5)
     Ricoh                  sane-ricoh(5)
     Sharp                  sane-sharp(5)
@@ -141,6 +141,7 @@ below:
   Miscellaneous backends:
     PNM image reader       sane-pnm(5)
     PINT scanners          sane-pint(5)
+    Video for Linux        no documentation, look at the source
 
   Miscellaneous:
     Dynamic loading        sane-dll(5)

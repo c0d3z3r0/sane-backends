@@ -146,7 +146,7 @@ typedef struct Mustek_Device
       {
         int bytes;
         int lines;
-	u_int8_t *buffer;
+	unsigned char *buffer;
       }
     cal;    
     /* current and maximum buffer size of the scanner */
