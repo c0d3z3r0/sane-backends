@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 1999-2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.9 Date 29-Jan-2000
+   Version 0.1.10 Date 01-Feb-2000
 
    This file is part of the SANE package.
 
@@ -1360,6 +1360,11 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		buf[ INQUIRY_BUF_SIZE] = 0;
 		DBG( 1, ">%s<\n", buf + 8);
 
+		/* 
+		 * For USB and PIO scanners this will be done later, once
+		 * we have communication established with the device.
+		 */
+
 		if( buf[ 0] != TYPE_PROCESSOR
 			|| strncmp( buf + 8, "EPSON", 5) != 0
 			|| (strncmp( buf + 16, "SCANNER ", 8) != 0
@@ -1372,10 +1377,15 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 			return SANE_STATUS_INVAL;
 		}
 
-
+#if 0
+		/* 
+		 * Wait with the setting of the device name until the
+		 * scanner itself can tell us.
+		 */
 		str = malloc( 8 + 1);
 		str[ 8] = '\0';
 		dummy_dev.sane.model = ( char *) memcpy( str, buf + 16 + 8, 8);
+#endif
 
 /*
 //  else parallel or USB.
@@ -1407,10 +1417,10 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		flags |= O_BINARY;
 #endif
 
-		s->fd = open(s->hw->sane.name, flags);
+		s->fd = open(dev_name, flags);
 		if (s->fd < 0) {
 			DBG( 1, "sane_start: %s open (USB) failed: %s\n", 
-				s->hw->sane.name, strerror(errno));
+				dev_name, strerror(errno));
 			status = (errno == EACCES) ? SANE_STATUS_ACCESS_DENIED 
 				: SANE_STATUS_INVAL;
 			return status;
@@ -1589,9 +1599,18 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 
 /*
 //  Extended status flag request (ESC f).
+//    this also requests the scanner device name from the the scanner
 */
-
-	if( SANE_TRUE == dev->extension) {
+#if 0
+	if( SANE_TRUE == dev->extension) 
+	/*
+	 * because we are also using the device name from this command, 
+	 * we have to run this block even if the scanner does not report
+	 * an extension. The extensions are only reported if the ADF or
+	 * the TPU are actually detected. 
+	 */
+#endif
+	{
 		u_char * buf;
 		EpsonHdr head;
 		SANE_String_Const * source_list_add = source_list;
@@ -1677,6 +1696,40 @@ static SANE_Status attach ( const char * dev_name, Epson_Device * * devp) {
 		}
 
 		*source_list_add = NULL;
+/*
+ *	Get the device name and copy it to dummy_dev.sane.model
+ *	The device name starts at buf[0x1A] and is up to 16 bytes long
+ *	We are overwriting whatever was set previously!
+ */
+ 		{
+#define DEVICE_NAME_LEN	(16)		
+			char device_name[DEVICE_NAME_LEN + 1];
+			char *end_ptr;
+			int len;
+
+			/* make sure that the end of string is marked */
+			device_name[DEVICE_NAME_LEN] = '\0';
+
+			/* copy the string to an area where we can work with it */
+			memcpy(device_name, buf + 0x1A, DEVICE_NAME_LEN);
+			end_ptr = strchr(device_name, ' ');
+			if (end_ptr != NULL)
+			{
+				*end_ptr = '\0';
+			}
+
+			len = strlen(device_name);
+
+			/* free the old string */
+			if (dummy_dev.sane.model != NULL)
+				free((char *) dummy_dev.sane.model);
+
+			str = malloc( len + 1);
+			str[len] = '\0';
+
+			/* finally copy the device name to the structure */
+			dummy_dev.sane.model = ( char *) memcpy( str, device_name, len);
+		}
 	}
 
 /*

@@ -12,7 +12,7 @@
    Copyright (C) 1999 Norihiko Sawa <sawa@yb3.so-net.ne.jp>
    Copyright (C) 2000 Karl Heinz Kremer <khk@khk.net>
 
-   Version 0.1.9 Date 29-Jan-2000
+   Version 0.1.10 Date 01-Feb-2000
 
    This file is part of the SANE package.
 
