@@ -1,15 +1,19 @@
+2000-01-18  Karl Heinz Kremer <khk@khk.net>
+	* fixed typo in epson.desc and fixed the dates for
+	  two of my earlier submissions in ChangeLog file
+
 2000-01-16  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc updated with URL
         * backend/epson.c added support for Expression family
 	  of scanners
 	* doc/sane-epson.man updated
-2000-01-09  Karl Heinz Kremer <khk@khk.net>
+2000-01-10  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.desc fixed/updated. Now shows a link to
 	  the alternative FilmScan 200 backend.
 
-2000-01-10  Karl Heinz Kremer <khk@khk.net>
+2000-01-09  Karl Heinz Kremer <khk@khk.net>
 
 	* backend/epson.* updated. This is a new backend still based 
 	  on the origial Sane 1.0.1 version, but with lots of work 
