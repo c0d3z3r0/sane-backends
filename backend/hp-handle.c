@@ -331,6 +331,7 @@ sanei_hp_handle_startScan (HpHandle this)
   HpScsi	scsi;
   HpScl         scl;
   HpProcessData procdata;
+  int           adfscan;
 
   /* FIXME: setup preview mode stuff? */
 
@@ -358,6 +359,40 @@ sanei_hp_handle_startScan (HpHandle this)
          "Request" : "No request" );
 
   scl = sanei_hp_optset_scan_type (this->dev->options, this->data);
+  adfscan = (scl ==  SCL_ADF_SCAN);
+
+  /* For ADF scan we should check if there is paper available */
+  if ( adfscan )
+  {int adfstat = 0;
+   int minval, maxval;
+
+    /* HP ScanJet IIp does not support commands ADF scan window */
+    /* and unload document. We have to use the usual scan window. */
+    if ( sanei_hp_device_support_get (this->dev->sanedev.name,
+                                      SCL_UNLOAD, &minval, &maxval)
+           != SANE_STATUS_GOOD )
+    {
+
+      DBG(1, "start: Request for ADF scan without support of unload doc.\n");
+      DBG(1, "       Seems to be a IIp. Use standard scan window command.\n");
+
+      scl = SCL_START_SCAN;
+    }
+
+    /* Check if the ADF is ready */
+    if (  sanei_hp_scl_inquire(scsi, SCL_ADF_READY, &adfstat, 0, 0)
+            != SANE_STATUS_GOOD )
+    {
+      DBG(1, "start: Error checking if ADF is ready\n");
+      return SANE_STATUS_UNSUPPORTED;
+    }
+
+    if ( adfstat != 1 )
+    {
+      DBG(1, "start: ADF scan requested without paper. Finished.\n");
+      return SANE_STATUS_NO_DOCS;
+    }
+  }
 
   DBG(1, "start: %s to mirror image vertically\n", procdata.mirror_vertical ?
          "Request" : "No request" );
