@@ -73,6 +73,8 @@
 #define AIX_GSC_INTERFACE	11
 #define DOMAINOS_INTERFACE	12
 #define FREEBSD_CAM_INTERFACE	13
+#define SYSVR4_INTERFACE	14 
+#define SCO_UW71_INTERFACE	15 
 
 #if defined (HAVE_SCSI_SG_H)
 # define USE LINUX_INTERFACE
@@ -114,14 +116,29 @@
 # include <invent.h>
 #elif defined (HAVE_SYS_SCSI_H)
 # include <sys/scsi.h>
-# ifdef SCTL_READ
-#  define USE HPUX_INTERFACE
-# else
-#  ifdef HAVE_GSCDDS_H
-#   define USE AIX_GSC_INTERFACE
-#   include <gscdds.h>
+# ifdef HAVE_SYS_SDI_COMM_H 
+#  ifdef HAVE_SYS_PASSTHRUDEF_H 
+#   define USE SCO_UW71_INTERFACE 
+#   include <sys/scsi.h> 
+#   include <sys/sdi_edt.h> 
+#   include <sys/sdi.h> 
+#   include <sys/passthrudef.h> 
+#  else 
+#   define USE SYSVR4_INTERFACE /* Unixware 2.x tested */ 
+#   define HAVE_SYSV_DRIVER 
+#   include <sys/sdi_edt.h> 
+#   include <sys/sdi_comm.h> 
+#  endif 
+# else 
+#  ifdef SCTL_READ
+#   define USE HPUX_INTERFACE
 #  else
+#   ifdef HAVE_GSCDDS_H
+#    define USE AIX_GSC_INTERFACE
+#    include <gscdds.h>
+#   else
     /* This happens for AIX without gsc and possibly other platforms... */
+#   endif
 #  endif
 # endif
 #elif defined (HAVE_OS2_H)
@@ -175,6 +192,16 @@ static int unit_ready (int fd);
 
 #ifdef SG_BIG_BUFF
 # define MAX_DATA	SG_BIG_BUFF
+#endif
+
+#if USE == SYSVR4_INTERFACE 
+# define MAX_DATA 56*1024 /* don't increase or kernel will dump 
+			   * tested with adsl, adsa and umax backend 
+			   * it depends on the lowend scsi 
+			   * drivers . But the most restriction 
+			   * is in the UNIXWARE KERNEL witch do 
+			   * not allow more then 64kB DMA transfers */ 
+static char lastrcmd[16]; /* hold command block of last read command */ 
 #endif
 
 #if USE == OPENSTEP_INTERFACE
@@ -949,6 +976,32 @@ sanei_scsi_open (const char *dev, int *fdp,
 	 return SANE_STATUS_INVAL;
       }
    }
+#elif USE == SCO_UW71_INTERFACE 
+   { 
+     pt_scsi_address_t dev_addr; 
+     pt_handle_t pt_handle; 
+     int bus, cnt, id, lun; 
+
+     if (4 != sscanf(dev, "/dev/passthru0:%d,%d,%d,%d", &bus, &cnt, &id, &lun))
+       { 
+	 DBG (1, "sanei_scsi_open: device name %s is not a valid\n", 
+	      strerror (errno)); 
+	 return SANE_STATUS_INVAL; 
+       } 
+     dev_addr.psa_bus = bus; 
+     dev_addr.psa_controller = cnt; 
+     dev_addr.psa_target = id; 
+     dev_addr.psa_lun = lun; 
+
+     if (0 != pt_open(PASSTHRU_SCSI_ADDRESS, &dev_addr, PT_EXCLUSIVE,
+		      &pt_handle)) 
+       { 
+	 DBG (1, "sanei_scsi_open: pt_open failed: %s!\n", strerror(errno)); 
+	 return SANE_STATUS_INVAL; 
+       } 
+     else 
+       fd = (int)pt_handle; 
+   } 
 #else
 #if defined(SGIOCSTL) || (USE == SOLARIS_INTERFACE)
   {
@@ -1178,6 +1231,9 @@ sanei_scsi_open (const char *dev, int *fdp,
       sanei_scsi_close (fd);
       return SANE_STATUS_INVAL;
     }
+#endif
+#if USE == SYSVR4_INTERFACE 
+  memset(lastrcmd,0,16); /* reinitialize last read command block */ 
 #endif
 
   if (fdp)
@@ -2525,6 +2581,218 @@ sanei_scsi_cmd (int fd, const void *src, size_t src_size,
   return SANE_STATUS_GOOD;
 }
 #endif /* USE == SCO_OS5_INTERFACE */
+#if USE == SYSVR4_INTERFACE
+
+/*
+ * UNIXWARE 2.x interface
+ * (c) R=I+S Rapp Informatik System Germany
+ * Email: wolfgang@rapp-informatik.de
+ *
+ * The driver version should run with other scsi componets like disk
+ * attached to the same controller at the same time.
+ *
+ * Attention : This port needs a sane kernel driver for Unixware 2.x
+ * The driver is available in binary pkgadd format
+ * Plese mail me.
+ *
+ */
+SANE_Status
+sanei_scsi_cmd (int fd, const void * src, size_t src_size,
+		void * dst, size_t * dst_size)
+{
+  struct sb sb, *sb_ptr; /* Command block and pointer */
+  struct scs *scs; /* group 6 command pointer */
+  struct scm *scm; /* group 10 command pointer */
+  struct scv *scv; /* group 12 command pointer */
+  char sense[32]; /* for call of sens req */
+  char cmd[16]; /* global for right alignment */
+  char * cp;
+  size_t cdb_size;
+
+  cdb_size = CDB_SIZE (*(u_char *) src);
+  memset (&cmd, 0, 16);
+  sb_ptr = &sb;
+  sb_ptr->sb_type = ISCB_TYPE;
+  cp = (char *) src;
+  DBG(1, "cdb_size = %d src = {0x%x,0x%x,0x%x,0x%x,0x%x,0x%x,0x%x,0x%x,0x%x,0x%x ...}\n", cdb_size,
+      cp[0],cp[1],cp[2],cp[3],cp[4],cp[5],cp[6],cp[7],cp[8],cp[9]);
+  switch (cdb_size)
+    {
+    default:
+      return SANE_STATUS_IO_ERROR;
+    case 6:
+      scs = (struct scs *) cmd;
+      memcpy(SCS_AD(scs),src,SCS_SZ);
+      scs->ss_lun = 0;
+      sb_ptr->SCB.sc_cmdpt = SCS_AD(scs);
+      sb_ptr->SCB.sc_cmdsz = SCS_SZ;
+      break;
+    case 10:
+      scm = (struct scm *) cmd;
+      memcpy(SCM_AD(scm),src,SCM_SZ);
+      scm->sm_lun = 0;
+      sb_ptr->SCB.sc_cmdpt = SCM_AD(scm);
+      sb_ptr->SCB.sc_cmdsz = SCM_SZ;
+      break;
+    case 12:
+      scv = (struct scv *) cmd;
+      memcpy(SCV_AD(scv),src,SCV_SZ);
+      scv->sv_lun = 0;
+      sb_ptr->SCB.sc_cmdpt = SCV_AD(scv);
+      sb_ptr->SCB.sc_cmdsz = SCV_SZ;
+      break;
+    }
+  if (dst_size && *dst_size)
+    {
+      assert (cdb_size == src_size);
+      sb_ptr->SCB.sc_mode = SCB_READ;
+      sb_ptr->SCB.sc_datapt = dst;
+      sb_ptr->SCB.sc_datasz = *dst_size;
+    }
+  else
+    {
+      assert (cdb_size <= src_size);
+      sb_ptr->SCB.sc_mode = SCB_WRITE;
+      sb_ptr->SCB.sc_datapt = (char *) src + cdb_size;
+      if ( (sb_ptr->SCB.sc_datasz = src_size - cdb_size) > 0 ) {
+	sb_ptr->SCB.sc_mode = SCB_WRITE;
+      } else {
+	/* also use READ mode if the backends have write with length 0 */
+	sb_ptr->SCB.sc_mode = SCB_READ;
+      }
+    }
+  sb_ptr->SCB.sc_time = 60000; /* 1 min timeout */
+  DBG(1, "sanei_scsi_cmd: sc_mode = %d, sc_cmdsz = %d, sc_datasz = %d\n",
+      sb_ptr->SCB.sc_mode, sb_ptr->SCB.sc_cmdsz, sb_ptr->SCB.sc_datasz);
+  {
+    /* do read write by normal read or write system calls */
+    /* the driver will lock process in momory and do optimized transfer */
+    cp = (char *) src;
+    switch (*cp)
+      {
+      case 0x0: /* test unit ready */
+	if (ioctl(fd, SS_TEST, NULL) < 0) {
+	  return SANE_STATUS_DEVICE_BUSY;
+	}
+	break;
+      case SS_READ:
+      case SM_READ:
+	if (*dst_size > 0x2048) {
+	  sb_ptr->SCB.sc_datapt = NULL;
+	  sb_ptr->SCB.sc_datasz = 0;
+	  if (memcmp(sb_ptr->SCB.sc_cmdpt,lastrcmd,sb_ptr->SCB.sc_cmdsz) ) {
+	    /* set the command block for the next read or write */
+	    memcpy(lastrcmd,sb_ptr->SCB.sc_cmdpt,sb_ptr->SCB.sc_cmdsz);
+	    if (!ioctl (fd, SDI_SEND, sb_ptr)) {
+	      *dst_size = read(fd , dst, *dst_size);
+	      if (*dst_size == -1) {
+		perror("sanei-scsi:UW-driver read ");
+		return SANE_STATUS_IO_ERROR;
+	      }
+	      break;
+	    }
+	  } else {
+	    *dst_size = read(fd , dst, *dst_size);
+	    if (*dst_size == -1) {
+	      perror("sanei-scsi:UW-driver read ");
+	      return SANE_STATUS_IO_ERROR;
+	    }
+	    break;
+	  }
+	  return SANE_STATUS_IO_ERROR;
+	}
+	/* fall through for small read */
+      default:
+	if (ioctl (fd, SDI_SEND, sb_ptr) < 0)
+	  {
+	    DBG(1, "sanei_scsi_cmd: ioctl(SDI_SEND) FAILED: %s\n",
+		strerror (errno));
+	    return SANE_STATUS_IO_ERROR;
+	  }
+	if (dst_size) *dst_size = sb_ptr->SCB.sc_datasz;
+#ifdef UWSUPPORTED /* at this time not supported by driver */
+	if (sb_ptr->SCB.sc_comp_code != SDI_ASW ) {
+	  DBG(1, "sanei_scsi_cmd: scsi_cmd failture %x\n",
+	      sb_ptr->SCB.sc_comp_code);
+	  if (sb_ptr->SCB.sc_comp_code == SDI_CKSTAT && sb_ptr->SCB.sc_status == S_CKCON)
+	    if (fd_info[fd].sense_handler) {
+	      void *arg = fd_info[fd].sense_handler_arg;
+	      return (*fd_info[fd].sense_handler) (fd, (u_char *)&sb_ptr->SCB.sc_link, arg);
+	    }
+	  return SANE_STATUS_IO_ERROR;
+	}
+#endif
+	break;
+      }
+    return SANE_STATUS_GOOD;
+  }
+}
+#endif /* USE == SYSVR4_INTERFACE */
+#if USE == SCO_UW71_INTERFACE
+SANE_Status
+sanei_scsi_cmd (int fd, const void *src, size_t src_size,
+		void *dst, size_t * dst_size)
+{
+  static u_char sense_buffer[24];
+  struct scb cmdblk;
+  time_t elapsed;
+  uint_t compcode, status;
+  int cdb_size, mode;
+  int i;
+
+  if (fd < 0)
+    return SANE_STATUS_IO_ERROR;
+
+  cmdblk.sc_cmdpt = (caddr_t) src;
+  cdb_size = CDB_SIZE (*(u_char *) src);
+  cmdblk.sc_cmdsz = cdb_size;
+  cmdblk.sc_time = 60000; /* 60 secs */
+
+  if (dst_size && *dst_size)
+    {
+      assert (cdb_size == src_size);
+      cmdblk.sc_datapt = (caddr_t) dst;
+      cmdblk.sc_datasz = *dst_size;
+      mode = SCB_READ;
+    }
+  else
+    {
+      assert (cdb_size <= src_size);
+      cmdblk.sc_datapt = (char *) src + cdb_size;
+      cmdblk.sc_datasz = src_size - cdb_size;
+      mode = SCB_WRITE;
+    }
+
+  if (pt_send(fd, cmdblk.sc_cmdpt, cmdblk.sc_cmdsz, cmdblk.sc_datapt,
+	      cmdblk.sc_datasz, mode, cmdblk.sc_time, &elapsed, &compcode,
+	      &status, sense_buffer, sizeof(sense_buffer)) != 0)
+    {
+      DBG (1, "sanei_scsi_cmd: pt_send failed: %s!\n", strerror(errno));
+    }
+  else
+    {
+      DBG (2, "sanei_scsi_cmd completed with: compcode = %x, status = %x\n",
+	   compcode, status);
+
+      switch (compcode)
+	{
+	case SDI_ASW: /* All seems well */
+	  return SANE_STATUS_GOOD;
+	case SDI_CKSTAT:
+	  DBG (2, "Sense Data:\n");
+	  for (i=0; i<sizeof(sense_buffer); i++)
+	    DBG (2, "%.2X ", sense_buffer[i]);
+	  DBG (2, "\n");
+	  if (fd_info[fd].sense_handler)
+	    return (*fd_info[fd].sense_handler)(fd, sense_buffer,
+						fd_info[fd].sense_handler_arg);
+	  /* fall through */
+	default:
+	  return SANE_STATUS_IO_ERROR;
+	}
+    }
+}
+#endif /* USE == SCO_UW71_INTERFACE */
 
 #if USE == OS2_INTERFACE
 
