@@ -1,3 +1,8 @@
+2000-01-30  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* config.sub configure.in include/sane/config.h.in sanei/sanei_scsi.c:
+	UnixWare 2.x and UnixWare 7 port by Wolfgang Rapp.
+
 2000-01-29 Karl Heinz Kremer <khk@Kk.net>
 
 	* backend/epson.[ch] Moved gamma "stuff" from advanced to standard
