@@ -91,22 +91,26 @@ typedef enum
     OPT_BR_Y,			/* bottom-right y */
 
     OPT_ENHANCEMENT_GROUP,
-    OPT_QUALITY_CAL,
-	OPT_SOFTWARE_CAL,
     OPT_CONTRAST,
+    OPT_BRIGHTNESS,
     OPT_THRESHOLD,
     OPT_HALFTONE_PATTERN,
     OPT_FILTER_TYPE,
-	OPT_TRANSPARENCY,
-	OPT_ADF,
-	OPT_PIXEL_AVG,
-	OPT_EDGE_ENH,
+    OPT_PIXEL_AVG,
+    OPT_EDGE_ENH,
 
-	OPT_CUSTOM_GAMMA, /* use custom gamma table */
-	OPT_GAMMA_VECTOR,
-	OPT_GAMMA_VECTOR_R,
-	OPT_GAMMA_VECTOR_G,
-	OPT_GAMMA_VECTOR_B,
+    OPT_CUSTOM_GAMMA, /* use custom gamma table */
+    OPT_GAMMA_VECTOR,
+    OPT_GAMMA_VECTOR_R,
+    OPT_GAMMA_VECTOR_G,
+    OPT_GAMMA_VECTOR_B,
+
+    OPT_TRANSPARENCY,
+    OPT_ADF,
+
+    OPT_CALIBRATION_GROUP,
+    OPT_QUALITY_CAL,
+    OPT_SOFTWARE_CAL,
 
     /* must come last */
     NUM_OPTIONS
@@ -126,7 +130,7 @@ ARTEC_Option;
 #define ARTEC_FLAG_SEPARATE_RES			0x00000200 /* separate x & y scan res */
 #define ARTEC_FLAG_IMAGE_REV_LR         0x00000400 /* reversed left-right */
 #define ARTEC_FLAG_ENHANCE_LINE_EDGE    0x00000800 /* line edge enhancement */
-#define ARTEC_FLAG_MONO_ADJUST          0x00001000
+#define ARTEC_FLAG_HALFTONE_PATTERN     0x00001000 /* > 1 halftone  pattern */
 #define ARTEC_FLAG_REVERSE_WINDOW       0x00002000 /* reverse selected area */
 #define ARTEC_FLAG_SC_BUFFERS_LINES     0x00004000 /* scanner has line buffer */
 #define ARTEC_FLAG_SC_HANDLES_OFFSET    0x00008000 /* sc. handles line offset */
@@ -136,7 +140,7 @@ ARTEC_Option;
 #define ARTEC_FLAG_SENSE_BYTE_22        0x00080000 /* supports sense byte 22 */
 #define ARTEC_FLAG_PIXEL_AVERAGING      0x00100000 /* supports pixel avg-ing */
 #define ARTEC_FLAG_ADF                  0x00200000 /* auto document feeder */
-#define ARTEC_FLAG_HALFTONE_PATTERN     0x00400000 /* > 1 halftone  patter */
+#define ARTEC_FLAG_OPT_BRIGHTNESS       0x00400000 /* supports set brightness */
 
 typedef enum
   {
@@ -213,6 +217,7 @@ typedef struct ARTEC_Device
     SANE_Word *vert_resolution_list;
     SANE_Range threshold_range;
     SANE_Range contrast_range;
+    SANE_Range brightness_range;
     SANE_Word setwindow_cmd_size;
     SANE_Word calibrate_method;
 	SANE_Word max_read_size;
