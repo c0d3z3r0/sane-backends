@@ -694,3 +694,19 @@ build-16 -> build-17
 
     * added support for sanei_scsi_open_extended and variable scsi buffer size
 
+
+build-17 -> build-18
+--------------------
+
+    * some cosmetic changes of the form
+        if (..) {...}
+      =>
+        if (..)
+        {
+          ...
+        }
+
+    * removed unnecessary SHADING_TYPE-handling routines for UMAX S-6E, UMAX S-6EG and Vista-S6E
+
+    * scsi buffer is only reallocated when size has changed
+

@@ -392,7 +392,7 @@ static void umax_print_inquiry(Umax_Device *dev)
     DBG(DBG_inquiry,"\n");
     DBG(DBG_inquiry,"adjust exposure time function\n");
     unit=get_inquiry_exposure_time_step_unit(inquiry_block);
-    DBG(DBG_inquiry,"exposure time step units......: %d micro-sec\n",unit);
+    DBG(DBG_inquiry,"exposure time step units......: %d micro-sec\n", unit);
     DBG(DBG_inquiry,"exposure time maximum.........: %d micro-sec\n",
             unit*get_inquiry_exposure_time_step_unit(inquiry_block));
     DBG(DBG_inquiry,"exposure time minimum (LHG)...: %d micro-sec\n",
@@ -785,19 +785,19 @@ static SANE_Status sense_handler(int scsi_fd, unsigned char *result, void *arg)	
         DBG(DBG_sense,"-> diagnostic error:\n");
         if (len >= 0x13)
 	{
-	  DBG_sense_nz("   dim light\n",get_RS_asb_dim_light(result));
-	  DBG_sense_nz("   no light\n",get_RS_asb_no_light(result));
-	  DBG_sense_nz("   sensor or motor error\n", get_RS_asb_sensor_motor(result));
-	  DBG_sense_nz("   too light\n",get_RS_asb_too_light(result));
-	  DBG_sense_nz("   calibration error\n",get_RS_asb_calibration(result));
-	  DBG_sense_nz("   rom error\n",get_RS_asb_rom(result));
-	  DBG_sense_nz("   ram error\n",get_RS_asb_ram(result));
-	  DBG_sense_nz("   cpu error\n",get_RS_asb_cpu(result));
-	  DBG_sense_nz("   scsi error\n",get_RS_asb_scsi(result));
-	  DBG_sense_nz("   timer error\n",get_RS_asb_timer(result));
-	  DBG_sense_nz("   filter motor error\n",get_RS_asb_filter_motor(result));
-	  DBG_sense_nz("   dc adjust error\n",get_RS_asb_dc_adjust(result));
-	  DBG_sense_nz("   uta home sensor or motor error\n", get_RS_asb_uta_sensor(result));
+	  DBG_sense_nz("   dim light\n",			get_RS_asb_dim_light(result));
+	  DBG_sense_nz("   no light\n",				get_RS_asb_no_light(result));
+	  DBG_sense_nz("   sensor or motor error\n",		get_RS_asb_sensor_motor(result));
+	  DBG_sense_nz("   too light\n",			get_RS_asb_too_light(result));
+	  DBG_sense_nz("   calibration error\n",		get_RS_asb_calibration(result));
+	  DBG_sense_nz("   rom error\n",			get_RS_asb_rom(result));
+	  DBG_sense_nz("   ram error\n",			get_RS_asb_ram(result));
+	  DBG_sense_nz("   cpu error\n",			get_RS_asb_cpu(result));
+	  DBG_sense_nz("   scsi error\n",			get_RS_asb_scsi(result));
+	  DBG_sense_nz("   timer error\n",			get_RS_asb_timer(result));
+	  DBG_sense_nz("   filter motor error\n",		get_RS_asb_filter_motor(result));
+	  DBG_sense_nz("   dc adjust error\n",			get_RS_asb_dc_adjust(result));
+	  DBG_sense_nz("   uta home sensor or motor error\n",	get_RS_asb_uta_sensor(result));
 	}
       }
       else
@@ -810,28 +810,46 @@ static SANE_Status sense_handler(int scsi_fd, unsigned char *result, void *arg)	
 
     case 0x05:										  /* illegal request */
       if (asc_ascq == 0x2000)
-      { DBG(DBG_sense,"-> invalid command operation code\n"); }
+      {
+        DBG(DBG_sense,"-> invalid command operation code\n");
+      }
       else if (asc_ascq == 0x2400)
-      { DBG(DBG_sense,"-> illegal field in CDB\n"); }
+      {
+        DBG(DBG_sense,"-> illegal field in CDB\n");
+       }
       else if (asc_ascq == 0x2500)
-      { DBG(DBG_sense,"-> logical unit not supported\n"); }
+      {
+        DBG(DBG_sense,"-> logical unit not supported\n");
+      }
       else if (asc_ascq == 0x2600)
-      { DBG(DBG_sense,"-> invalid field in parameter list\n"); }
+      {
+        DBG(DBG_sense,"-> invalid field in parameter list\n");
+      }
       else if (asc_ascq == 0x2c01)
-      { DBG(DBG_sense,"-> too many windows specified\n"); }
+      {
+        DBG(DBG_sense,"-> too many windows specified\n");
+      }
       else if (asc_ascq == 0x2c02)
-      { DBG(DBG_sense,"-> invalid combination of windows specified\n"); }
+      {
+        DBG(DBG_sense,"-> invalid combination of windows specified\n");
+      }
       else
-      { DBG(DBG_sense,"-> illegal request: asc=%d, ascq=%d\n", asc, ascq); }
+      {
+        DBG(DBG_sense,"-> illegal request: asc=%d, ascq=%d\n", asc, ascq);
+      }
 
       if (len >= 0x11)
       {
         if (get_RS_SKSV(result) != 0)
         {
           if (get_RS_CD(result) == 0)
-          { DBG(DBG_sense,"-> illegal parameter in CDB\n"); }
+          {
+            DBG(DBG_sense,"-> illegal parameter in CDB\n");
+          }
           else
-          { DBG(DBG_sense,"-> illegal parameter is in the data parameters sent during data out phase\n"); }
+          {
+            DBG(DBG_sense,"-> illegal parameter is in the data parameters sent during data out phase\n");
+          }
 
           DBG(DBG_sense,"-> error detected in byte %d\n", get_RS_field_pointer(result));
          }
@@ -842,11 +860,17 @@ static SANE_Status sense_handler(int scsi_fd, unsigned char *result, void *arg)	
 
     case 0x06:										   /* unit attention */
       if (asc_ascq == 0x2900)
-      { DBG(DBG_sense,"-> power on, reset or bus device reset\n"); }
+      {
+        DBG(DBG_sense,"-> power on, reset or bus device reset\n");
+      }
       else if (asc_ascq == 0x3f01)
-      { DBG(DBG_sense,"-> microcode has been changed\n"); }
+      {
+        DBG(DBG_sense,"-> microcode has been changed\n");
+       }
       else
-      { DBG(DBG_sense,"-> unit attention: asc=%d, ascq=%d\n", asc, ascq); }
+      {
+        DBG(DBG_sense,"-> unit attention: asc=%d, ascq=%d\n", asc, ascq);
+      }
      break;
 
 
@@ -911,6 +935,7 @@ static int umax_calculate_pixels(int scansize_pixel, int resolution, int resolut
       toomuch++;
       pix = toomuch * resolution_base/del_pixel_1;
     }
+
     if (pix > missing_pixels)
     {
       toomuch--;
@@ -988,7 +1013,10 @@ static void umax_order_line_to_pixel(Umax_Device *dev, unsigned char *source, in
     }
 
     line++;
-    if (line >= dev->pixelline_max) { line = 0; }
+    if (line >= dev->pixelline_max)
+    {
+      line = 0;
+    }
 
     dev->pixelline_next[color] = line;						  /* next line of this color */
     dev->pixelline_ready[color]++;					  /* number of ready lines for color */
@@ -1052,7 +1080,11 @@ static unsigned char * umax_get_pixel_line(Umax_Device *dev)
 
       dev->pixelline_written++;
       dev->pixelline_read++;
-      if (dev->pixelline_read >= dev->pixelline_max) { dev->pixelline_read = 0; }
+
+      if (dev->pixelline_read >= dev->pixelline_max)
+      {
+        dev->pixelline_read = 0;
+      }
     }
   }
 
@@ -1111,23 +1143,22 @@ static SANE_Status umax_wait_scanner(Umax_Device *dev)
 
   do
   {
-      if (cnt > 100)							   /* maximal 100 * 0.5 sec = 50 sec */
-      {
-        DBG(DBG_warning, "scanner does not get ready\n");
-        return -1;
-      }
+    if (cnt > 100)							   /* maximal 100 * 0.5 sec = 50 sec */
+    {
+      DBG(DBG_warning, "scanner does not get ready\n");
+      return -1;
+    }
 											  /* test unit ready */
-      status = sanei_scsi_cmd(dev->sfd, test_unit_ready.cmd,test_unit_ready.size, NULL, NULL);
-      cnt++;
+    status = sanei_scsi_cmd(dev->sfd, test_unit_ready.cmd,test_unit_ready.size, NULL, NULL);
+    cnt++;
 
-      if (status)
-      {
-        if (cnt == 1)
-        { DBG(DBG_info2,"scanner reports %s, waiting ...\n", sane_strstatus(status)); }
+    if (status)
+    {
+      if (cnt == 1)
+      { DBG(DBG_info2,"scanner reports %s, waiting ...\n", sane_strstatus(status)); }
 
-        usleep(500000);									 /* wait 0.5 seconds */
-      }
-
+      usleep(500000);									 /* wait 0.5 seconds */
+    }
   } while (status != SANE_STATUS_GOOD );
 
   DBG(DBG_info,"scanner ready\n");
@@ -1348,20 +1379,34 @@ static void umax_send_gamma_data(Umax_Device *dev, void *gamma_data, int color)
     dest = dev->buffer + send.size + gamma_DCF2.size;					    /* write to dest */
 
     if (dev->gamma_input_bits_code & 32)
-    { length = 65536; }									    /* 16 input bits */
+    {
+      length = 65536; /* 16 input bits */
+    }
     else if (dev->gamma_input_bits_code & 16)
-    { length = 16384; }									    /* 14 input bits */
+    {
+      length = 16384; /* 14 input bits */
+    }
     else if (dev->gamma_input_bits_code & 8)
-    { length = 4096; }									    /* 12 input bits */
+    {
+      length = 4096; /* 12 input bits */
+    }
     else if (dev->gamma_input_bits_code & 4)
-    { length = 1024; }									    /* 10 input bits */
+    {
+      length = 1024; /* 10 input bits */
+    }
     else if (dev->gamma_input_bits_code & 2)
-    { length = 512; }									     /* 9 input bits */
+    {
+      length = 512; /* 9 input bits */
+    }
     else
-    { length = 256; }									     /* 8 input bits */
+    {
+      length = 256; /* 8 input bits */
+    }
 
     if (dev->bits_per_pixel_code != 1)					/* more than 8 output bits per pixel */
-    { length = length * 2; }								 /* = 2 output bytes */
+    {
+      length = length * 2; /* = 2 output bytes */
+    }
 
     set_S_xfer_length(dev->buffer, color*length+gamma_DCF2.size);			       /* set length */
     memcpy(dest, data, color*length);								/* copy data */
@@ -2168,9 +2213,6 @@ static void umax_correct_inquiry(Umax_Device *dev, char *vendor, char *product, 
 	dev->RGB_PREVIEW_FIX = 1;
         DBG(DBG_warning,"activating preview fix\n");
 #endif
-        DBG(DBG_warning,"setting up special options for %s\n", product);
-        DBG(DBG_warning," - activating inversion of shading data\n");
-        dev->shading_type = SHADING_TYPE_AVERAGE;	  /* shading type = average value and invert */
     }
     else if (!strncmp(product, "Vista-T630 ", 11))
     {
@@ -2515,11 +2557,15 @@ static int umax_check_values(Umax_Device *dev)
 
   maxwidth = dev->maxwidth - dev->upper_left_x - 1;
   if ( (dev->scanwidth <= 0) || (dev->scanwidth > maxwidth) )
-  { dev->scanwidth = maxwidth; }
+  {
+    dev->scanwidth = maxwidth;
+  }
 
   maxlength = dev->maxlength - dev->upper_left_y - 1;
   if ( (dev->scanlength <= 0) || (dev->scanlength > maxlength) )
-  { dev->scanlength = maxlength; }
+  {
+    dev->scanlength = maxlength;
+  }
 									    /* Now calculate width in pixels */
   dev->width_in_pixels  = umax_calculate_pixels(dev->scanwidth,  dev->x_resolution,
                                                 dev->relevant_optical_res * dev->scale_x, dev->x_coordinate_base);
@@ -2561,16 +2607,24 @@ static int umax_check_values(Umax_Device *dev)
    case RGB_LINEART:
    case RGB_HALFTONE:
      if (dev->three_pass)
-     { dev->row_len = dev->width_in_pixels / 8 ; }
+     {
+       dev->row_len = dev->width_in_pixels / 8 ;
+     }
      else
-     { dev->row_len = (dev->width_in_pixels / 8 ) * 3; }
+     {
+       dev->row_len = (dev->width_in_pixels / 8 ) * 3;
+     }
     break;
 
    case RGB:
      if (dev->three_pass)				     /* three (24bpp) or six (30bpp) bytes per pixel */
-     { dev->row_len = dev->width_in_pixels * dev->bytes_per_color; }
+     {
+       dev->row_len = dev->width_in_pixels * dev->bytes_per_color;
+     }
      else
-     { dev->row_len = dev->width_in_pixels * 3 * dev->bytes_per_color; }
+     {
+       dev->row_len = dev->width_in_pixels * 3 * dev->bytes_per_color;
+     }
     break;
   }
 
@@ -2680,7 +2734,9 @@ static int umax_check_values(Umax_Device *dev)
       }
     }
     else
-    { dev->reverse_multi = 0; }
+    {
+      dev->reverse_multi = 0;
+    }
   }
 
   /* ----------------------------- analog gamma ---------------------------- */
@@ -2688,7 +2744,9 @@ static int umax_check_values(Umax_Device *dev)
   if (dev->inquiry_analog_gamma == 0)
   {
     if (dev->analog_gamma_r + dev->analog_gamma_g + dev->analog_gamma_b != 0)
-    { DBG(DBG_warning,"WARNING: analog gamma correction not supported by scanner!\n"); }
+    {
+      DBG(DBG_warning,"WARNING: analog gamma correction not supported by scanner!\n");
+    }
     dev->analog_gamma_r = dev->analog_gamma_g = dev->analog_gamma_b = 0;
   }
 
@@ -2707,9 +2765,13 @@ static int umax_check_values(Umax_Device *dev)
   /* ---------------------------- speed and smear  ------------------------- */
   
   if (dev->slow != 0)
-  {dev->WD_speed = WD_speed_slow;}
+  {
+    dev->WD_speed = WD_speed_slow;
+  }
   else
-  {dev->WD_speed = WD_speed_fast;}
+  {
+    dev->WD_speed = WD_speed_fast;
+  }
 
   if (dev->smear != 0) {dev->WD_speed += WD_speed_smear;}
 
@@ -2735,10 +2797,16 @@ static int umax_check_values(Umax_Device *dev)
   case LINEART:							       /* ------------ LINEART ------------- */
   case RGB_LINEART:						       /* ---------- RGB_LINEART ----------- */
    dev->use_exposure_time_min = dev->inquiry_exposure_time_l_min;
+
    if (dev->module == WD_module_flatbed) 
-   { dev->use_exposure_time_def_r = dev->inquiry_exposure_time_l_fb_def; }
+   {
+     dev->use_exposure_time_def_r = dev->inquiry_exposure_time_l_fb_def;
+   }
    else
-   { dev->use_exposure_time_def_r = dev->inquiry_exposure_time_l_uta_def; }
+   {
+     dev->use_exposure_time_def_r = dev->inquiry_exposure_time_l_uta_def;
+   }
+
    if (dev->inquiry_lineart == 0)
    {
     DBG(DBG_error,"ERROR: LINEART-MODE NOT SUPPORTED BY SCANNER, ABORTING\n");
@@ -2762,10 +2830,15 @@ static int umax_check_values(Umax_Device *dev)
 
   case GRAYSCALE:						       /* ---------- GRAYSCALE ------------- */
    dev->use_exposure_time_min = dev->inquiry_exposure_time_g_min;
+
    if (dev->module == WD_module_flatbed) 
-   { dev->use_exposure_time_def_r = dev->inquiry_exposure_time_g_fb_def; }
+   {
+     dev->use_exposure_time_def_r = dev->inquiry_exposure_time_g_fb_def;
+   }
    else
-   { dev->use_exposure_time_def_r = dev->inquiry_exposure_time_g_uta_def; }
+   {
+     dev->use_exposure_time_def_r = dev->inquiry_exposure_time_g_uta_def;
+   }
    if (dev->inquiry_gray == 0)
    {
     DBG(DBG_error, "ERROR: GRAYSCALE-MODE NOT SUPPORTED BY SCANNER, ABORTING\n");
@@ -3248,7 +3321,10 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
     /* umax_get_data_buffer_status(dev); */
 
     status = umax_read_image_data(dev, data_to_read);
-    if (status == 0) { continue; }
+    if (status == 0)
+    {
+      continue;
+    }
 
     if (status == -1)
     {
@@ -3271,7 +3347,9 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
       int i;
 
       if (dev->bits_per_pixel_code != 1)							  /* >24 bpp */
-      { bytes = 2; }
+      {
+        bytes = 2;
+      }
 
       lines = data_to_read / (dev->width_in_pixels * bytes);
 
@@ -3304,16 +3382,8 @@ static int umax_reader_process(Umax_Device *dev, FILE *fp, unsigned int data_lef
 
 
 static void umax_initialize_values(Umax_Device *dev)	      /* called each time before setting scan-values */
-  /* we have to test if dev->buffer is != NULL after call umax_initialize_values */
 {										 /* Initialize dev structure */
   DBG(DBG_proc,"initialize_values\n");
-
-  if (dev->buffer)
-  {
-    free(dev->buffer);									      /* free buffer */
-  }
-
-  dev->buffer = malloc(dev->bufsize);							  /* allocate buffer */
 
   dev->three_pass            = 0;						  /* 1 if threepas_mode only */
   dev->row_len               = -1;
@@ -3531,7 +3601,10 @@ static size_t max_string_size(SANE_String_Const strings[])
   for (i = 0; strings[i]; ++i)
   {
     size = strlen (strings[i]) + 1;
-    if (size > max_size) { max_size = size; }
+    if (size > max_size)
+    {
+      max_size = size;
+    }
   }
 
  return max_size;
@@ -3648,16 +3721,18 @@ int sfd;
   }
 #endif
 
-  umax_init(dev);							  /* preset values in structure dev */
-  umax_initialize_values(dev);						/* reset values and allocate buffer */
+  dev->buffer = malloc(dev->bufsize);									/* allocate buffer */
 
   if (!dev->buffer) /* malloc failed */
   {
-    DBG(DBG_error, "ERROR: attach scanner: could not allocate buffer\n");
+    DBG(DBG_error, "attach scanner: could not allocate buffer\n");
     sanei_scsi_close(sfd);
     free(dev);
     return SANE_STATUS_NO_MEM;
   }
+
+  umax_init(dev);									 /* preset values in structure dev */
+  umax_initialize_values(dev);										   /* reset values */
 
   dev->devicename = strdup(devicename);
   dev->sfd        = sfd;
@@ -3767,7 +3842,10 @@ static int reader_process(Umax_Scanner *scanner, int pipe_fd)		      /* executed
   data_length = scanner->params.lines * scanner->params.bytes_per_line;
 
   fp = fdopen (pipe_fd, "w");
-  if (!fp) {return SANE_STATUS_IO_ERROR;}
+  if (!fp)
+  {
+    return SANE_STATUS_IO_ERROR;
+  }
 
   DBG(DBG_sane_info,"reader_process: starting to READ data\n");
 
@@ -4560,9 +4638,15 @@ SANE_Status sane_init(SANE_Int *version_code, SANE_Auth_Callback authorize)
     if (dev_name[0] == '#') { continue; }					     /* ignore line comments */
 
     len = strlen (dev_name);
-    if (dev_name[len - 1] == '\n') { dev_name[--len] = '\0'; }
+    if (dev_name[len - 1] == '\n')
+    {
+      dev_name[--len] = '\0';
+    }
 
-    if (!len) { continue; }							       /* ignore empty lines */
+    if (!len) /* ignore empty lines */
+    {
+      continue;
+    }
 
     sanei_config_attach_matching_devices (dev_name, attach_one);
   }
@@ -4605,7 +4689,10 @@ SANE_Status sane_get_devices(const SANE_Device ***device_list, SANE_Bool local_o
   if (devlist) { free (devlist); }
 
   devlist = malloc((num_devices + 1) * sizeof (devlist[0]));
-  if (!devlist) { return SANE_STATUS_NO_MEM; }
+  if (!devlist)
+  {
+    return SANE_STATUS_NO_MEM;
+  }
 
   i = 0;
 
@@ -4645,7 +4732,10 @@ SANE_Status sane_open(SANE_String_Const devicename, SANE_Handle *handle)
     if (!dev)
     {
       status = attach_scanner(devicename, &dev);
-      if (status != SANE_STATUS_GOOD) { return status; }
+      if (status != SANE_STATUS_GOOD)
+      {
+        return status;
+      }
     }
   }
   else
@@ -5581,8 +5671,11 @@ SANE_Status sane_get_parameters(SANE_Handle handle, SANE_Parameters *params)
     length = SANE_UNFIX(scanner->val[OPT_BR_Y].w - scanner->val[OPT_TL_Y].w);
     x_dpi  = SANE_UNFIX(scanner->val[OPT_X_RESOLUTION].w);
     y_dpi  = SANE_UNFIX(scanner->val[OPT_Y_RESOLUTION].w);
+
     if ( (scanner->val[OPT_RESOLUTION_BIND].w == SANE_TRUE) || (scanner->val[OPT_PREVIEW].w == SANE_TRUE) )
-    { y_dpi = x_dpi; }
+    {
+      y_dpi = x_dpi;
+    }
 
     if (x_dpi > 0.0 && y_dpi > 0.0 && width > 0.0 && length > 0.0)
     {
@@ -5645,7 +5738,10 @@ SANE_Status sane_get_parameters(SANE_Handle handle, SANE_Parameters *params)
 
   scanner->params.last_frame = (scanner->params.format != SANE_FRAME_RED && scanner->params.format != SANE_FRAME_GREEN);
 
-  if (params) { *params = scanner->params; }
+  if (params)
+  {
+    *params = scanner->params;
+  }
 
  return SANE_STATUS_GOOD;
 }
@@ -5671,42 +5767,55 @@ SANE_Status sane_start(SANE_Handle handle)
   if (scanner->device->sfd < 0)   /* first call, don`t run this routine again on multi frame or multi image scan */
   {
 #ifdef HAVE_SANEI_SCSI_OPEN_EXTENDED
-    scanner->device->bufsize = 131072; /* 128KB */
+   unsigned int scsi_bufsize = 131072; /* 128KB */
 
     if (sanei_scsi_open_extended(scanner->device->sane.name, &(scanner->device->sfd), sense_handler,
-                                 scanner->device, &scanner->device->bufsize) != 0)
+                                 scanner->device, &scsi_bufsize) != 0)
     {
-      DBG(DBG_error, "attach_scanner: open failed\n");
+      DBG(DBG_error, "sane_start: open failed\n");
       return SANE_STATUS_INVAL;
     }
 
-    if (scanner->device->bufsize < 32768) /* < 32KB */
+    if (scsi_bufsize < 32768) /* < 32KB */
     {
-      DBG(DBG_error, "attach_scanner: sanei_scsi_open_extended returned too small scsi buffer\n");
+      DBG(DBG_error, "sane_start: sanei_scsi_open_extended returned too small scsi buffer\n");
       sanei_scsi_close((scanner->device->sfd));
       return SANE_STATUS_NO_MEM;
     }
-    DBG(DBG_info, "attach_scanner: sanei_scsi_open_extended returned scsi buffer size = %d\n", scanner->device->bufsize);
-#else
-    scanner->device->bufsize = sanei_scsi_max_request_size;
+    DBG(DBG_info, "sane_start: sanei_scsi_open_extended returned scsi buffer size = %d\n", scsi_bufsize);
 
+    if (scsi_bufsize != scanner->device->bufsize)
+    {
+      DBG(DBG_info, "sane_start: buffer size has changed, reallocating buffer\n");
+
+      if (scanner->device->buffer)
+      {
+        free(scanner->device->buffer);									     /* free buffer */
+      }
+
+      scanner->device->bufsize = scsi_bufsize;
+      scanner->device->buffer  = malloc(scanner->device->bufsize);					  /* allocate buffer */
+
+      if (!scanner->device->buffer) /* malloc failed */
+      {
+        DBG(DBG_error, "sane_start: could not allocate buffer\n");
+        sanei_scsi_close(scanner->device->sfd);
+        scanner->device->bufsize = 0;
+        return SANE_STATUS_NO_MEM;
+      }
+    }
+#else
     if ( sanei_scsi_open(scanner->device->sane.name, &(scanner->device->sfd), sense_handler,
                          scanner->device) != SANE_STATUS_GOOD )
     {
        DBG(DBG_error, "sane_start: open of %s failed:\n", scanner->device->sane.name);
        return SANE_STATUS_INVAL;
     }
+
+    /* there is no need to reallocate the buffer because the size is fixed */
 #endif
 
-    umax_initialize_values(scanner->device);						/* reset values and allocate buffer */
-
-    if (!scanner->device->buffer) /* malloc failed */
-    {
-      DBG(DBG_error, "sane_start: could not allocate buffer\n");
-      sanei_scsi_close(scanner->device->sfd);
-      scanner->device->bufsize = 0;
-      return SANE_STATUS_NO_MEM;
-    }
+    umax_initialize_values(scanner->device);								    /* reset values */
 
     scanner->device->three_pass_color = 1;
 
@@ -5881,12 +5990,27 @@ SANE_Status sane_start(SANE_Handle handle)
       scanner->device->s_density = P_100_TO_254(scanner->val[OPT_SCAN_LAMP_DEN].w);
     }
 
-    if      (strcmp(mode, LINEART_STR)        == 0) { scanner->device->colormode = LINEART; }
-    else if (strcmp(mode, HALFTONE_STR)       == 0) { scanner->device->colormode = HALFTONE; }
-    else if (strcmp(mode, GRAY_STR)           == 0) { scanner->device->colormode = GRAYSCALE; }
-    else if (strcmp(mode, COLOR_LINEART_STR)  == 0) { scanner->device->colormode = RGB_LINEART; }
-    else if (strcmp(mode, COLOR_HALFTONE_STR) == 0) { scanner->device->colormode = RGB_HALFTONE; }
-    else if (strcmp(mode, COLOR_STR)          == 0)
+    if (strcmp(mode, LINEART_STR) == 0)
+    {
+      scanner->device->colormode = LINEART;
+    }
+    else if (strcmp(mode, HALFTONE_STR) == 0)
+    {
+      scanner->device->colormode = HALFTONE;
+    }
+    else if (strcmp(mode, GRAY_STR) == 0)
+    {
+      scanner->device->colormode = GRAYSCALE;
+    }
+    else if (strcmp(mode, COLOR_LINEART_STR) == 0)
+    {
+      scanner->device->colormode = RGB_LINEART;
+    }
+    else if (strcmp(mode, COLOR_HALFTONE_STR) == 0)
+    {
+      scanner->device->colormode = RGB_HALFTONE;
+    }
+    else if (strcmp(mode, COLOR_STR) == 0)
     {
       scanner->device->colormode = RGB;
       if (scanner->val[OPT_RGB_BIND].w == SANE_FALSE)
@@ -5921,28 +6045,48 @@ SANE_Status sane_start(SANE_Handle handle)
 
 #ifdef UMAX_CALIBRATION_MODE_SELECTABLE
     if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_0000) == 0)
-    { scanner->device->calibration = 0; }
+    {
+      scanner->device->calibration = 0;
+    }
     else if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_1111) == 0)
-    { scanner->device->calibration = 15; }
+    {
+      scanner->device->calibration = 15;
+    }
     else if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_1110) == 0)
-    { scanner->device->calibration = 14; }
+    {
+      scanner->device->calibration = 14;
+    }
     else if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_1101) == 0)
-    { scanner->device->calibration = 13; }
+    {
+      scanner->device->calibration = 13;
+    }
     else if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_1010) == 0)
-    { scanner->device->calibration = 10; }
+    {
+      scanner->device->calibration = 10;
+    }
     else if (strcmp(scanner->val[OPT_CALIB_MODE].s,CALIB_MODE_1001) == 0)
-    { scanner->device->calibration = 9; }
+    {
+      scanner->device->calibration = 9;
+    }
 #endif
 
 #ifdef UMAX_SHADING_TYPE_SELECTABLE
     if (strcmp(scanner->val[OPT_SHADING_TYPE].s,SHADING_TYPE_ONE_LINE_TEXT) == 0)
-    { scanner->device->shading_type = SHADING_TYPE_ONE_LINE; }
+    {
+      scanner->device->shading_type = SHADING_TYPE_ONE_LINE;
+    }
     else if (strcmp(scanner->val[OPT_SHADING_TYPE].s,SHADING_TYPE_AVERAGE_TEXT) == 0)
-    { scanner->device->shading_type = SHADING_TYPE_AVERAGE; }
+    {
+      scanner->device->shading_type = SHADING_TYPE_AVERAGE;
+    }
     else if (strcmp(scanner->val[OPT_SHADING_TYPE].s,SHADING_TYPE_ONE_LINE_INVERT_TEXT) == 0)
-    { scanner->device->shading_type = SHADING_TYPE_ONE_LINE_INVERT; }
+    {
+      scanner->device->shading_type = SHADING_TYPE_ONE_LINE_INVERT;
+    }
     else if (strcmp(scanner->val[OPT_SHADING_TYPE].s,SHADING_TYPE_AVERAGE_INVERT_TEXT) == 0)
-    { scanner->device->shading_type = SHADING_TYPE_AVERAGE_INVERT; }
+    {
+      scanner->device->shading_type = SHADING_TYPE_AVERAGE_INVERT;
+    }
 #endif
 
     /* get and set geometric values for scanning */
@@ -5950,7 +6094,9 @@ SANE_Status sane_start(SANE_Handle handle)
     scanner->device->y_resolution = SANE_UNFIX(scanner->val[OPT_Y_RESOLUTION].w);
 
     if ( (scanner->val[OPT_RESOLUTION_BIND].w == SANE_TRUE) || (scanner->val[OPT_PREVIEW].w == SANE_TRUE) )
-    { scanner->device->y_resolution = scanner->device->x_resolution; }
+    {
+      scanner->device->y_resolution = scanner->device->x_resolution;
+    }
 
     xbasedots = scanner->device->x_coordinate_base / MM_PER_INCH;
     ybasedots = scanner->device->y_coordinate_base / MM_PER_INCH;
