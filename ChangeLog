@@ -1,5 +1,10 @@
 2000-02-06  Petter Reinholdtsen <pere@td.org.uit.no>
 
+	* configure: Regenerated based on current configure.in.
+
+	doc/Makefile.in doc/sane-logo.gif doc/sane-logo.png doc/sane.gif
+	doc/sane.png: Convert .gif to .png.
+
 	* backend/canon.c backend/snapscan-sources.c: Port to HP/UX.  Stop
 	using GCC specific features.
 
