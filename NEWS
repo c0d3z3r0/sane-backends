@@ -3,6 +3,7 @@ New after 1.01:
 * Updated HP backend to v0.83
 * Updated UMAX backend to v1.0-build-12
 * Updated CANON backend to v991108
+* Updated Microtek backend to 0.11.0
 * Updated Microtek2 backend to v0.8
 * Updated Artec backend to v0.5
 * Upgraded to libtool 1.3.3
