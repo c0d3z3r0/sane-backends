@@ -1,16 +1,18 @@
 2000-01-29 Karl Heinz Kremer <khk@Kk.net>
+
 	* backend/epson.[ch] Moved gamma "stuff" from advanced to standard
 	  options section to fix core dump in xscanimage
 	  Removed pragma pack() to make it easier to compile on non-gcc
 	  systems
-2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
-	* preview (xscanimage): added GDK_INPUT_EXCEPTION to gdk_input_add
 
 2000-01-29  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+
+	* preview (xscanimage): added GDK_INPUT_EXCEPTION to gdk_input_add
 	* updated umax-backend to build 15 (for more see umax.CHANGES
 	* xscanimage: added GDK_INPUT_EXCEPTION to gdk_input_add
 
 2000-01-26  Karl Heinz Kremer <khk@khk.net>
+
 	* backend/epson.[ch] Bugfix for resolution selection via menu
 	  Fixed coredump when no scanner found
 	  merged Christian Bucher's newest version
@@ -24,7 +26,7 @@
 	backend/sp15c.desc backend/sp15c.h: Updated backends sp15c
 	(v1.12) and m3096g (v1.11) from Randolph Bentson.
 
-2000-01-25: Chris Pinkham <cpinkham@infi.net>
+2000-01-25  Chris Pinkham <cpinkham@infi.net>
 
 	* backend/artec.h backend/artec.c backend/artec.desc
 	  installed new version (0.5.6) of artec backend with support
@@ -34,14 +36,15 @@
 	  backend status.
 
 
-2000-01-25: Abel Deuring <a.deuring@satzbau-gmbh.de>
+2000-01-25  Abel Deuring <a.deuring@satzbau-gmbh.de>
+
 	* frontend/scanimage.c: minor modifications to the new batch mode
 	  If an error occurs in batch mode, the corresponding output file
 	  is now deleted. (Should make post-processing easier, because
 	  otherwise we would have an empty output file every time the
 	  ADF is empty or paper is jammed.)
 
-2000-01-25: Kazuya Fukuda <fukuda@avm.nhe.nec.co.jp> and
+2000-01-25  Kazuya Fukuda <fukuda@avm.nhe.nec.co.jp> and
             Abel Deuring <a.deuring@satzbau-gmbh.de>
 	* backend/sharp.c: Fix of possible segfault in sane_init
 	* backend/sharp.conf: contains now a complete sample configuration
@@ -63,17 +66,17 @@
 
 	All patches from Randolph Bentson.
 
-2000-01-24: Abel Deuring <a.deuring@satzbau-gmbh.de>
+2000-01-24  Abel Deuring <a.deuring@satzbau-gmbh.de>
 
 	* backend/sharp.c, backend/sharp.h: update to version 0.30 
 	(sorry, forgot to make this note some days earlier)
 
-2000-01-24: Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
+2000-01-24  Oliver Rauch <Oliver.Rauch@Wolfsburg.DE>
 
 	* Added test for libcam to configure.in
 	  it is needed by FreeBSD 3+
 
-2000-01-21: Rene Rebe: <rene.rebe@okay.net>
+2000-01-21  Rene Rebe: <rene.rebe@okay.net>
 
 	* ChangeLog: updated (oversaw last time, sorry)
 	* backend/avision.c: fixed some compiling warnings
