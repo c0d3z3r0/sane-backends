@@ -46,6 +46,9 @@
 static char *hp_backend_version = "0.88";
 /* Changes:
 
+   V 0.88, 20-Jul-2000, PK:
+      - Use sanei_config_read()
+      - dont write chars < 32 to DBG
    V 0.88, 09-Jul-2000, PK:
       - Add front button support by Chris S. Cowles, Houston, Texas,
         c_cowles@ieee.org
@@ -535,7 +538,7 @@ hp_read_config (void)
 
   if ((fp = sanei_config_open(HP_CONFIG_FILE)) != 0)
     {
-      while (fgets(buf, sizeof(buf), fp))
+      while (sanei_config_read(buf, sizeof(buf), fp))
 	{
 	  char *dev_name;
 

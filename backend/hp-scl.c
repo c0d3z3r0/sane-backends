@@ -1287,8 +1287,7 @@ _hp_scl_inq (HpScsi scsi, HpScl scl, HpScl inq_cmnd,
 
   if (buf[0] == 'N')
     {				/* null response */
-      DBG(3, "scl_inq: parameter '%c' (%d) unsupported\n",
-	  SCL_PARAM_CHAR(scl), SCL_INQ_ID(scl));
+      DBG(3, "scl_inq: parameter %d unsupported\n", SCL_INQ_ID(scl));
       return SANE_STATUS_UNSUPPORTED;
     }
 
@@ -1367,8 +1366,7 @@ sanei_hp_scl_upload_binary (HpScsi scsi, HpScl scl, size_t *lengthhp,
 
   if (buf[0] == 'N')
     {				/* null response */
-      DBG(1, "scl_upload_binary: parameter '%c' (%d) unsupported\n",
-	  SCL_PARAM_CHAR(scl), SCL_INQ_ID(scl));
+      DBG(1, "scl_upload_binary: parameter %d unsupported\n", SCL_INQ_ID(scl));
       return SANE_STATUS_UNSUPPORTED;
     }
 
