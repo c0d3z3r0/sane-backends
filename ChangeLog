@@ -1,3 +1,9 @@
+1999-12-29  Petter Reinholdtsen <pere@td.org.uit.no>
+
+	* configure.in: Add gcc options '-W -Wall -Wpointer-arith
+	-Wcast-qual' to at least get warnings on illegal C code which
+	would fail to compile on HP/UX native compiler.
+
 1999-12-20  Petter Reinholdtsen <pere@td.org.uit.no>
 
 	* include/sane/config.h.in backend/dc25.desc backend/dc25.c:
