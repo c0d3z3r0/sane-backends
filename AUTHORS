@@ -39,6 +39,7 @@ Backends:
  sharp:		FUKUDA Kazuya (*) and Abel Deuring (*)
  snapscan:	Kevin Charter, Franck Schneider, and Michel Roelofs
  sp15c:		Randolph Bentson (*)
+ st400:     Ingo Wilken (*)
  tamarack:	Roger Wolff
  umax:		Oliver Rauch (*) and Michael K. Johnson
  v4l:           Juergen G. Schimmer
@@ -82,6 +83,7 @@ Gordon Matzigkeit  <gord@gnu.ai.mit.edu>
 Helmut Koeberle <helmut.koeberle@bytec.de>
 Henning Meier-Geinitz <hmg@gmx.de>
 Ingo Schneider <schneidi@informatik.tu-muenchen.de>
+Ingo Wilken <Ingo.Wilken@informatik.uni-oldenburg.de>
 Jeff Freedman <jsf@hevanet.com>
 Karl Anders Øygard <karlo@opera.no>
 Karl Heinz Kremer <khk@khk.net>
