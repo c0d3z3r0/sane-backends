@@ -40,6 +40,7 @@ Backends:
  sp15c:		Randolph Bentson (*)
  tamarack:	Roger Wolff
  umax:		Oliver Rauch (*) and Michael K. Johnson
+ v4l:           Juergen G. Schimmer
 
 (*) Current active maintainer(s).
 
@@ -67,6 +68,7 @@ David Huggins-Daines <bn711@freenet.carleton.ca>
 David Mosberger <David.Mosberger@acm.org>
 Didier Carlier <didier@sema.be>
 FUKUDA Kazuya <fukuda@avm.nhe.nec.co.jp>
+Juergen G. Schimmer <schimmi@nbgm.siemens.de>
 Feico W. Dillema <dillema@acm.org>
 Franck Schneider <schnefra@hol.fr>
 Gordon Matzigkeit  <gord@gnu.ai.mit.edu>
