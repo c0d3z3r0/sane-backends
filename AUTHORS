@@ -49,16 +49,20 @@ Backends:
 
 Frontends:
 
+ jscanimage:    Jeff Freedman and Guido Muesch
  saned:		Andreas Beck and David Mosberger
  scanimage:	Andreas Beck, David Mosberger, Gordon Matzigkeit
  xcam:		David Mosberger
  xscanimage:	Tristan Tarrant, Andreas Beck, and David Mosberger
 
+Please also read the file PROJECTS for projects that are planned or
+not yet included into the SANE distribution.
+
 CVS repository maintainer:
 
   Petter Reinholdtsen
 
-email addresses:
+Email addresses:
 
 Abel Deuring <a.deuring@satzbau-gmbh.de>
 Andreas Beck <becka@sunserver1.rz.uni-duesseldorf.de>
@@ -81,6 +85,7 @@ Feico W. Dillema <dillema@acm.org>
 Franck Schneider <schnefra@hol.fr>
 Gerhard Jaeger <g.jaeger@earthling.net>
 Gordon Matzigkeit  <gord@gnu.ai.mit.edu>
+Guido Muesch <odiug@faho.rwth-aachen.de>
 Helmut Koeberle <helmut.koeberle@bytec.de>
 Henning Meier-Geinitz <hmg@gmx.de>
 Ingo Schneider <schneidi@informatik.tu-muenchen.de>

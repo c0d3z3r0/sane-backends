@@ -161,6 +161,9 @@ libsane.* symlinks in /usr/local/lib/.
 
 For SCSI scanners reading of sane-scsi(5) is recommended.
 
+Please also read the file PROJECTS for projects that are planned or
+not yet included into the SANE distribution.
+
 If you encounter any problems with getting your device(s) recognized,
 try setting the various environment variables that are there to assist
 in debugging such problems.  The environment variables are documented

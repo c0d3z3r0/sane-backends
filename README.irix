@@ -1,0 +1,14 @@
+Linking with shared libraries produced by Irix cc results in version
+problems: The application expects libsane.so.2 but only libsane.so.1
+is found. Until this is fixed please use the following workaround: Put
+a symlink "libsane.so.2" pointing to "libsane.so.1" into /usr/local/lib/
+(or wherever libsane is installed).
+
+There seem to be problems with some versions of the jpeg library. If
+compilation errors in the jpeg support files occur, disable jpeg and
+the dc210 backend in configure: remove the line
+  LIBS="-ljpeg  $LIBS" 
+and change the line
+  DC210=dc210
+to
+  DC210=

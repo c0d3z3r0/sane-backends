@@ -1,4 +1,25 @@
+2000-08-05  Henning Meier-Geinitz <hmg@gmx.de>
+
+	* AUTHORS: Added link to PROJECTS.
+	* PROJECTS: Removed frontends that are included in the SANE 
+	  distribution. Added frontends: sanecgi, scanadf. Removed backends
+ 	  Kodak DS-20 (old camera, no specs available, not interested anymore),
+ 	  Logitech (old handscanner, author not interested anymore). Added
+ 	  backends as6e (Artec AS6E), bh (Bell and Howell Copiscan), lhii
+	  (handheld scanner support), Mustek USB, nec (NEC  PC-IN500/4C),
+	  v4l2 (Video for Linux 2). Added/updated information about SANE
+	  ports: BeOS, OS/2, win32. Added Information about WinSANE and
+	  TWAIN interface for xsane-win32. Added link to AUTHORS and README.
+ 	  Changed format. Added explanation for statuses.
+	* README: Added link to PROJECTS.
+	* README.irix: New file. Information about the library version and
+	  jpeg library problems.
+	* backend/as6e.desc: New description file for the Artec AS6E.
+	* backend/bh.desc: New description file for Bell and Howell Copiscan
+	  scanners.
+
 2000-08-03  Henning Meier-Geinitz <hmg@gmx.de>
+
 	* PROJECTS: Removed backends that are included in SANE. Updated
 	  info for Primax. Added HP 4200.
 
