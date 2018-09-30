@@ -95,6 +95,7 @@ static struct option basic_options[] = {
   {"progress", no_argument, NULL, 'p'},
   {"test", no_argument, NULL, 'T'},
   {"all-options", no_argument, NULL, 'A'},
+  {"inactive-options", no_argument, NULL, 'I'},
   {"version", no_argument, NULL, 'V'},
   {"buffer-size", optional_argument, NULL, 'B'},
   {"batch", optional_argument, NULL, 'b'},
@@ -116,7 +117,7 @@ static struct option basic_options[] = {
 #define OUTPUT_PNG      2
 #define OUTPUT_JPEG     3
 
-#define BASE_OPTSTRING	"d:hi:Lf:B::nvVTAbp"
+#define BASE_OPTSTRING	"d:hi:Lf:B::nvVTAIbp"
 #define STRIP_HEIGHT	256	/* # lines we increment image height */
 
 static struct option *all_options;
@@ -127,6 +128,7 @@ static int verbose;
 static int progress = 0;
 static int test;
 static int all;
+static int inactive;
 static int output_format = OUTPUT_PNM;
 static int help;
 static int dont_scan = 0;
@@ -1960,8 +1962,9 @@ static void print_options(SANE_Device * device, SANE_Int num_dev_options, SANE_B
       if (!opt)
 	opt = sane_get_option_descriptor (device, i);
 
-      if (ro || SANE_OPTION_IS_SETTABLE (opt->cap)
-	  || opt->type == SANE_TYPE_GROUP)
+      if ( ((ro || SANE_OPTION_IS_SETTABLE (opt->cap)) &&
+            (inactive || SANE_OPTION_IS_ACTIVE (opt->cap)))
+	   || opt->type == SANE_TYPE_GROUP )
 	print_option (device, i, opt);
     }
   if (num_dev_options)
@@ -2044,6 +2047,9 @@ main (int argc, char **argv)
 	  break;
 	case 'A':
 	  all = 1;
+	  break;
+	case 'I':
+	  inactive = 1;
 	  break;
 	case 'n':
 	  dont_scan = 1;
@@ -2250,6 +2256,7 @@ Parameters are separated by a blank from single-character options (e.g.\n\
 -n, --dont-scan            only set options, don't actually scan\n\
 -T, --test                 test backend thoroughly\n\
 -A, --all-options          list all available backend options\n\
+-I, --inactive-options     show (normally hidden) inactive backend options\n\
 -h, --help                 display this help message and exit\n\
 -v, --verbose              give even more status messages\n\
 -B, --buffer-size=#        change input buffer size (in kB, default 32)\n");

@@ -27,6 +27,7 @@ scanimage \- scan an image
 .RB [ \-n | \-\-dont\-scan ]
 .RB [ \-T | \-\-test ]
 .RB [ \-A | \-\-all-options ]
+.RB [ \-I | \-\-inactive-options ]
 .RB [ \-h | \-\-help ]
 .RB [ \-v | \-\-verbose ]
 .RB [ \-B | \-\-buffer-size
@@ -253,6 +254,14 @@ or
 options request help information.  The information is printed on
 standard output and in this case, no attempt will be made to acquire
 an image.
+.PP
+The
+.B \-I
+or
+.B \-\-inactive-options
+option requests that
+.B scanimage
+unhides normally hidden inactive options in any help information printed.
 .PP
 The
 .B \-v
