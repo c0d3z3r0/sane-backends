@@ -41,6 +41,7 @@
 #include "../include/sane/config.h"
 
 #include <string.h>
+#include <regex.h>
 
 #include <sys/types.h>
 #include <stdlib.h>
@@ -170,6 +171,7 @@ sanei_constrain_value (const SANE_Option_Descriptor * opt, void *value,
   SANE_Word w, v, *array;
   SANE_Bool b;
   size_t len;
+  regex_t regex;
 
   switch (opt->constraint_type)
     {
@@ -262,13 +264,12 @@ sanei_constrain_value (const SANE_Option_Descriptor * opt, void *value,
          the same string is a prefix of a longer option name. */
       string_list = opt->constraint.string_list;
       len = strlen (value);
+      regcomp(&regex, value, REG_ICASE);
 
       /* count how many matches of length LEN characters we have: */
       num_matches = 0;
       for (i = 0; string_list[i]; ++i)
-      {
-	  if (strncasecmp (value, string_list[i], len) == 0
-	      && len <= strlen (string_list[i]))
+	  if (regexec(&regex, string_list[i], 0, NULL, 0) == 0)
 	  {
 	    /* exact match... */
 	    if (len == strlen (string_list[i]))
@@ -279,6 +280,7 @@ sanei_constrain_value (const SANE_Option_Descriptor * opt, void *value,
 	      break;
 	  }
       }
+      regfree(&regex);
 
       if (num_matches == 1)
 	{
