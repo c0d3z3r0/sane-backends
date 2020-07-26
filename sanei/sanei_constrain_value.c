@@ -267,28 +267,31 @@ sanei_constrain_value (const SANE_Option_Descriptor * opt, void *value,
       num_matches = 0;
       match = -1;
       for (i = 0; string_list[i]; ++i)
-	if (strncasecmp (value, string_list[i], len) == 0
-	    && len <= strlen (string_list[i]))
+      {
+	  if (strncasecmp (value, string_list[i], len) == 0
+	      && len <= strlen (string_list[i]))
 	  {
-	    match = i;
-	    if (len == strlen (string_list[i]))
-	      {
-		/* exact match... */
-		if (strcmp (value, string_list[i]) != 0)
-		  /* ...but case differs */
-		  strcpy (value, string_list[match]);
-		return SANE_STATUS_GOOD;
-	      }
-	    ++num_matches;
-	  }
+	    num_matches++;
 
-      if (num_matches > 1)
-	return SANE_STATUS_INVAL;
-      else if (num_matches == 1)
+	    /* exact match... */
+	    if (len == strlen (string_list[i]))
+	      break;
+
+	    /* remember first non-exact match */
+	    match = i;
+
+	    /* second non-exact match; abort early */
+	    if(num_matches > 1)
+	      break;
+	  }
+      }
+
+      if (num_matches == 1)
 	{
 	  strcpy (value, string_list[match]);
 	  return SANE_STATUS_GOOD;
 	}
+
       return SANE_STATUS_INVAL;
 
     case SANE_CONSTRAINT_NONE:
